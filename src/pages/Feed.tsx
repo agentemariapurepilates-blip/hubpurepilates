@@ -61,19 +61,10 @@ const Feed = () => {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
 
+    // Build base query for posts
     let query = supabase
       .from('posts')
-      .select(`
-        *,
-        profiles:user_id (full_name, email, avatar_url),
-        comments (
-          id,
-          content,
-          emoji,
-          created_at,
-          profiles:user_id (full_name, email, avatar_url)
-        )
-      `)
+      .select('*')
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: false });
 
@@ -85,18 +76,117 @@ const Feed = () => {
       query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
     }
 
-    const { data, error } = await query;
+    const { data: postsData, error } = await query;
 
     if (error) {
       console.error('Error fetching posts:', error);
-    } else {
-      setPosts(data as unknown as Post[]);
+      setLoading(false);
+      return;
     }
+
+    if (!postsData || postsData.length === 0) {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
+
+    // Fetch profiles for all post authors
+    const userIds = [...new Set(postsData.map(p => p.user_id))];
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, email, avatar_url')
+      .in('user_id', userIds);
+
+    const profilesMap = new Map(
+      (profilesData || []).map(p => [p.user_id, { full_name: p.full_name, email: p.email, avatar_url: p.avatar_url }])
+    );
+
+    // Fetch all comments for these posts
+    const postIds = postsData.map(p => p.id);
+    const { data: commentsData } = await supabase
+      .from('comments')
+      .select('id, content, emoji, created_at, user_id, post_id')
+      .in('post_id', postIds)
+      .order('created_at', { ascending: true });
+
+    // Fetch profiles for comment authors
+    const commentUserIds = [...new Set((commentsData || []).map(c => c.user_id))];
+    if (commentUserIds.length > 0) {
+      const { data: commentProfilesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, avatar_url')
+        .in('user_id', commentUserIds);
+
+      (commentProfilesData || []).forEach(p => {
+        if (!profilesMap.has(p.user_id)) {
+          profilesMap.set(p.user_id, { full_name: p.full_name, email: p.email, avatar_url: p.avatar_url });
+        }
+      });
+    }
+
+    // Group comments by post_id
+    const commentsMap = new Map<string, Comment[]>();
+    (commentsData || []).forEach(comment => {
+      const profile = profilesMap.get(comment.user_id) || null;
+      const commentWithProfile: Comment = {
+        id: comment.id,
+        content: comment.content,
+        emoji: comment.emoji,
+        created_at: comment.created_at,
+        profiles: profile,
+      };
+      
+      if (!commentsMap.has(comment.post_id)) {
+        commentsMap.set(comment.post_id, []);
+      }
+      commentsMap.get(comment.post_id)!.push(commentWithProfile);
+    });
+
+    // Combine everything
+    const postsWithDetails: Post[] = postsData.map(post => ({
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      sector: post.sector as SectorType,
+      image_url: post.image_url,
+      pinned: post.pinned || false,
+      created_at: post.created_at,
+      profiles: profilesMap.get(post.user_id) || null,
+      comments: commentsMap.get(post.id) || [],
+    }));
+
+    setPosts(postsWithDetails);
     setLoading(false);
   }, [searchQuery, selectedSectors]);
 
   useEffect(() => {
     fetchPosts();
+  }, [fetchPosts]);
+
+  // Realtime subscription for automatic updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('feed-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'posts' },
+        () => fetchPosts()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comments' },
+        () => fetchPosts()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_likes' },
+        () => fetchPosts()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchPosts]);
 
   const toggleSector = (sector: SectorType) => {
