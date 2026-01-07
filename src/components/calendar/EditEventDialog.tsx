@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { format } from 'date-fns';
+import { useState, useEffect } from 'react';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -11,9 +11,30 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
+interface MarketingEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  start_date: string;
+  end_date: string;
+  user_id: string;
+  created_at: string;
+  tag?: 'pacotes' | 'pure_pass' | 'pure_club' | null;
+  profiles?: {
+    full_name: string | null;
+    email: string;
+  } | null;
+}
+
+interface EditEventDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  event: MarketingEvent | null;
+  onSuccess: () => void;
+}
 
 const TAG_OPTIONS = [
   { value: 'pacotes', label: 'Pacotes' },
@@ -23,27 +44,29 @@ const TAG_OPTIONS = [
 
 type EventTag = 'pacotes' | 'pure_pass' | 'pure_club';
 
-interface CreateEventDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  selectedDate: Date | null;
-  onSuccess: () => void;
-}
-
-export const CreateEventDialog = ({ open, onOpenChange, selectedDate, onSuccess }: CreateEventDialogProps) => {
-  const { user } = useAuth();
+export const EditEventDialog = ({ open, onOpenChange, event, onSuccess }: EditEventDialogProps) => {
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState<Date | undefined>(selectedDate || undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(selectedDate || undefined);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [tag, setTag] = useState<EventTag | ''>('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (event && open) {
+      setTitle(event.title);
+      setDescription(event.description || '');
+      setStartDate(parseISO(event.start_date));
+      setEndDate(parseISO(event.end_date));
+      setTag(event.tag || '');
+    }
+  }, [event, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user || !startDate || !endDate || !title.trim()) {
+    if (!event || !startDate || !endDate || !title.trim()) {
       toast({
         title: 'Erro',
         description: 'Preencha todos os campos obrigatórios',
@@ -63,32 +86,29 @@ export const CreateEventDialog = ({ open, onOpenChange, selectedDate, onSuccess 
 
     setLoading(true);
 
-    const { error } = await supabase.from('marketing_events').insert({
-      title: title.trim(),
-      description: description.trim() || null,
-      start_date: format(startDate, 'yyyy-MM-dd'),
-      end_date: format(endDate, 'yyyy-MM-dd'),
-      user_id: user.id,
-      tag: tag || null,
-    });
+    const { error } = await supabase
+      .from('marketing_events')
+      .update({
+        title: title.trim(),
+        description: description.trim() || null,
+        start_date: format(startDate, 'yyyy-MM-dd'),
+        end_date: format(endDate, 'yyyy-MM-dd'),
+        tag: tag || null,
+      })
+      .eq('id', event.id);
 
     if (error) {
-      console.error('Error creating event:', error);
+      console.error('Error updating event:', error);
       toast({
         title: 'Erro',
-        description: 'Não foi possível criar o evento',
+        description: 'Não foi possível atualizar o evento',
         variant: 'destructive',
       });
     } else {
       toast({
         title: 'Sucesso',
-        description: 'Evento criado com sucesso!',
+        description: 'Evento atualizado com sucesso!',
       });
-      setTitle('');
-      setDescription('');
-      setStartDate(undefined);
-      setEndDate(undefined);
-      setTag('');
       onOpenChange(false);
       onSuccess();
     }
@@ -96,17 +116,19 @@ export const CreateEventDialog = ({ open, onOpenChange, selectedDate, onSuccess 
     setLoading(false);
   };
 
+  if (!event) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Novo Evento de Marketing</DialogTitle>
+          <DialogTitle>Editar Evento</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Título *</Label>
+            <Label htmlFor="edit-title">Título *</Label>
             <Input
-              id="title"
+              id="edit-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex: 50% OFF para planos anuais"
@@ -115,9 +137,9 @@ export const CreateEventDialog = ({ open, onOpenChange, selectedDate, onSuccess 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="edit-description">Descrição</Label>
             <Textarea
-              id="description"
+              id="edit-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Detalhes da campanha..."
@@ -202,7 +224,7 @@ export const CreateEventDialog = ({ open, onOpenChange, selectedDate, onSuccess 
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Criando...' : 'Criar Evento'}
+              {loading ? 'Salvando...' : 'Salvar Alterações'}
             </Button>
           </DialogFooter>
         </form>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, User, Trash2 } from 'lucide-react';
+import { CalendarDays, User, Trash2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -19,6 +19,12 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+const TAG_LABELS: Record<string, string> = {
+  pacotes: 'Pacotes',
+  pure_pass: 'Pure Pass',
+  pure_club: 'Pure Club',
+};
+
 interface MarketingEvent {
   id: string;
   title: string;
@@ -27,6 +33,7 @@ interface MarketingEvent {
   end_date: string;
   user_id: string;
   created_at: string;
+  tag?: 'pacotes' | 'pure_pass' | 'pure_club' | null;
   profiles?: {
     full_name: string | null;
     email: string;
@@ -38,9 +45,10 @@ interface EventDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   event: MarketingEvent | null;
   onEventDeleted?: () => void;
+  onEditClick?: () => void;
 }
 
-export const EventDetailsDialog = ({ open, onOpenChange, event, onEventDeleted }: EventDetailsDialogProps) => {
+export const EventDetailsDialog = ({ open, onOpenChange, event, onEventDeleted, onEditClick }: EventDetailsDialogProps) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
@@ -90,10 +98,15 @@ export const EventDetailsDialog = ({ open, onOpenChange, event, onEventDeleted }
               </div>
               <div className="flex-1">
                 <DialogTitle className="text-xl">{event.title}</DialogTitle>
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <Badge variant="secondary">
                     {format(startDate, "dd 'de' MMMM", { locale: ptBR })} - {format(endDate, "dd 'de' MMMM", { locale: ptBR })}
                   </Badge>
+                  {event.tag && (
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                      {TAG_LABELS[event.tag]}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -125,7 +138,18 @@ export const EventDetailsDialog = ({ open, onOpenChange, event, onEventDeleted }
 
             <Separator />
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  onOpenChange(false);
+                  onEditClick?.();
+                }}
+                className="gap-2"
+              >
+                <Pencil className="h-4 w-4" />
+                Editar Evento
+              </Button>
               <Button 
                 variant="destructive" 
                 onClick={() => setShowDeleteConfirm(true)}

@@ -8,7 +8,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { CreateEventDialog } from '@/components/calendar/CreateEventDialog';
 import { EventDetailsDialog } from '@/components/calendar/EventDetailsDialog';
+import { EditEventDialog } from '@/components/calendar/EditEventDialog';
 import { cn } from '@/lib/utils';
+
+const TAG_LABELS: Record<string, string> = {
+  pacotes: 'Pacotes',
+  pure_pass: 'Pure Pass',
+  pure_club: 'Pure Club',
+};
+
+const TAG_COLORS: Record<string, string> = {
+  pacotes: 'bg-blue-500/20 text-blue-700 dark:text-blue-400',
+  pure_pass: 'bg-green-500/20 text-green-700 dark:text-green-400',
+  pure_club: 'bg-purple-500/20 text-purple-700 dark:text-purple-400',
+};
 
 interface MarketingEvent {
   id: string;
@@ -18,6 +31,7 @@ interface MarketingEvent {
   end_date: string;
   user_id: string;
   created_at: string;
+  tag?: 'pacotes' | 'pure_pass' | 'pure_club' | null;
   profiles?: {
     full_name: string | null;
     email: string;
@@ -32,6 +46,7 @@ const CalendarioMarketing = () => {
   const [selectedEvent, setSelectedEvent] = useState<MarketingEvent | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchEvents = useCallback(async () => {
@@ -190,7 +205,10 @@ const CalendarioMarketing = () => {
                       {dayEvents.slice(0, 2).map(event => (
                         <div
                           key={event.id}
-                          className="text-xs p-1 rounded bg-primary/20 text-primary truncate"
+                          className={cn(
+                            "text-xs p-1 rounded truncate",
+                            event.tag ? TAG_COLORS[event.tag] : "bg-primary/20 text-primary"
+                          )}
                           title={event.title}
                         >
                           {event.title}
@@ -225,8 +243,15 @@ const CalendarioMarketing = () => {
                   className="p-4 bg-card rounded-lg border border-border cursor-pointer hover:border-primary/50 transition-colors"
                 >
                   <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-medium">{event.title}</h4>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium">{event.title}</h4>
+                        {event.tag && (
+                          <span className={cn("text-xs px-2 py-0.5 rounded", TAG_COLORS[event.tag])}>
+                            {TAG_LABELS[event.tag]}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         {format(parseISO(event.start_date), "dd 'de' MMMM", { locale: ptBR })} - {format(parseISO(event.end_date), "dd 'de' MMMM", { locale: ptBR })}
                       </p>
@@ -256,6 +281,14 @@ const CalendarioMarketing = () => {
         onOpenChange={setIsDetailsDialogOpen}
         event={selectedEvent}
         onEventDeleted={fetchEvents}
+        onEditClick={() => setIsEditDialogOpen(true)}
+      />
+
+      <EditEventDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        event={selectedEvent}
+        onSuccess={fetchEvents}
       />
     </MainLayout>
   );
