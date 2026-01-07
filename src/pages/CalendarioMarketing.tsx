@@ -255,6 +255,7 @@ const CalendarioMarketing = () => {
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
         event={selectedEvent}
+        onEventDeleted={fetchEvents}
       />
     </MainLayout>
   );
