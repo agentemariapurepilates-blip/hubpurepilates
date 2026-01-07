@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-type SectorType = 'estudios' | 'franchising' | 'academy' | 'marketing' | 'tecnologia' | 'expansao';
+type SectorType = 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao';
 
 interface Comment {
   id: string;
@@ -46,9 +46,8 @@ const sectors = [
   { value: 'estudios', label: 'Estúdios' },
   { value: 'franchising', label: 'Franchising' },
   { value: 'academy', label: 'Academy' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'tecnologia', label: 'Tecnologia' },
-  { value: 'expansao', label: 'Expansão' },
+  { value: 'consultoras', label: 'Consultoras' },
+  { value: 'implantacao', label: 'Implantação' },
 ];
 
 const Feed = () => {
