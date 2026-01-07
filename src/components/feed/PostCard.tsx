@@ -5,7 +5,12 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { MessageCircle, Send, Pin } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { MessageCircle, Send, Pin, Smile } from 'lucide-react';
 import SectorBadge from './SectorBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,7 +31,7 @@ interface Post {
   id: string;
   title: string;
   content: string;
-  sector: 'estudios' | 'franchising' | 'academy' | 'marketing' | 'tecnologia' | 'expansao';
+  sector: 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao';
   image_url: string | null;
   pinned: boolean;
   created_at: string;
@@ -42,13 +47,17 @@ interface PostCardProps {
   onCommentAdded: () => void;
 }
 
-const emojis = ['👍', '❤️', '🎉', '💪', '🙌', '👏'];
+const emojis = [
+  '😀', '😃', '😄', '😁', '😊', '🥰', '😍', '🤩',
+  '👍', '👏', '🙌', '💪', '🎉', '🎊', '🏆', '⭐',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+  '🔥', '✨', '💡', '📢', '📌', '✅', '🚀', '💼',
+];
 
 const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
-  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmitComment = async () => {
@@ -59,7 +68,6 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
       post_id: post.id,
       user_id: user.id,
       content: newComment.trim(),
-      emoji: selectedEmoji,
     });
 
     setSubmitting(false);
@@ -70,16 +78,30 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
     }
 
     setNewComment('');
-    setSelectedEmoji(null);
     onCommentAdded();
     toast.success('Comentário adicionado!');
+  };
+
+  const insertEmoji = (emoji: string) => {
+    setNewComment((prev) => prev + emoji);
   };
 
   const authorName = post.profiles?.full_name || post.profiles?.email?.split('@')[0] || 'Usuário';
   const authorInitial = authorName[0].toUpperCase();
 
   return (
-    <Card className="card-pure animate-fade-in">
+    <Card className="card-pure animate-fade-in overflow-hidden">
+      {/* Image displayed at the top like Facebook */}
+      {post.image_url && (
+        <div className="w-full">
+          <img 
+            src={post.image_url} 
+            alt={post.title}
+            className="w-full object-cover max-h-[500px]"
+          />
+        </div>
+      )}
+      
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -109,14 +131,6 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
       <CardContent>
         <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
         <p className="text-muted-foreground whitespace-pre-wrap">{post.content}</p>
-        
-        {post.image_url && (
-          <img 
-            src={post.image_url} 
-            alt={post.title}
-            className="mt-4 rounded-lg w-full object-cover max-h-96"
-          />
-        )}
 
         <div className="mt-4 pt-4 border-t">
           <Button
@@ -175,20 +189,28 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
                   className="min-h-[80px] resize-none"
                 />
                 <div className="flex items-center justify-between">
-                  <div className="flex gap-1">
-                    {emojis.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => setSelectedEmoji(selectedEmoji === emoji ? null : emoji)}
-                        className={`p-1.5 rounded hover:bg-muted transition-colors ${
-                          selectedEmoji === emoji ? 'bg-muted ring-2 ring-primary' : ''
-                        }`}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button type="button" variant="ghost" size="sm" className="gap-1">
+                        <Smile className="h-4 w-4" />
+                        Emoji
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-2" align="start">
+                      <div className="grid grid-cols-8 gap-1">
+                        {emojis.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => insertEmoji(emoji)}
+                            className="p-1.5 text-lg hover:bg-muted rounded transition-colors"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Button
                     size="sm"
                     onClick={handleSubmitComment}

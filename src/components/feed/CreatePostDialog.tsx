@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -20,7 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Loader2 } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Plus, Loader2, Image, X, Smile } from 'lucide-react';
 
 interface CreatePostDialogProps {
   onPostCreated: () => void;
@@ -30,9 +35,15 @@ const sectors = [
   { value: 'estudios', label: 'Estúdios' },
   { value: 'franchising', label: 'Franchising' },
   { value: 'academy', label: 'Academy' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'tecnologia', label: 'Tecnologia' },
-  { value: 'expansao', label: 'Expansão' },
+  { value: 'consultoras', label: 'Consultoras' },
+  { value: 'implantacao', label: 'Implantação' },
+];
+
+const emojis = [
+  '😀', '😃', '😄', '😁', '😊', '🥰', '😍', '🤩',
+  '👍', '👏', '🙌', '💪', '🎉', '🎊', '🏆', '⭐',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+  '🔥', '✨', '💡', '📢', '📌', '✅', '🚀', '💼',
 ];
 
 const CreatePostDialog = ({ onPostCreated }: CreatePostDialogProps) => {
@@ -42,17 +53,73 @@ const CreatePostDialog = ({ onPostCreated }: CreatePostDialogProps) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [sector, setSector] = useState<string>('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('A imagem deve ter no máximo 5MB');
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const insertEmoji = (emoji: string) => {
+    setContent((prev) => prev + emoji);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !sector) return;
 
     setLoading(true);
+    let imageUrl: string | null = null;
+
+    // Upload image if exists
+    if (imageFile) {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('post-images')
+        .upload(fileName, imageFile);
+
+      if (uploadError) {
+        toast.error('Erro ao fazer upload da imagem');
+        setLoading(false);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('post-images')
+        .getPublicUrl(fileName);
+
+      imageUrl = publicUrl;
+    }
+
     const { error } = await supabase.from('posts').insert({
       user_id: user.id,
       title,
       content,
-      sector: sector as 'estudios' | 'franchising' | 'academy' | 'marketing' | 'tecnologia' | 'expansao',
+      sector: sector as 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao',
+      image_url: imageUrl,
     });
 
     setLoading(false);
@@ -66,6 +133,8 @@ const CreatePostDialog = ({ onPostCreated }: CreatePostDialogProps) => {
     setTitle('');
     setContent('');
     setSector('');
+    setImageFile(null);
+    setImagePreview(null);
     setOpen(false);
     onPostCreated();
   };
@@ -78,7 +147,7 @@ const CreatePostDialog = ({ onPostCreated }: CreatePostDialogProps) => {
           Nova Publicação
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar Nova Publicação</DialogTitle>
         </DialogHeader>
@@ -111,18 +180,85 @@ const CreatePostDialog = ({ onPostCreated }: CreatePostDialogProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content">Conteúdo</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="content">Conteúdo</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 gap-1">
+                    <Smile className="h-4 w-4" />
+                    Emoji
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-2" align="end">
+                  <div className="grid grid-cols-8 gap-1">
+                    {emojis.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => insertEmoji(emoji)}
+                        className="p-1.5 text-lg hover:bg-muted rounded transition-colors"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
             <Textarea
               id="content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Escreva o conteúdo da publicação..."
-              className="min-h-[150px]"
+              className="min-h-[120px]"
               required
             />
           </div>
 
-          <div className="flex justify-end gap-3">
+          {/* Image upload */}
+          <div className="space-y-2">
+            <Label>Imagem (opcional)</Label>
+            {imagePreview ? (
+              <div className="relative">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-8 w-8"
+                  onClick={removeImage}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+              >
+                <Image className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Clique para adicionar uma imagem
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  PNG, JPG até 5MB
+                </p>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
