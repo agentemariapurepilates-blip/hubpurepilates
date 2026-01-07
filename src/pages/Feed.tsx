@@ -13,6 +13,14 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 type SectorType = 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao';
 
@@ -52,21 +60,45 @@ const sectors = [
   { value: 'implantacao', label: 'Implantação' },
 ];
 
+const POSTS_PER_PAGE = 4;
+
 const Feed = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSectors, setSelectedSectors] = useState<SectorType[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPosts, setTotalPosts] = useState(0);
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
 
-    // Build base query for posts
+    // First get total count
+    let countQuery = supabase
+      .from('posts')
+      .select('*', { count: 'exact', head: true });
+
+    if (selectedSectors.length > 0) {
+      countQuery = countQuery.in('sector', selectedSectors);
+    }
+
+    if (searchQuery) {
+      countQuery = countQuery.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
+    }
+
+    const { count } = await countQuery;
+    setTotalPosts(count || 0);
+
+    // Build paginated query for posts
+    const from = (currentPage - 1) * POSTS_PER_PAGE;
+    const to = from + POSTS_PER_PAGE - 1;
+
     let query = supabase
       .from('posts')
       .select('*')
       .order('pinned', { ascending: false })
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (selectedSectors.length > 0) {
       query = query.in('sector', selectedSectors);
@@ -157,11 +189,16 @@ const Feed = () => {
 
     setPosts(postsWithDetails);
     setLoading(false);
-  }, [searchQuery, selectedSectors]);
+  }, [searchQuery, selectedSectors, currentPage]);
 
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedSectors]);
 
   // Realtime subscription for automatic updates
   useEffect(() => {
@@ -196,6 +233,8 @@ const Feed = () => {
         : [...prev, sector]
     );
   };
+
+  const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE);
 
   return (
     <MainLayout>
@@ -246,7 +285,7 @@ const Feed = () => {
 
         <div className="space-y-4">
           {loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
+            Array.from({ length: POSTS_PER_PAGE }).map((_, i) => (
               <div key={i} className="card-pure p-6 space-y-4">
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-10 w-10 rounded-full" />
@@ -269,6 +308,54 @@ const Feed = () => {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && !loading && (
+          <div className="mt-8">
+            <Pagination>
+              <PaginationContent>
+                {currentPage > 1 && (
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      href="#" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(prev => Math.max(1, prev - 1));
+                      }}
+                    />
+                  </PaginationItem>
+                )}
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      href="#"
+                      isActive={page === currentPage}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(page);
+                      }}
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+
+                {currentPage < totalPages && (
+                  <PaginationItem>
+                    <PaginationNext 
+                      href="#" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                      }}
+                    />
+                  </PaginationItem>
+                )}
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </div>
     </MainLayout>
   );
