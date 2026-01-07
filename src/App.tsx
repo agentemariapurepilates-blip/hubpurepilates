@@ -10,6 +10,7 @@ import Feed from "./pages/Feed";
 import Onboarding from "./pages/Onboarding";
 import Metricas from "./pages/Metricas";
 import Perfil from "./pages/Perfil";
+import CalendarioMarketing from "./pages/CalendarioMarketing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Index />} />
             <Route path="/feed" element={<Feed />} />
+            <Route path="/calendario-marketing" element={<CalendarioMarketing />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/metricas" element={<Metricas />} />
             <Route path="/perfil" element={<Perfil />} />

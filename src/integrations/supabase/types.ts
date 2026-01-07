@@ -81,6 +81,39 @@ export type Database = {
           },
         ]
       }
+      marketing_events: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string
+          id: string
+          start_date: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date: string
+          id?: string
+          start_date: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          start_date?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       metrics: {
         Row: {
           created_at: string
