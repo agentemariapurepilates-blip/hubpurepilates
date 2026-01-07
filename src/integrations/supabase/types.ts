@@ -88,6 +88,7 @@ export type Database = {
           end_date: string
           id: string
           start_date: string
+          tag: Database["public"]["Enums"]["event_tag"] | null
           title: string
           updated_at: string
           user_id: string
@@ -98,6 +99,7 @@ export type Database = {
           end_date: string
           id?: string
           start_date: string
+          tag?: Database["public"]["Enums"]["event_tag"] | null
           title: string
           updated_at?: string
           user_id: string
@@ -108,6 +110,7 @@ export type Database = {
           end_date?: string
           id?: string
           start_date?: string
+          tag?: Database["public"]["Enums"]["event_tag"] | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -314,6 +317,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      event_tag: "pacotes" | "pure_pass" | "pure_club"
       profile_type: "colaborador" | "professor" | "franqueado"
       sector_type:
         | "estudios"
@@ -452,6 +456,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      event_tag: ["pacotes", "pure_pass", "pure_club"],
       profile_type: ["colaborador", "professor", "franqueado"],
       sector_type: [
         "estudios",

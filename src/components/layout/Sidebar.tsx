@@ -20,7 +20,7 @@ import { useState } from 'react';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Feed', href: '/feed', icon: Newspaper },
-  { name: 'Calendário', href: '/calendario-marketing', icon: CalendarDays },
+  { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
   { name: 'Onboarding', href: '/onboarding', icon: GraduationCap },
   { name: 'Métricas', href: '/metricas', icon: BarChart3 },
   { name: 'Perfil', href: '/perfil', icon: User },
