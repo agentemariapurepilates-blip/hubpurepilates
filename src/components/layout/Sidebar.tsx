@@ -10,7 +10,8 @@ import {
   Users, 
   LogOut,
   Menu,
-  X
+  X,
+  User
 } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState } from 'react';
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Feed', href: '/feed', icon: Newspaper },
   { name: 'Onboarding', href: '/onboarding', icon: GraduationCap },
   { name: 'Métricas', href: '/metricas', icon: BarChart3 },
+  { name: 'Perfil', href: '/perfil', icon: User },
 ];
 
 const adminNavigation = [

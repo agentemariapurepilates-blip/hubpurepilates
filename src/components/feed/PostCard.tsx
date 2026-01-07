@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { MessageCircle, Send, Pin, Smile } from 'lucide-react';
+import { MessageCircle, Send, Pin, Smile, Heart } from 'lucide-react';
 import SectorBadge from './SectorBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +24,7 @@ interface Comment {
   profiles: {
     full_name: string | null;
     email: string;
+    avatar_url: string | null;
   } | null;
 }
 
@@ -38,6 +39,7 @@ interface Post {
   profiles: {
     full_name: string | null;
     email: string;
+    avatar_url: string | null;
   } | null;
   comments: Comment[];
 }
@@ -59,6 +61,65 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [hasLiked, setHasLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+
+  useEffect(() => {
+    fetchLikes();
+  }, [post.id, user]);
+
+  const fetchLikes = async () => {
+    // Get total likes count
+    const { count } = await supabase
+      .from('post_likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', post.id);
+
+    setLikesCount(count || 0);
+
+    // Check if current user liked
+    if (user) {
+      const { data } = await supabase
+        .from('post_likes')
+        .select('id')
+        .eq('post_id', post.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      setHasLiked(!!data);
+    }
+  };
+
+  const handleLike = async () => {
+    if (!user || likeLoading) return;
+
+    setLikeLoading(true);
+
+    if (hasLiked) {
+      const { error } = await supabase
+        .from('post_likes')
+        .delete()
+        .eq('post_id', post.id)
+        .eq('user_id', user.id);
+
+      if (!error) {
+        setHasLiked(false);
+        setLikesCount((prev) => prev - 1);
+      }
+    } else {
+      const { error } = await supabase
+        .from('post_likes')
+        .insert({ post_id: post.id, user_id: user.id });
+
+      if (!error) {
+        setHasLiked(true);
+        setLikesCount((prev) => prev + 1);
+      }
+    }
+
+    setLikeLoading(false);
+  };
 
   const handleSubmitComment = async () => {
     if (!newComment.trim() || !user) return;
@@ -106,6 +167,7 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
+              <AvatarImage src={post.profiles?.avatar_url || undefined} alt={authorName} />
               <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                 {authorInitial}
               </AvatarFallback>
@@ -132,7 +194,17 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
         <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
         <p className="text-muted-foreground whitespace-pre-wrap">{post.content}</p>
 
-        <div className="mt-4 pt-4 border-t">
+        <div className="mt-4 pt-4 border-t flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`gap-2 ${hasLiked ? 'text-red-500' : 'text-muted-foreground'}`}
+            onClick={handleLike}
+            disabled={likeLoading}
+          >
+            <Heart className={`h-4 w-4 ${hasLiked ? 'fill-current' : ''}`} />
+            {likesCount} curtida{likesCount !== 1 ? 's' : ''}
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -140,39 +212,45 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
             onClick={() => setShowComments(!showComments)}
           >
             <MessageCircle className="h-4 w-4" />
-            {post.comments?.length || 0} comentários
+            {post.comments?.length || 0} comentário{(post.comments?.length || 0) !== 1 ? 's' : ''}
           </Button>
         </div>
 
         {showComments && (
           <div className="mt-4 space-y-4 animate-fade-in">
             {/* Comments list */}
-            {post.comments?.map((comment) => (
-              <div key={comment.id} className="flex gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
-                    {(comment.profiles?.full_name?.[0] || comment.profiles?.email?.[0] || 'U').toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 bg-muted rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-medium">
-                      {comment.profiles?.full_name || comment.profiles?.email?.split('@')[0]}
-                    </p>
-                    {comment.emoji && (
-                      <span className="text-base">{comment.emoji}</span>
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(comment.created_at), { 
-                        addSuffix: true, 
-                        locale: ptBR 
-                      })}
-                    </span>
+            {post.comments?.map((comment) => {
+              const commentAuthor = comment.profiles?.full_name || comment.profiles?.email?.split('@')[0] || 'Usuário';
+              const commentInitial = commentAuthor[0].toUpperCase();
+              
+              return (
+                <div key={comment.id} className="flex gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={comment.profiles?.avatar_url || undefined} alt={commentAuthor} />
+                    <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
+                      {commentInitial}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 bg-muted rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-medium">
+                        {commentAuthor}
+                      </p>
+                      {comment.emoji && (
+                        <span className="text-base">{comment.emoji}</span>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(comment.created_at), { 
+                          addSuffix: true, 
+                          locale: ptBR 
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-sm">{comment.content}</p>
                   </div>
-                  <p className="text-sm">{comment.content}</p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* New comment form */}
             <div className="flex gap-3">
