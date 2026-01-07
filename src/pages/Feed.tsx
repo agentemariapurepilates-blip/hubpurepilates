@@ -24,6 +24,7 @@ interface Comment {
   profiles: {
     full_name: string | null;
     email: string;
+    avatar_url: string | null;
   } | null;
 }
 
@@ -38,6 +39,7 @@ interface Post {
   profiles: {
     full_name: string | null;
     email: string;
+    avatar_url: string | null;
   } | null;
   comments: Comment[];
 }
@@ -63,13 +65,13 @@ const Feed = () => {
       .from('posts')
       .select(`
         *,
-        profiles:user_id (full_name, email),
+        profiles:user_id (full_name, email, avatar_url),
         comments (
           id,
           content,
           emoji,
           created_at,
-          profiles:user_id (full_name, email)
+          profiles:user_id (full_name, email, avatar_url)
         )
       `)
       .order('pinned', { ascending: false })

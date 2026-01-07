@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
 import Onboarding from "./pages/Onboarding";
 import Metricas from "./pages/Metricas";
+import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/feed" element={<Feed />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/metricas" element={<Metricas />} />
+            <Route path="/perfil" element={<Perfil />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
