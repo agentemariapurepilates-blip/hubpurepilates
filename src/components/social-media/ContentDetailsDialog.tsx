@@ -93,8 +93,27 @@ const ContentDetailsDialog = ({
   };
 
   const handleDownload = () => {
-    if (content.google_drive_url) {
-      window.open(content.google_drive_url, '_blank');
+    if (!content.google_drive_url) return;
+    
+    let url = content.google_drive_url.trim();
+    
+    // Ensure URL has protocol
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+    
+    // Try to open in new tab
+    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    
+    if (!newWindow) {
+      // Popup was blocked, copy URL to clipboard as fallback
+      navigator.clipboard.writeText(url).then(() => {
+        toast.info('Link copiado! Cole no navegador para acessar.', {
+          description: 'O popup foi bloqueado pelo navegador.'
+        });
+      }).catch(() => {
+        toast.error('Não foi possível abrir o link. Verifique se popups estão habilitados.');
+      });
     }
   };
 
