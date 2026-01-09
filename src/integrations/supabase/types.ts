@@ -218,36 +218,45 @@ export type Database = {
       posts: {
         Row: {
           content: string
+          cover_image_url: string | null
           created_at: string
           id: string
           image_url: string | null
           pinned: boolean | null
           post_type: string | null
           sector: Database["public"]["Enums"]["sector_type"]
+          short_description: string | null
+          target_month: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
           content: string
+          cover_image_url?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
           pinned?: boolean | null
           post_type?: string | null
           sector: Database["public"]["Enums"]["sector_type"]
+          short_description?: string | null
+          target_month?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
           content?: string
+          cover_image_url?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
           pinned?: boolean | null
           post_type?: string | null
           sector?: Database["public"]["Enums"]["sector_type"]
+          short_description?: string | null
+          target_month?: string | null
           title?: string
           updated_at?: string
           user_id?: string

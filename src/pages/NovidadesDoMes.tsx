@@ -7,48 +7,29 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkles, MessageCircle } from 'lucide-react';
-import PostCard from '@/components/feed/PostCard';
+import NewsCard, { NewsPost } from '@/components/novidades/NewsCard';
 import CreatePostDialog from '@/components/feed/CreatePostDialog';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
-type SectorType = 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao';
-
-interface Comment {
-  id: string;
-  content: string;
-  emoji: string | null;
-  created_at: string;
-  profiles: {
-    full_name: string | null;
-    email: string;
-    avatar_url: string | null;
-  } | null;
-}
-
-interface Post {
-  id: string;
-  title: string;
-  content: string;
-  sector: SectorType;
-  image_url: string | null;
-  pinned: boolean;
-  created_at: string;
-  profiles: {
-    full_name: string | null;
-    email: string;
-    avatar_url: string | null;
-  } | null;
-  comments: Comment[];
-}
+const POSTS_PER_PAGE = 4;
 
 const NovidadesDoMes = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, isApproved, isColaborador } = useAuth();
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Generate last 12 months for filter
   const generateMonthOptions = () => {
@@ -75,12 +56,14 @@ const NovidadesDoMes = () => {
       const monthStart = format(startOfMonth(selectedMonth), 'yyyy-MM-dd');
       const monthEnd = format(endOfMonth(selectedMonth), 'yyyy-MM-dd');
 
-      const { data: postsData, error: postsError } = await supabase
+      // First try to filter by target_month
+      let query = supabase
         .from('posts')
         .select('*')
-        .eq('post_type', 'novidades')
-        .gte('created_at', monthStart)
-        .lte('created_at', monthEnd + 'T23:59:59')
+        .eq('post_type', 'novidades');
+
+      // Filter by target_month if set, otherwise fall back to created_at
+      const { data: postsData, error: postsError } = await query
         .order('pinned', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -92,8 +75,25 @@ const NovidadesDoMes = () => {
         return;
       }
 
+      // Filter posts by target_month or created_at (for backward compatibility)
+      const filteredPosts = postsData.filter(post => {
+        if (post.target_month) {
+          const targetDate = parseISO(post.target_month);
+          return format(targetDate, 'yyyy-MM') === format(selectedMonth, 'yyyy-MM');
+        }
+        // Fall back to created_at for old posts without target_month
+        const createdDate = new Date(post.created_at);
+        return format(createdDate, 'yyyy-MM') === format(selectedMonth, 'yyyy-MM');
+      });
+
+      if (filteredPosts.length === 0) {
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+
       // Fetch profiles for all post authors
-      const userIds = [...new Set(postsData.map(p => p.user_id))];
+      const userIds = [...new Set(filteredPosts.map(p => p.user_id))];
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('user_id, full_name, email, avatar_url')
@@ -104,7 +104,7 @@ const NovidadesDoMes = () => {
       );
 
       // Fetch all comments for these posts
-      const postIds = postsData.map(p => p.id);
+      const postIds = filteredPosts.map(p => p.id);
       const { data: commentsData } = await supabase
         .from('comments')
         .select('id, content, emoji, created_at, user_id, post_id')
@@ -127,10 +127,10 @@ const NovidadesDoMes = () => {
       }
 
       // Group comments by post_id
-      const commentsMap = new Map<string, Comment[]>();
+      const commentsMap = new Map<string, NewsPost['comments']>();
       (commentsData || []).forEach(comment => {
         const profile = profilesMap.get(comment.user_id) || null;
-        const commentWithProfile: Comment = {
+        const commentWithProfile = {
           id: comment.id,
           content: comment.content,
           emoji: comment.emoji,
@@ -145,19 +145,24 @@ const NovidadesDoMes = () => {
       });
 
       // Combine everything
-      const postsWithDetails: Post[] = postsData.map(post => ({
+      const postsWithDetails: NewsPost[] = filteredPosts.map(post => ({
         id: post.id,
         title: post.title,
         content: post.content,
-        sector: post.sector as SectorType,
+        sector: post.sector as NewsPost['sector'],
         image_url: post.image_url,
+        cover_image_url: post.cover_image_url,
+        short_description: post.short_description,
+        target_month: post.target_month,
         pinned: post.pinned || false,
         created_at: post.created_at,
+        user_id: post.user_id,
         profiles: profilesMap.get(post.user_id) || null,
         comments: commentsMap.get(post.id) || [],
       }));
 
       setPosts(postsWithDetails);
+      setCurrentPage(1); // Reset to first page when month changes
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {
@@ -204,6 +209,16 @@ const NovidadesDoMes = () => {
     };
   }, [user, fetchPosts]);
 
+  // Pagination logic
+  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE);
+  const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
+  const paginatedPosts = posts.slice(startIndex, startIndex + POSTS_PER_PAGE);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   if (authLoading) {
     return (
       <MainLayout>
@@ -216,7 +231,7 @@ const NovidadesDoMes = () => {
 
   return (
     <MainLayout>
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-xl sm:text-2xl font-heading font-bold flex items-center gap-2">
@@ -257,17 +272,18 @@ const NovidadesDoMes = () => {
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
 
-        {/* Posts list */}
+        {/* Posts grid */}
         {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
               <Card key={i}>
                 <CardHeader>
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/4" />
+                  <Skeleton className="h-32 w-full" />
                 </CardHeader>
                 <CardContent>
-                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-4 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-3 w-1/2" />
                 </CardContent>
               </Card>
             ))}
@@ -285,15 +301,50 @@ const NovidadesDoMes = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onCommentAdded={fetchPosts}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {paginatedPosts.map((post) => (
+                <NewsCard
+                  key={post.id}
+                  post={post}
+                  onPostUpdated={fetchPosts}
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Pagination className="mt-6">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        isActive={page === currentPage}
+                        onClick={() => handlePageChange(page)}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
         )}
       </div>
     </MainLayout>
