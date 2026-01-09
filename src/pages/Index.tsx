@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Newspaper, BarChart3, ArrowRight, CalendarDays, Video, User } from 'lucide-react';
+import { Newspaper, ArrowRight, CalendarDays, Video, User, Sparkles } from 'lucide-react';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -20,14 +20,15 @@ const Index = () => {
 
   // Quick links para colaboradores (acesso total)
   const colaboradorLinks = [
-    { title: 'Feed', description: 'Acompanhe as novidades', icon: Newspaper, href: '/feed', color: 'bg-primary/10 text-primary' },
+    { title: 'Feed da Sede', description: 'Acompanhe as novidades da sede', icon: Newspaper, href: '/feed', color: 'bg-primary/10 text-primary' },
+    { title: 'Novidades do Mês', description: 'Comunicados importantes', icon: Sparkles, href: '/novidades', color: 'bg-amber-500/10 text-amber-500' },
     { title: 'Calendário de Marketing', description: 'Eventos e campanhas', icon: CalendarDays, href: '/calendario-marketing', color: 'bg-sector-academy/10 text-sector-academy' },
     { title: 'Mídias Sociais', description: 'Conteúdos para redes', icon: Video, href: '/midias-sociais', color: 'bg-sector-franchising/10 text-sector-franchising' },
-    { title: 'Métricas', description: 'Indicadores gerais', icon: BarChart3, href: '/metricas', color: 'bg-primary/10 text-primary' },
   ];
 
   // Quick links para franqueados (acesso limitado)
   const franqueadoLinks = [
+    { title: 'Novidades do Mês', description: 'Comunicados importantes', icon: Sparkles, href: '/novidades', color: 'bg-amber-500/10 text-amber-500' },
     { title: 'Calendário de Marketing', description: 'Eventos e campanhas', icon: CalendarDays, href: '/calendario-marketing', color: 'bg-sector-academy/10 text-sector-academy' },
     { title: 'Mídias Sociais', description: 'Conteúdos para redes', icon: Video, href: '/midias-sociais', color: 'bg-sector-franchising/10 text-sector-franchising' },
     { title: 'Meu Perfil', description: 'Suas informações', icon: User, href: '/perfil', color: 'bg-primary/10 text-primary' },
@@ -57,7 +58,7 @@ const Index = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {quickLinks.map((link) => (
             <Card key={link.href} className="card-pure cursor-pointer group" onClick={() => navigate(link.href)}>
               <CardHeader>

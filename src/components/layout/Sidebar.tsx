@@ -6,14 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Home, 
   Newspaper, 
-  BarChart3, 
   Users, 
   LogOut,
   Menu,
   X,
   User,
   CalendarDays,
-  Video
+  Video,
+  Sparkles
 } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState } from 'react';
@@ -22,21 +22,33 @@ const adminNavigation = [
   { name: 'Usuários', href: '/admin/usuarios', icon: Users },
 ];
 
+export const MobileMenuButton = ({ mobileOpen, setMobileOpen }: { mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) => (
+  <Button
+    variant="ghost"
+    size="icon"
+    className="lg:hidden"
+    onClick={() => setMobileOpen(!mobileOpen)}
+  >
+    {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+  </Button>
+);
+
 const Sidebar = () => {
   const { user, signOut, isAdmin, isColaborador, userType, isApproved } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Build navigation based on user type
-  // Franqueado: apenas Calendário, Mídias e Perfil
+  // Franqueado: Novidades, Calendário, Mídias e Perfil
   // Colaborador/Admin: acesso completo
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: Home },
-    // Feed and Métricas only for colaboradores (not franqueados)
-    ...(isColaborador ? [{ name: 'Feed', href: '/feed', icon: Newspaper }] : []),
+    { name: 'Comece aqui', href: '/', icon: Home },
+    // Feed da Sede only for colaboradores
+    ...(isColaborador ? [{ name: 'Feed da Sede', href: '/feed', icon: Newspaper }] : []),
+    // Novidades do Mês for everyone
+    { name: 'Novidades do Mês', href: '/novidades', icon: Sparkles },
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
     { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
-    ...(isColaborador ? [{ name: 'Métricas', href: '/metricas', icon: BarChart3 }] : []),
     { name: 'Perfil', href: '/perfil', icon: User },
   ];
 
@@ -134,15 +146,13 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile menu button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-50 lg:hidden"
-        onClick={() => setMobileOpen(!mobileOpen)}
-      >
-        {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </Button>
+      {/* Mobile header with menu button */}
+      <div className="fixed top-0 left-0 right-0 z-50 lg:hidden bg-background border-b border-border">
+        <div className="flex items-center gap-3 p-3">
+          <MobileMenuButton mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+          <img src={logo} alt="Pure Pilates" className="h-8" />
+        </div>
+      </div>
 
       {/* Mobile sidebar overlay */}
       {mobileOpen && (

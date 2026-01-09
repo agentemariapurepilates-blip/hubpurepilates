@@ -222,6 +222,7 @@ export type Database = {
           id: string
           image_url: string | null
           pinned: boolean | null
+          post_type: string | null
           sector: Database["public"]["Enums"]["sector_type"]
           title: string
           updated_at: string
@@ -233,6 +234,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           pinned?: boolean | null
+          post_type?: string | null
           sector: Database["public"]["Enums"]["sector_type"]
           title: string
           updated_at?: string
@@ -244,6 +246,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           pinned?: boolean | null
+          post_type?: string | null
           sector?: Database["public"]["Enums"]["sector_type"]
           title?: string
           updated_at?: string

@@ -80,7 +80,8 @@ const Feed = () => {
     // First get total count
     let countQuery = supabase
       .from('posts')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('post_type', 'feed');
 
     if (selectedSectors.length > 0) {
       countQuery = countQuery.in('sector', selectedSectors);
@@ -100,6 +101,7 @@ const Feed = () => {
     let query = supabase
       .from('posts')
       .select('*')
+      .eq('post_type', 'feed')
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .range(from, to);
@@ -260,8 +262,8 @@ const Feed = () => {
       <div className="max-w-3xl mx-auto">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-heading font-bold">Feed</h1>
-            <p className="text-muted-foreground">Acompanhe as novidades da Pure Pilates</p>
+            <h1 className="text-2xl font-heading font-bold">Feed da Sede</h1>
+            <p className="text-muted-foreground">Acompanhe as novidades da sede Pure Pilates</p>
           </div>
           <CreatePostDialog onPostCreated={fetchPosts} />
         </div>

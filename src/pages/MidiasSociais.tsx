@@ -168,17 +168,18 @@ const MidiasSociais = () => {
   };
 
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const weekDaysShort = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
   return (
     <MainLayout>
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Mídias Sociais</h1>
-            <p className="text-muted-foreground mt-1">Calendário de conteúdos para redes sociais</p>
+            <h1 className="text-xl sm:text-3xl font-bold text-foreground">Mídias Sociais</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">Calendário de conteúdos para redes sociais</p>
           </div>
           {isColaborador && (
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Novo Conteúdo
             </Button>
@@ -186,34 +187,35 @@ const MidiasSociais = () => {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-4 mb-6">
+        <div className="flex flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-6">
           {Object.entries(TAG_LABELS).map(([key, label]) => (
-            <div key={key} className="flex items-center gap-2">
-              <span className={cn("w-4 h-4 rounded", TAG_LEGEND_COLORS[key])} />
-              <span className="text-sm text-muted-foreground">{label}</span>
+            <div key={key} className="flex items-center gap-1.5 sm:gap-2">
+              <span className={cn("w-3 h-3 sm:w-4 sm:h-4 rounded", TAG_LEGEND_COLORS[key])} />
+              <span className="text-xs sm:text-sm text-muted-foreground">{label}</span>
             </div>
           ))}
         </div>
 
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
           {/* Month Navigation */}
-          <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30">
-            <Button variant="ghost" size="icon" onClick={handlePreviousMonth}>
-              <ChevronLeft className="h-5 w-5" />
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border bg-muted/30">
+            <Button variant="ghost" size="icon" onClick={handlePreviousMonth} className="h-8 w-8 sm:h-10 sm:w-10">
+              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
-            <h2 className="text-xl font-semibold capitalize">
+            <h2 className="text-base sm:text-xl font-semibold capitalize">
               {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
             </h2>
-            <Button variant="ghost" size="icon" onClick={handleNextMonth}>
-              <ChevronRight className="h-5 w-5" />
+            <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8 sm:h-10 sm:w-10">
+              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </div>
 
           {/* Week Days Header */}
           <div className="grid grid-cols-7 border-b border-border">
-            {weekDays.map(day => (
-              <div key={day} className="p-3 text-center text-sm font-medium text-muted-foreground bg-muted/20">
-                {day}
+            {weekDays.map((day, index) => (
+              <div key={day} className="p-1.5 sm:p-3 text-center text-xs sm:text-sm font-medium text-muted-foreground bg-muted/20">
+                <span className="hidden sm:inline">{day}</span>
+                <span className="sm:hidden">{weekDaysShort[index]}</span>
               </div>
             ))}
           </div>
@@ -221,7 +223,7 @@ const MidiasSociais = () => {
           {/* Calendar Grid */}
           <div className="grid grid-cols-7">
             {paddingDays.map((_, index) => (
-              <div key={`padding-${index}`} className="min-h-28 p-2 border-b border-r border-border bg-muted/10" />
+              <div key={`padding-${index}`} className="min-h-16 sm:min-h-24 md:min-h-28 p-1 sm:p-2 border-b border-r border-border bg-muted/10" />
             ))}
             {daysInMonth.map(day => {
               const dayContent = getContentForDay(day);
@@ -233,19 +235,19 @@ const MidiasSociais = () => {
                   key={day.toISOString()}
                   onClick={() => handleDayClick(day)}
                   className={cn(
-                    "min-h-28 p-2 border-b border-r border-border cursor-pointer transition-colors hover:bg-accent/50",
+                    "min-h-16 sm:min-h-24 md:min-h-28 p-1 sm:p-2 border-b border-r border-border cursor-pointer transition-colors hover:bg-accent/50",
                     !isSameMonth(day, currentDate) && "bg-muted/20 text-muted-foreground",
                     isDayToday && "bg-primary/5"
                   )}
                 >
                   <div className={cn(
-                    "text-sm font-medium mb-1",
+                    "text-xs sm:text-sm font-medium mb-0.5 sm:mb-1",
                     isDayToday && "text-primary font-bold"
                   )}>
                     {format(day, 'd')}
                   </div>
                   {hasContent && (
-                    <div className="space-y-1">
+                    <div className="space-y-0.5 sm:space-y-1">
                       {dayContent.slice(0, 2).map(c => {
                         const tag = c.tag || c.content_type;
                         const colorClass = tag && TAG_COLORS[tag] ? TAG_COLORS[tag] : 'bg-primary text-primary-foreground';
@@ -254,19 +256,19 @@ const MidiasSociais = () => {
                           <div
                             key={c.id}
                             className={cn(
-                              "text-xs p-1.5 rounded font-medium flex items-center gap-1",
+                              "text-[10px] sm:text-xs p-1 sm:p-1.5 rounded font-medium flex items-center gap-0.5 sm:gap-1",
                               colorClass
                             )}
                             title={c.title}
                           >
-                            <TagIcon className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{c.title}</span>
+                            <TagIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />
+                            <span className="truncate hidden sm:inline">{c.title}</span>
                           </div>
                         );
                       })}
                       {dayContent.length > 2 && (
-                        <div className="text-xs text-muted-foreground">
-                          +{dayContent.length - 2} mais
+                        <div className="text-[10px] sm:text-xs text-muted-foreground">
+                          +{dayContent.length - 2}
                         </div>
                       )}
                     </div>
