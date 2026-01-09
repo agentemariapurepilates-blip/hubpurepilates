@@ -29,12 +29,6 @@ interface CreateSocialMediaDialogProps {
 }
 
 const contentTypes = [
-  { value: 'video', label: 'Vídeo' },
-  { value: 'image', label: 'Imagem' },
-  { value: 'document', label: 'Documento' },
-];
-
-const contentTags = [
   { value: 'reels', label: 'Reels', color: 'bg-purple-500' },
   { value: 'desafio_semana', label: 'Desafio da Semana', color: 'bg-red-500' },
   { value: 'carrossel', label: 'Carrossel', color: 'bg-teal-500' },
@@ -51,16 +45,14 @@ const CreateSocialMediaDialog = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [googleDriveUrl, setGoogleDriveUrl] = useState('');
-  const [contentType, setContentType] = useState('video');
-  const [tag, setTag] = useState<string>('');
+  const [contentType, setContentType] = useState<string>('');
   const [postingDate, setPostingDate] = useState('');
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setGoogleDriveUrl('');
-    setContentType('video');
-    setTag('');
+    setContentType('');
     setPostingDate('');
   };
 
@@ -72,7 +64,7 @@ const CreateSocialMediaDialog = ({
       return;
     }
 
-    if (!title || !postingDate || !tag) {
+    if (!title || !postingDate || !contentType) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
@@ -87,7 +79,7 @@ const CreateSocialMediaDialog = ({
       posting_date: postingDate,
       start_date: postingDate,
       end_date: postingDate,
-      tag: tag as 'reels' | 'desafio_semana' | 'carrossel',
+      tag: contentType as 'reels' | 'desafio_semana' | 'carrossel',
       user_id: user.id,
     });
 
@@ -137,13 +129,13 @@ const CreateSocialMediaDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tag">Tag *</Label>
-            <Select value={tag} onValueChange={setTag}>
+            <Label htmlFor="contentType">Tipo de Conteúdo *</Label>
+            <Select value={contentType} onValueChange={setContentType}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione uma tag" />
+                <SelectValue placeholder="Selecione um tipo" />
               </SelectTrigger>
               <SelectContent>
-                {contentTags.map((t) => (
+                {contentTypes.map((t) => (
                   <SelectItem key={t.value} value={t.value}>
                     <div className="flex items-center gap-2">
                       <span className={`w-3 h-3 rounded-full ${t.color}`} />
@@ -164,22 +156,6 @@ const CreateSocialMediaDialog = ({
               placeholder="Descreva o conteúdo..."
               rows={3}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="contentType">Tipo de Conteúdo</Label>
-            <Select value={contentType} onValueChange={setContentType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {contentTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
