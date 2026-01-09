@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Plus, Video, Image, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, parseISO, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import CreateSocialMediaDialog from '@/components/social-media/CreateContentDialog';
@@ -35,11 +35,6 @@ const TAG_CONFIG: Record<string, { label: string; bgColor: string }> = {
   carrossel: { label: 'Carrossel', bgColor: 'bg-teal-500' },
 };
 
-const CONTENT_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  video: Video,
-  image: Image,
-  document: FileText,
-};
 
 const MidiasSociais = () => {
   const { isColaborador } = useAuth();
@@ -142,12 +137,6 @@ const MidiasSociais = () => {
     setIsEditDialogOpen(true);
   };
 
-  const upcomingContent = content
-    .filter((c) => {
-      const contentDate = c.posting_date ? parseISO(c.posting_date) : parseISO(c.start_date);
-      return contentDate >= new Date();
-    })
-    .slice(0, 5);
 
   return (
     <MainLayout>
@@ -165,121 +154,89 @@ const MidiasSociais = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Calendar */}
-          <Card className="card-pure lg:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">
-                {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" onClick={handleNextMonth}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-7 gap-1 mb-2">
-                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
-                  <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
-                    {day}
-                  </div>
-                ))}
-              </div>
+        {/* Calendar */}
+        <Card className="card-pure">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg capitalize">
+              {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={handleNextMonth}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Legend */}
+            <div className="flex flex-wrap gap-3 mb-4 pb-4 border-b">
+              {Object.entries(TAG_CONFIG).map(([key, config]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <span className={`w-3 h-3 rounded-full ${config.bgColor}`} />
+                  <span className="text-sm text-muted-foreground">{config.label}</span>
+                </div>
+              ))}
+            </div>
 
-              <div className="grid grid-cols-7 gap-1">
-                {paddingDays.map((_, index) => (
-                  <div key={`padding-${index}`} className="aspect-square p-1" />
-                ))}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+                  {day}
+                </div>
+              ))}
+            </div>
 
-                {daysInMonth.map((date) => {
-                  const dayContent = getContentForDay(date);
-                  const hasContent = dayContent.length > 0;
+            <div className="grid grid-cols-7 gap-1">
+              {paddingDays.map((_, index) => (
+                <div key={`padding-${index}`} className="min-h-[80px] p-1" />
+              ))}
 
-                  return (
-                    <button
-                      key={date.toISOString()}
-                      onClick={() => handleDayClick(date)}
-                      className={`
-                        aspect-square p-1 rounded-lg text-sm transition-colors relative
-                        ${isToday(date) ? 'bg-primary text-primary-foreground font-bold' : ''}
-                        ${!isSameMonth(date, currentDate) ? 'text-muted-foreground/50' : ''}
-                        ${hasContent ? 'bg-accent/50 hover:bg-accent' : 'hover:bg-muted'}
-                      `}
-                    >
-                      <span className="block">{format(date, 'd')}</span>
-                      {hasContent && (
-                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                          {dayContent.slice(0, 3).map((c, i) => {
-                            const tagConfig = c.tag ? TAG_CONFIG[c.tag] : null;
-                            return (
-                              <span 
-                                key={i} 
-                                className={`w-2 h-2 rounded-full ${tagConfig?.bgColor || 'bg-primary'}`} 
-                              />
-                            );
-                          })}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+              {daysInMonth.map((date) => {
+                const dayContent = getContentForDay(date);
+                const hasContent = dayContent.length > 0;
 
-          {/* Upcoming Content */}
-          <Card className="card-pure">
-            <CardHeader>
-              <CardTitle className="text-lg">Próximos Conteúdos</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {loading ? (
-                <p className="text-muted-foreground text-sm">Carregando...</p>
-              ) : upcomingContent.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Nenhum conteúdo programado</p>
-              ) : (
-                upcomingContent.map((c) => {
-                  const Icon = CONTENT_TYPE_ICONS[c.content_type || 'video'] || Video;
-                  const tagConfig = c.tag ? TAG_CONFIG[c.tag] : null;
-                  const contentDate = c.posting_date ? parseISO(c.posting_date) : parseISO(c.start_date);
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => {
-                        setSelectedContent(c);
-                        setIsDetailsDialogOpen(true);
-                      }}
-                      className="w-full text-left p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-md bg-primary/10">
-                          <Icon className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-sm truncate">{c.title}</p>
-                            {tagConfig && (
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full text-white ${tagConfig.bgColor}`}>
-                                {tagConfig.label}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {format(contentDate, 'dd/MM/yyyy', { locale: ptBR })}
-                          </p>
-                        </div>
+                return (
+                  <button
+                    key={date.toISOString()}
+                    onClick={() => handleDayClick(date)}
+                    className={`
+                      min-h-[80px] p-1 rounded-lg text-sm transition-colors flex flex-col
+                      ${isToday(date) ? 'ring-2 ring-primary' : ''}
+                      ${!isSameMonth(date, currentDate) ? 'text-muted-foreground/50' : ''}
+                      ${hasContent ? 'bg-muted/30 hover:bg-muted/50' : 'hover:bg-muted/30'}
+                    `}
+                  >
+                    <span className={`text-xs font-medium mb-1 ${isToday(date) ? 'text-primary font-bold' : ''}`}>
+                      {format(date, 'd')}
+                    </span>
+                    {hasContent && (
+                      <div className="flex flex-col gap-0.5 flex-1">
+                        {dayContent.slice(0, 2).map((c, i) => {
+                          const tagConfig = c.tag ? TAG_CONFIG[c.tag] : (c.content_type ? TAG_CONFIG[c.content_type] : null);
+                          return (
+                            <span 
+                              key={i} 
+                              className={`text-[10px] px-1 py-0.5 rounded text-white truncate ${tagConfig?.bgColor || 'bg-primary'}`}
+                            >
+                              {tagConfig?.label || 'Conteúdo'}
+                            </span>
+                          );
+                        })}
+                        {dayContent.length > 2 && (
+                          <span className="text-[10px] text-muted-foreground">
+                            +{dayContent.length - 2} mais
+                          </span>
+                        )}
                       </div>
-                    </button>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Create Dialog */}
         <CreateSocialMediaDialog
