@@ -333,7 +333,9 @@ export type Database = {
           end_date: string
           google_drive_url: string | null
           id: string
+          posting_date: string | null
           start_date: string
+          tag: Database["public"]["Enums"]["social_media_tag"] | null
           title: string
           updated_at: string
           user_id: string
@@ -345,7 +347,9 @@ export type Database = {
           end_date: string
           google_drive_url?: string | null
           id?: string
+          posting_date?: string | null
           start_date: string
+          tag?: Database["public"]["Enums"]["social_media_tag"] | null
           title: string
           updated_at?: string
           user_id: string
@@ -357,7 +361,9 @@ export type Database = {
           end_date?: string
           google_drive_url?: string | null
           id?: string
+          posting_date?: string | null
           start_date?: string
+          tag?: Database["public"]["Enums"]["social_media_tag"] | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -408,6 +414,7 @@ export type Database = {
         | "expansao"
         | "consultoras"
         | "implantacao"
+      social_media_tag: "reels" | "desafio_semana" | "carrossel"
       user_type: "colaborador" | "franqueado"
     }
     CompositeTypes: {
@@ -549,6 +556,7 @@ export const Constants = {
         "consultoras",
         "implantacao",
       ],
+      social_media_tag: ["reels", "desafio_semana", "carrossel"],
       user_type: ["colaborador", "franqueado"],
     },
   },

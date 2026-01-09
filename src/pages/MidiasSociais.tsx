@@ -17,6 +17,8 @@ interface SocialMediaContent {
   description: string | null;
   google_drive_url: string | null;
   content_type: string | null;
+  posting_date: string | null;
+  tag: 'reels' | 'desafio_semana' | 'carrossel' | null;
   start_date: string;
   end_date: string;
   user_id: string;
@@ -26,6 +28,12 @@ interface SocialMediaContent {
     email: string;
   } | null;
 }
+
+const TAG_CONFIG: Record<string, { label: string; bgColor: string }> = {
+  reels: { label: 'Reels', bgColor: 'bg-purple-500' },
+  desafio_semana: { label: 'Desafio', bgColor: 'bg-red-500' },
+  carrossel: { label: 'Carrossel', bgColor: 'bg-teal-500' },
+};
 
 const CONTENT_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   video: Video,
@@ -113,9 +121,8 @@ const MidiasSociais = () => {
 
   const getContentForDay = (date: Date) => {
     return content.filter((c) => {
-      const startDate = parseISO(c.start_date);
-      const endDate = parseISO(c.end_date);
-      return date >= startDate && date <= endDate;
+      const contentDate = c.posting_date ? parseISO(c.posting_date) : parseISO(c.start_date);
+      return isSameDay(date, contentDate);
     });
   };
 
@@ -136,7 +143,10 @@ const MidiasSociais = () => {
   };
 
   const upcomingContent = content
-    .filter((c) => parseISO(c.start_date) >= new Date())
+    .filter((c) => {
+      const contentDate = c.posting_date ? parseISO(c.posting_date) : parseISO(c.start_date);
+      return contentDate >= new Date();
+    })
     .slice(0, 5);
 
   return (
@@ -204,9 +214,12 @@ const MidiasSociais = () => {
                       {hasContent && (
                         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
                           {dayContent.slice(0, 3).map((c, i) => {
-                            const Icon = CONTENT_TYPE_ICONS[c.content_type || 'video'] || Video;
+                            const tagConfig = c.tag ? TAG_CONFIG[c.tag] : null;
                             return (
-                              <Icon key={i} className="h-3 w-3 text-primary" />
+                              <span 
+                                key={i} 
+                                className={`w-2 h-2 rounded-full ${tagConfig?.bgColor || 'bg-primary'}`} 
+                              />
                             );
                           })}
                         </div>
@@ -231,6 +244,8 @@ const MidiasSociais = () => {
               ) : (
                 upcomingContent.map((c) => {
                   const Icon = CONTENT_TYPE_ICONS[c.content_type || 'video'] || Video;
+                  const tagConfig = c.tag ? TAG_CONFIG[c.tag] : null;
+                  const contentDate = c.posting_date ? parseISO(c.posting_date) : parseISO(c.start_date);
                   return (
                     <button
                       key={c.id}
@@ -245,9 +260,16 @@ const MidiasSociais = () => {
                           <Icon className="h-4 w-4 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{c.title}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm truncate">{c.title}</p>
+                            {tagConfig && (
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full text-white ${tagConfig.bgColor}`}>
+                                {tagConfig.label}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">
-                            {format(parseISO(c.start_date), 'dd/MM/yyyy', { locale: ptBR })}
+                            {format(contentDate, 'dd/MM/yyyy', { locale: ptBR })}
                           </p>
                         </div>
                       </div>
