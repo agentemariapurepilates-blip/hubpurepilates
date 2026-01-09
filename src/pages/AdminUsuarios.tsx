@@ -185,13 +185,14 @@ const AdminUsuarios = () => {
   };
 
   const approveUser = async (userId: string, approvedType: UserType) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .update({ 
         is_approved: true,
         user_type: approvedType
       })
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .select();
 
     if (error) {
       toast.error('Erro ao aprovar usuário');
@@ -199,14 +200,16 @@ const AdminUsuarios = () => {
       return;
     }
 
+    // Verificar se realmente atualizou alguma linha
+    if (!data || data.length === 0) {
+      toast.error('Não foi possível aprovar o usuário. Verifique suas permissões.');
+      console.error('No rows updated - RLS may be blocking the update');
+      return;
+    }
+
     toast.success('Usuário aprovado com sucesso!');
-    setUsers((prev) =>
-      prev.map((u) => 
-        u.user_id === userId 
-          ? { ...u, is_approved: true, user_type: approvedType } 
-          : u
-      )
-    );
+    // Recarregar dados do banco para garantir consistência
+    await fetchUsers();
   };
 
   const rejectUser = async (userId: string) => {
