@@ -41,6 +41,72 @@ interface UserProfile {
   isAdmin: boolean;
 }
 
+// Component for pending user row with its own state
+const PendingUserRow = ({
+  user,
+  onApprove,
+  onReject,
+}: {
+  user: UserProfile;
+  onApprove: (userId: string, type: UserType) => void;
+  onReject: (userId: string) => void;
+}) => {
+  const [selectedType, setSelectedType] = useState<UserType>(
+    user.requested_user_type || 'colaborador'
+  );
+
+  return (
+    <TableRow>
+      <TableCell className="font-medium">
+        {user.full_name || 'Sem nome'}
+      </TableCell>
+      <TableCell>{user.email}</TableCell>
+      <TableCell>
+        <Badge variant="outline">
+          {user.requested_user_type === 'franqueado' ? 'Franqueado' : 'Colaborador'}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {new Date(user.created_at).toLocaleDateString('pt-BR')}
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center gap-2 justify-end">
+          <Select
+            value={selectedType}
+            onValueChange={(value) => setSelectedType(value as UserType)}
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="colaborador">Colaborador</SelectItem>
+              <SelectItem value="franqueado">Franqueado</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="default"
+            size="sm"
+            className="gap-1 bg-green-600 hover:bg-green-700"
+            onClick={() => onApprove(user.user_id, selectedType)}
+          >
+            <CheckCircle className="h-4 w-4" />
+            Aprovar
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="gap-1"
+            onClick={() => onReject(user.user_id)}
+          >
+            <XCircle className="h-4 w-4" />
+            Reprovar
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+};
+
 const AdminUsuarios = () => {
   const { isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -312,54 +378,12 @@ const AdminUsuarios = () => {
                       </TableRow>
                     ) : (
                       pendingUsers.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-medium">
-                            {user.full_name || 'Sem nome'}
-                          </TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {user.requested_user_type === 'franqueado' ? 'Franqueado' : 'Colaborador'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {new Date(user.created_at).toLocaleDateString('pt-BR')}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center gap-2 justify-end">
-                              <Select
-                                defaultValue={user.requested_user_type || 'colaborador'}
-                                onValueChange={(value) => approveUser(user.user_id, value as UserType)}
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue placeholder="Aprovar como..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="colaborador">
-                                    <span className="flex items-center gap-2">
-                                      <CheckCircle className="h-4 w-4 text-green-500" />
-                                      Colaborador
-                                    </span>
-                                  </SelectItem>
-                                  <SelectItem value="franqueado">
-                                    <span className="flex items-center gap-2">
-                                      <CheckCircle className="h-4 w-4 text-green-500" />
-                                      Franqueado
-                                    </span>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => rejectUser(user.user_id)}
-                              >
-                                <XCircle className="h-5 w-5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                        <PendingUserRow
+                          key={user.id}
+                          user={user}
+                          onApprove={approveUser}
+                          onReject={rejectUser}
+                        />
                       ))
                     )}
                   </TableBody>
