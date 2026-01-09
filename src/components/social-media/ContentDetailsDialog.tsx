@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Download, Edit, Trash2, User, Video, Image, FileText } from 'lucide-react';
+import { Calendar, Download, Edit, Trash2, User, Video } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -51,18 +51,6 @@ interface ContentDetailsDialogProps {
   onEditClick: () => void;
 }
 
-const CONTENT_TYPE_LABELS: Record<string, string> = {
-  video: 'Vídeo',
-  image: 'Imagem',
-  document: 'Documento',
-};
-
-const CONTENT_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  video: Video,
-  image: Image,
-  document: FileText,
-};
-
 const TAG_CONFIG: Record<string, { label: string; className: string }> = {
   reels: { label: 'Reels', className: 'bg-purple-500 text-white hover:bg-purple-600' },
   desafio_semana: { label: 'Desafio da Semana', className: 'bg-red-500 text-white hover:bg-red-600' },
@@ -84,8 +72,7 @@ const ContentDetailsDialog = ({
 
   const postingDate = content.posting_date ? parseISO(content.posting_date) : parseISO(content.start_date);
   const canEdit = isColaborador && (user?.id === content.user_id || isAdmin);
-  const Icon = CONTENT_TYPE_ICONS[content.content_type || 'video'] || Video;
-  const tagConfig = content.tag ? TAG_CONFIG[content.tag] : null;
+  const tagConfig = content.tag ? TAG_CONFIG[content.tag] : (content.content_type ? TAG_CONFIG[content.content_type] : null);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -117,7 +104,7 @@ const ContentDetailsDialog = ({
           <DialogHeader>
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <Icon className="h-5 w-5 text-primary" />
+                <Video className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <DialogTitle className="text-xl">{content.title}</DialogTitle>
@@ -127,9 +114,6 @@ const ContentDetailsDialog = ({
                       {tagConfig.label}
                     </Badge>
                   )}
-                  <Badge variant="secondary">
-                    {CONTENT_TYPE_LABELS[content.content_type || 'video'] || 'Vídeo'}
-                  </Badge>
                 </div>
               </div>
             </div>

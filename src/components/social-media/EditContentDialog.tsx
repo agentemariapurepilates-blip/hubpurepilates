@@ -41,12 +41,6 @@ interface EditContentDialogProps {
 }
 
 const contentTypes = [
-  { value: 'video', label: 'Vídeo' },
-  { value: 'image', label: 'Imagem' },
-  { value: 'document', label: 'Documento' },
-];
-
-const contentTags = [
   { value: 'reels', label: 'Reels', color: 'bg-purple-500' },
   { value: 'desafio_semana', label: 'Desafio da Semana', color: 'bg-red-500' },
   { value: 'carrossel', label: 'Carrossel', color: 'bg-teal-500' },
@@ -62,8 +56,7 @@ const EditContentDialog = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [googleDriveUrl, setGoogleDriveUrl] = useState('');
-  const [contentType, setContentType] = useState('video');
-  const [tag, setTag] = useState<string>('');
+  const [contentType, setContentType] = useState('');
   const [postingDate, setPostingDate] = useState('');
 
   useEffect(() => {
@@ -71,8 +64,7 @@ const EditContentDialog = ({
       setTitle(content.title);
       setDescription(content.description || '');
       setGoogleDriveUrl(content.google_drive_url || '');
-      setContentType(content.content_type || 'video');
-      setTag(content.tag || '');
+      setContentType(content.tag || content.content_type || '');
       setPostingDate(content.posting_date || content.start_date);
     }
   }, [content, open]);
@@ -82,7 +74,7 @@ const EditContentDialog = ({
 
     if (!content) return;
 
-    if (!title || !postingDate || !tag) {
+    if (!title || !postingDate || !contentType) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
@@ -99,7 +91,7 @@ const EditContentDialog = ({
         posting_date: postingDate,
         start_date: postingDate,
         end_date: postingDate,
-        tag: tag as 'reels' | 'desafio_semana' | 'carrossel',
+        tag: contentType as 'reels' | 'desafio_semana' | 'carrossel',
       })
       .eq('id', content.id);
 
@@ -137,13 +129,13 @@ const EditContentDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-tag">Tag *</Label>
-            <Select value={tag} onValueChange={setTag}>
+            <Label htmlFor="edit-contentType">Tipo de Conteúdo *</Label>
+            <Select value={contentType} onValueChange={setContentType}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione uma tag" />
+                <SelectValue placeholder="Selecione um tipo" />
               </SelectTrigger>
               <SelectContent>
-                {contentTags.map((t) => (
+                {contentTypes.map((t) => (
                   <SelectItem key={t.value} value={t.value}>
                     <div className="flex items-center gap-2">
                       <span className={`w-3 h-3 rounded-full ${t.color}`} />
@@ -163,22 +155,6 @@ const EditContentDialog = ({
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="edit-contentType">Tipo de Conteúdo</Label>
-            <Select value={contentType} onValueChange={setContentType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {contentTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
