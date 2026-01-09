@@ -1,24 +1,60 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Newspaper, GraduationCap, BarChart3, ArrowRight } from 'lucide-react';
+import { Newspaper, BarChart3, ArrowRight, CalendarDays, Video, User } from 'lucide-react';
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user, loading, isApproved, isColaborador } = useAuth();
 
-  const quickLinks = [
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+    if (!loading && user && !isApproved) {
+      navigate('/aguardando-aprovacao');
+    }
+  }, [user, loading, isApproved, navigate]);
+
+  // Quick links para colaboradores (acesso total)
+  const colaboradorLinks = [
     { title: 'Feed', description: 'Acompanhe as novidades', icon: Newspaper, href: '/feed', color: 'bg-primary/10 text-primary' },
-    { title: 'Onboarding', description: 'Trilhas de integração', icon: GraduationCap, href: '/onboarding', color: 'bg-sector-academy/10 text-sector-academy' },
-    { title: 'Métricas', description: 'Indicadores gerais', icon: BarChart3, href: '/metricas', color: 'bg-sector-franchising/10 text-sector-franchising' },
+    { title: 'Calendário de Marketing', description: 'Eventos e campanhas', icon: CalendarDays, href: '/calendario-marketing', color: 'bg-sector-academy/10 text-sector-academy' },
+    { title: 'Mídias Sociais', description: 'Conteúdos para redes', icon: Video, href: '/midias-sociais', color: 'bg-sector-franchising/10 text-sector-franchising' },
+    { title: 'Métricas', description: 'Indicadores gerais', icon: BarChart3, href: '/metricas', color: 'bg-primary/10 text-primary' },
   ];
+
+  // Quick links para franqueados (acesso limitado)
+  const franqueadoLinks = [
+    { title: 'Calendário de Marketing', description: 'Eventos e campanhas', icon: CalendarDays, href: '/calendario-marketing', color: 'bg-sector-academy/10 text-sector-academy' },
+    { title: 'Mídias Sociais', description: 'Conteúdos para redes', icon: Video, href: '/midias-sociais', color: 'bg-sector-franchising/10 text-sector-franchising' },
+    { title: 'Meu Perfil', description: 'Suas informações', icon: User, href: '/perfil', color: 'bg-primary/10 text-primary' },
+  ];
+
+  const quickLinks = isColaborador ? colaboradorLinks : franqueadoLinks;
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-heading font-bold">Bem-vindo à Central Pure Pilates</h1>
-          <p className="text-muted-foreground mt-2">Sua plataforma de comunicação interna</p>
+          <p className="text-muted-foreground mt-2">
+            {isColaborador 
+              ? 'Sua plataforma de comunicação interna' 
+              : 'Portal do Franqueado Pure Pilates'}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

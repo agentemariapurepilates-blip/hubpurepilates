@@ -258,6 +258,8 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          is_approved: boolean | null
+          requested_user_type: Database["public"]["Enums"]["user_type"] | null
           sector: string | null
           updated_at: string
           user_id: string
@@ -269,6 +271,8 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          is_approved?: boolean | null
+          requested_user_type?: Database["public"]["Enums"]["user_type"] | null
           sector?: string | null
           updated_at?: string
           user_id: string
@@ -280,6 +284,8 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          is_approved?: boolean | null
+          requested_user_type?: Database["public"]["Enums"]["user_type"] | null
           sector?: string | null
           updated_at?: string
           user_id?: string
