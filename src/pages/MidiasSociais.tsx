@@ -3,7 +3,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus,
+  Video,
+  Image,
+  Target,
+  LayoutGrid,
+  LucideIcon,
+} from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, parseISO, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import CreateSocialMediaDialog from '@/components/social-media/CreateContentDialog';
@@ -18,7 +27,7 @@ interface SocialMediaContent {
   google_drive_url: string | null;
   content_type: string | null;
   posting_date: string | null;
-  tag: 'reels' | 'desafio_semana' | 'carrossel' | null;
+  tag: 'reels' | 'desafio_semana' | 'carrossel' | 'estatico' | null;
   start_date: string;
   end_date: string;
   user_id: string;
@@ -33,18 +42,28 @@ const TAG_LABELS: Record<string, string> = {
   reels: 'Reels',
   desafio_semana: 'Desafio da Semana',
   carrossel: 'Carrossel',
+  estatico: 'Estático',
 };
 
 const TAG_COLORS: Record<string, string> = {
   reels: 'bg-purple-500 text-white',
   desafio_semana: 'bg-red-500 text-white',
   carrossel: 'bg-teal-500 text-white',
+  estatico: 'bg-blue-500 text-white',
 };
 
 const TAG_LEGEND_COLORS: Record<string, string> = {
   reels: 'bg-purple-500',
   desafio_semana: 'bg-red-500',
   carrossel: 'bg-teal-500',
+  estatico: 'bg-blue-500',
+};
+
+const TAG_ICONS: Record<string, LucideIcon> = {
+  reels: Video,
+  desafio_semana: Target,
+  carrossel: LayoutGrid,
+  estatico: Image,
 };
 
 const MidiasSociais = () => {
@@ -230,16 +249,18 @@ const MidiasSociais = () => {
                       {dayContent.slice(0, 2).map(c => {
                         const tag = c.tag || c.content_type;
                         const colorClass = tag && TAG_COLORS[tag] ? TAG_COLORS[tag] : 'bg-primary text-primary-foreground';
+                        const TagIcon = tag && TAG_ICONS[tag] ? TAG_ICONS[tag] : Video;
                         return (
                           <div
                             key={c.id}
                             className={cn(
-                              "text-xs p-1.5 rounded truncate font-medium",
+                              "text-xs p-1.5 rounded font-medium flex items-center gap-1",
                               colorClass
                             )}
                             title={c.title}
                           >
-                            {c.title}
+                            <TagIcon className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{c.title}</span>
                           </div>
                         );
                       })}

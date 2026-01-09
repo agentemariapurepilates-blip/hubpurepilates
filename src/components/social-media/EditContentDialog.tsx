@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { Video, Image, Target, LayoutGrid, LucideIcon } from 'lucide-react';
 
 interface SocialMediaContent {
   id: string;
@@ -26,7 +27,7 @@ interface SocialMediaContent {
   google_drive_url: string | null;
   content_type: string | null;
   posting_date: string | null;
-  tag: 'reels' | 'desafio_semana' | 'carrossel' | null;
+  tag: 'reels' | 'desafio_semana' | 'carrossel' | 'estatico' | null;
   start_date: string;
   end_date: string;
   user_id: string;
@@ -40,10 +41,11 @@ interface EditContentDialogProps {
   onContentUpdated: () => void;
 }
 
-const contentTypes = [
-  { value: 'reels', label: 'Reels', color: 'bg-purple-500' },
-  { value: 'desafio_semana', label: 'Desafio da Semana', color: 'bg-red-500' },
-  { value: 'carrossel', label: 'Carrossel', color: 'bg-teal-500' },
+const contentTypes: { value: string; label: string; color: string; icon: LucideIcon }[] = [
+  { value: 'reels', label: 'Reels', color: 'bg-purple-500', icon: Video },
+  { value: 'desafio_semana', label: 'Desafio da Semana', color: 'bg-red-500', icon: Target },
+  { value: 'carrossel', label: 'Carrossel', color: 'bg-teal-500', icon: LayoutGrid },
+  { value: 'estatico', label: 'Estático', color: 'bg-blue-500', icon: Image },
 ];
 
 const EditContentDialog = ({
@@ -91,7 +93,7 @@ const EditContentDialog = ({
         posting_date: postingDate,
         start_date: postingDate,
         end_date: postingDate,
-        tag: contentType as 'reels' | 'desafio_semana' | 'carrossel',
+        tag: contentType as 'reels' | 'desafio_semana' | 'carrossel' | 'estatico',
       })
       .eq('id', content.id);
 
@@ -139,6 +141,7 @@ const EditContentDialog = ({
                   <SelectItem key={t.value} value={t.value}>
                     <div className="flex items-center gap-2">
                       <span className={`w-3 h-3 rounded-full ${t.color}`} />
+                      <t.icon className="h-4 w-4" />
                       {t.label}
                     </div>
                   </SelectItem>
@@ -148,7 +151,7 @@ const EditContentDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-description">Descrição</Label>
+            <Label htmlFor="edit-description">Legenda da Publicação</Label>
             <Textarea
               id="edit-description"
               value={description}
