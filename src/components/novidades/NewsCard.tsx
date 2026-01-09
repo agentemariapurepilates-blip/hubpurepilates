@@ -10,7 +10,7 @@ import ReadNewsDialog from './ReadNewsDialog';
 import EditNewsDialog from './EditNewsDialog';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Pencil, Trash2, ArrowRight, ImageIcon } from 'lucide-react';
+import { Pencil, Trash2, ArrowRight } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -119,48 +119,44 @@ const NewsCard = ({ post, onPostUpdated }: NewsCardProps) => {
   return (
     <>
       <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-200">
-        <div className="flex flex-col sm:flex-row">
-          {/* Cover Image */}
-          <div className="sm:w-48 h-40 sm:h-auto flex-shrink-0 bg-muted relative">
-            {coverImage ? (
+        <div className="flex flex-col">
+          {/* Cover Image - Full width at top */}
+          {coverImage && (
+            <div className="w-full h-48 sm:h-56 bg-muted relative">
               <img
                 src={coverImage}
                 alt={post.title}
                 className="w-full h-full object-cover"
               />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Content */}
-          <CardContent className="flex-1 p-4 sm:p-5 flex flex-col">
+          <CardContent className="p-5 sm:p-6">
             {/* Sector Badge */}
-            <div className="mb-2">
+            <div className="mb-3">
               <SectorBadge sector={post.sector} />
             </div>
 
             {/* Title */}
-            <h3 className="font-heading font-semibold text-lg mb-2 line-clamp-2">
+            <h3 className="font-heading font-semibold text-xl sm:text-2xl mb-3">
               {post.title}
             </h3>
 
             {/* Short Description */}
-            <p className="text-sm text-muted-foreground mb-3 line-clamp-2 flex-1">
+            <p className="text-muted-foreground mb-4 line-clamp-3">
               {shortDescription}
             </p>
 
             {/* Author and Date */}
-            <div className="flex items-center gap-2 mb-3">
-              <Avatar className="h-6 w-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Avatar className="h-8 w-8">
                 <AvatarImage src={post.profiles?.avatar_url || undefined} />
-                <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                <AvatarFallback className="text-xs bg-primary/10 text-primary">
                   {authorInitials}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm text-muted-foreground">
                 {authorName} • {formatDistanceToNow(new Date(post.created_at), { 
                   addSuffix: true, 
                   locale: ptBR 
@@ -169,38 +165,37 @@ const NewsCard = ({ post, onPostUpdated }: NewsCardProps) => {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 pt-3 border-t">
               <Button 
                 variant="default" 
-                size="sm"
-                className="gap-1"
+                className="gap-2"
                 onClick={() => setShowReadDialog(true)}
               >
                 Ler mais
-                <ArrowRight className="h-3 w-3" />
+                <ArrowRight className="h-4 w-4" />
               </Button>
 
               {isOwner && (
                 <>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     className="gap-1"
                     onClick={() => setShowEditDialog(true)}
                   >
-                    <Pencil className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Editar</span>
+                    <Pencil className="h-4 w-4" />
+                    Editar
                   </Button>
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         className="text-destructive hover:text-destructive gap-1"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Excluir</span>
+                        <Trash2 className="h-4 w-4" />
+                        Excluir
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>

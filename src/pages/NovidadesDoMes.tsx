@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/layout/MainLayout';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkles, MessageCircle } from 'lucide-react';
@@ -274,16 +274,16 @@ const NovidadesDoMes = () => {
 
         {/* Posts grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-6">
             {[1, 2, 3, 4].map((i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-32 w-full" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-4 w-3/4 mb-2" />
+              <Card key={i} className="overflow-hidden">
+                <Skeleton className="h-48 w-full" />
+                <CardContent className="p-5">
+                  <Skeleton className="h-5 w-24 mb-3" />
+                  <Skeleton className="h-6 w-3/4 mb-3" />
                   <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-4 w-2/3 mb-4" />
+                  <Skeleton className="h-8 w-32" />
                 </CardContent>
               </Card>
             ))}
@@ -302,7 +302,7 @@ const NovidadesDoMes = () => {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="space-y-6">
               {paginatedPosts.map((post) => (
                 <NewsCard
                   key={post.id}
