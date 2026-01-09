@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Download, Edit, Trash2, User, Video } from 'lucide-react';
+import { Calendar, Download, Edit, Trash2, User, Video, Image, Target, LayoutGrid, LucideIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -32,7 +32,7 @@ interface SocialMediaContent {
   google_drive_url: string | null;
   content_type: string | null;
   posting_date: string | null;
-  tag: 'reels' | 'desafio_semana' | 'carrossel' | null;
+  tag: 'reels' | 'desafio_semana' | 'carrossel' | 'estatico' | null;
   start_date: string;
   end_date: string;
   user_id: string;
@@ -51,10 +51,11 @@ interface ContentDetailsDialogProps {
   onEditClick: () => void;
 }
 
-const TAG_CONFIG: Record<string, { label: string; className: string }> = {
-  reels: { label: 'Reels', className: 'bg-purple-500 text-white hover:bg-purple-600' },
-  desafio_semana: { label: 'Desafio da Semana', className: 'bg-red-500 text-white hover:bg-red-600' },
-  carrossel: { label: 'Carrossel', className: 'bg-teal-500 text-white hover:bg-teal-600' },
+const TAG_CONFIG: Record<string, { label: string; className: string; icon: LucideIcon }> = {
+  reels: { label: 'Reels', className: 'bg-purple-500 text-white hover:bg-purple-600', icon: Video },
+  desafio_semana: { label: 'Desafio da Semana', className: 'bg-red-500 text-white hover:bg-red-600', icon: Target },
+  carrossel: { label: 'Carrossel', className: 'bg-teal-500 text-white hover:bg-teal-600', icon: LayoutGrid },
+  estatico: { label: 'Estático', className: 'bg-blue-500 text-white hover:bg-blue-600', icon: Image },
 };
 
 const ContentDetailsDialog = ({
@@ -104,7 +105,11 @@ const ContentDetailsDialog = ({
           <DialogHeader>
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <Video className="h-5 w-5 text-primary" />
+                {tagConfig ? (
+                  <tagConfig.icon className="h-5 w-5 text-primary" />
+                ) : (
+                  <Video className="h-5 w-5 text-primary" />
+                )}
               </div>
               <div className="flex-1">
                 <DialogTitle className="text-xl">{content.title}</DialogTitle>

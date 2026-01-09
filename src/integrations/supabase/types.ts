@@ -414,7 +414,7 @@ export type Database = {
         | "expansao"
         | "consultoras"
         | "implantacao"
-      social_media_tag: "reels" | "desafio_semana" | "carrossel"
+      social_media_tag: "reels" | "desafio_semana" | "carrossel" | "estatico"
       user_type: "colaborador" | "franqueado"
     }
     CompositeTypes: {
@@ -556,7 +556,7 @@ export const Constants = {
         "consultoras",
         "implantacao",
       ],
-      social_media_tag: ["reels", "desafio_semana", "carrossel"],
+      social_media_tag: ["reels", "desafio_semana", "carrossel", "estatico"],
       user_type: ["colaborador", "franqueado"],
     },
   },

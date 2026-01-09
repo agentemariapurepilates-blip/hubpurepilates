@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { Video, Image, Target, LayoutGrid, LucideIcon } from 'lucide-react';
 
 interface CreateSocialMediaDialogProps {
   open: boolean;
@@ -28,10 +29,11 @@ interface CreateSocialMediaDialogProps {
   onContentCreated: () => void;
 }
 
-const contentTypes = [
-  { value: 'reels', label: 'Reels', color: 'bg-purple-500' },
-  { value: 'desafio_semana', label: 'Desafio da Semana', color: 'bg-red-500' },
-  { value: 'carrossel', label: 'Carrossel', color: 'bg-teal-500' },
+const contentTypes: { value: string; label: string; color: string; icon: LucideIcon }[] = [
+  { value: 'reels', label: 'Reels', color: 'bg-purple-500', icon: Video },
+  { value: 'desafio_semana', label: 'Desafio da Semana', color: 'bg-red-500', icon: Target },
+  { value: 'carrossel', label: 'Carrossel', color: 'bg-teal-500', icon: LayoutGrid },
+  { value: 'estatico', label: 'Estático', color: 'bg-blue-500', icon: Image },
 ];
 
 const CreateSocialMediaDialog = ({
@@ -79,7 +81,7 @@ const CreateSocialMediaDialog = ({
       posting_date: postingDate,
       start_date: postingDate,
       end_date: postingDate,
-      tag: contentType as 'reels' | 'desafio_semana' | 'carrossel',
+      tag: contentType as 'reels' | 'desafio_semana' | 'carrossel' | 'estatico',
       user_id: user.id,
     });
 
@@ -139,6 +141,7 @@ const CreateSocialMediaDialog = ({
                   <SelectItem key={t.value} value={t.value}>
                     <div className="flex items-center gap-2">
                       <span className={`w-3 h-3 rounded-full ${t.color}`} />
+                      <t.icon className="h-4 w-4" />
                       {t.label}
                     </div>
                   </SelectItem>
@@ -148,12 +151,12 @@ const CreateSocialMediaDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="description">Legenda da Publicação</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva o conteúdo..."
+              placeholder="Escreva a legenda..."
               rows={3}
             />
           </div>
