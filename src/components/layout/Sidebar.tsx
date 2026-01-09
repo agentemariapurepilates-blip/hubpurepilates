@@ -2,42 +2,51 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { 
   Home, 
   Newspaper, 
-  GraduationCap, 
   BarChart3, 
   Users, 
   LogOut,
   Menu,
   X,
   User,
-  CalendarDays
+  CalendarDays,
+  Video
 } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState } from 'react';
-
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: Home },
-  { name: 'Feed', href: '/feed', icon: Newspaper },
-  { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
-  { name: 'Onboarding', href: '/onboarding', icon: GraduationCap },
-  { name: 'Métricas', href: '/metricas', icon: BarChart3 },
-  { name: 'Perfil', href: '/perfil', icon: User },
-];
 
 const adminNavigation = [
   { name: 'Usuários', href: '/admin/usuarios', icon: Users },
 ];
 
 const Sidebar = () => {
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut, isAdmin, isColaborador, userType } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Build navigation based on user type
+  const navigation = [
+    { name: 'Dashboard', href: '/', icon: Home },
+    // Feed only for colaboradores
+    ...(isColaborador ? [{ name: 'Feed', href: '/feed', icon: Newspaper }] : []),
+    { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
+    { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
+    { name: 'Métricas', href: '/metricas', icon: BarChart3 },
+    { name: 'Perfil', href: '/perfil', icon: User },
+  ];
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
+  };
+
+  const getUserTypeLabel = () => {
+    if (isAdmin) return 'Administrador';
+    if (userType === 'franqueado') return 'Franqueado';
+    return 'Colaborador';
   };
 
   const NavContent = () => (
@@ -104,9 +113,9 @@ const Sidebar = () => {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{user?.email}</p>
-            <p className="text-xs text-muted-foreground">
-              {isAdmin ? 'Administrador' : 'Colaborador'}
-            </p>
+            <Badge variant={isAdmin ? 'default' : userType === 'franqueado' ? 'secondary' : 'outline'} className="text-xs mt-1">
+              {getUserTypeLabel()}
+            </Badge>
           </div>
         </div>
         <Button

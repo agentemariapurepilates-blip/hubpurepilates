@@ -261,6 +261,7 @@ export type Database = {
           sector: string | null
           updated_at: string
           user_id: string
+          user_type: Database["public"]["Enums"]["user_type"] | null
         }
         Insert: {
           avatar_url?: string | null
@@ -271,6 +272,7 @@ export type Database = {
           sector?: string | null
           updated_at?: string
           user_id: string
+          user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Update: {
           avatar_url?: string | null
@@ -279,6 +281,78 @@ export type Database = {
           full_name?: string | null
           id?: string
           sector?: string | null
+          updated_at?: string
+          user_id?: string
+          user_type?: Database["public"]["Enums"]["user_type"] | null
+        }
+        Relationships: []
+      }
+      social_media_comments: {
+        Row: {
+          comment: string
+          content_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          content_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          content_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_media_comments_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "social_media_content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_media_content: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          description: string | null
+          end_date: string
+          google_drive_url: string | null
+          id: string
+          start_date: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          description?: string | null
+          end_date: string
+          google_drive_url?: string | null
+          id?: string
+          start_date: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          google_drive_url?: string | null
+          id?: string
+          start_date?: string
+          title?: string
           updated_at?: string
           user_id?: string
         }
@@ -328,6 +402,7 @@ export type Database = {
         | "expansao"
         | "consultoras"
         | "implantacao"
+      user_type: "colaborador" | "franqueado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -468,6 +543,7 @@ export const Constants = {
         "consultoras",
         "implantacao",
       ],
+      user_type: ["colaborador", "franqueado"],
     },
   },
 } as const

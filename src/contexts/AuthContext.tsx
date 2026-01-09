@@ -3,11 +3,15 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+type UserType = 'colaborador' | 'franqueado';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
+  isColaborador: boolean;
+  userType: UserType | null;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -28,23 +32,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userType, setUserType] = useState<UserType | null>(null);
 
-  const checkAdminRole = async (userId: string) => {
+  // Colaborador = pode criar conteúdo. Admin também é considerado colaborador.
+  const isColaborador = userType === 'colaborador' || isAdmin;
+
+  const checkUserRoleAndType = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Check admin role
+      const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .eq('role', 'admin')
         .maybeSingle();
       
-      if (!error && data) {
-        setIsAdmin(true);
+      setIsAdmin(!!roleData);
+
+      // Check user type from profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (profileData?.user_type) {
+        setUserType(profileData.user_type as UserType);
       } else {
-        setIsAdmin(false);
+        setUserType('colaborador'); // Default
       }
     } catch {
       setIsAdmin(false);
+      setUserType('colaborador');
     }
   };
 
@@ -58,10 +77,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           setTimeout(() => {
-            checkAdminRole(session.user.id);
+            checkUserRoleAndType(session.user.id);
           }, 0);
         } else {
           setIsAdmin(false);
+          setUserType(null);
         }
       }
     );
@@ -73,7 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
       
       if (session?.user) {
-        checkAdminRole(session.user.id);
+        checkUserRoleAndType(session.user.id);
       }
     });
 
@@ -137,11 +157,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     await supabase.auth.signOut();
     setIsAdmin(false);
+    setUserType(null);
     toast.success('Logout realizado com sucesso');
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, isColaborador, userType, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
