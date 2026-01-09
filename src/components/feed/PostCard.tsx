@@ -192,7 +192,10 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
       </CardHeader>
       <CardContent>
         <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
-        <p className="text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+        <div 
+          className="prose-post text-muted-foreground"
+          dangerouslySetInnerHTML={{ __html: post.content }}
+        />
 
         <div className="mt-4 pt-4 border-t flex items-center gap-4">
           <Button

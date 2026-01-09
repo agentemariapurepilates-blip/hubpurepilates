@@ -188,3 +188,69 @@
     box-shadow: var(--shadow-pure);
   }
 }
+
+/* TipTap Rich Text Editor Styles */
+.ProseMirror {
+  outline: none;
+  min-height: 200px;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+.ProseMirror p {
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+.rich-editor-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+/* Prose content in post cards */
+.prose-post img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.prose-post p {
+  margin-bottom: 0.75rem;
+}
+
+.prose-post p:last-child {
+  margin-bottom: 0;
+}
+
+.prose-post strong {
+  font-weight: 600;
+}
+
+.prose-post em {
+  font-style: italic;
+}
+
+.prose-post u {
+  text-decoration: underline;
+}
+
+.prose-post a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+
+.prose-post a:hover {
+  opacity: 0.8;
+}
