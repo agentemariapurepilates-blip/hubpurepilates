@@ -34,6 +34,12 @@ const contentTypes = [
   { value: 'document', label: 'Documento' },
 ];
 
+const contentTags = [
+  { value: 'reels', label: 'Reels', color: 'bg-purple-500' },
+  { value: 'desafio_semana', label: 'Desafio da Semana', color: 'bg-red-500' },
+  { value: 'carrossel', label: 'Carrossel', color: 'bg-teal-500' },
+];
+
 const CreateSocialMediaDialog = ({
   open,
   onOpenChange,
@@ -46,16 +52,16 @@ const CreateSocialMediaDialog = ({
   const [description, setDescription] = useState('');
   const [googleDriveUrl, setGoogleDriveUrl] = useState('');
   const [contentType, setContentType] = useState('video');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [tag, setTag] = useState<string>('');
+  const [postingDate, setPostingDate] = useState('');
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setGoogleDriveUrl('');
     setContentType('video');
-    setStartDate('');
-    setEndDate('');
+    setTag('');
+    setPostingDate('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,7 +72,7 @@ const CreateSocialMediaDialog = ({
       return;
     }
 
-    if (!title || !startDate || !endDate) {
+    if (!title || !postingDate || !tag) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
@@ -78,8 +84,10 @@ const CreateSocialMediaDialog = ({
       description: description || null,
       google_drive_url: googleDriveUrl || null,
       content_type: contentType,
-      start_date: startDate,
-      end_date: endDate,
+      posting_date: postingDate,
+      start_date: postingDate,
+      end_date: postingDate,
+      tag: tag as 'reels' | 'desafio_semana' | 'carrossel',
       user_id: user.id,
     });
 
@@ -101,8 +109,7 @@ const CreateSocialMediaDialog = ({
   const handleOpenChange = (open: boolean) => {
     if (open && selectedDate) {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      setStartDate(dateStr);
-      setEndDate(dateStr);
+      setPostingDate(dateStr);
     }
     if (!open) {
       resetForm();
@@ -127,6 +134,25 @@ const CreateSocialMediaDialog = ({
               placeholder="Ex: Reels sobre promoção de janeiro"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tag">Tag *</Label>
+            <Select value={tag} onValueChange={setTag}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma tag" />
+              </SelectTrigger>
+              <SelectContent>
+                {contentTags.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    <div className="flex items-center gap-2">
+                      <span className={`w-3 h-3 rounded-full ${t.color}`} />
+                      {t.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -167,27 +193,15 @@ const CreateSocialMediaDialog = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Data Início *</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endDate">Data Fim *</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="postingDate">Data de Postagem *</Label>
+            <Input
+              id="postingDate"
+              type="date"
+              value={postingDate}
+              onChange={(e) => setPostingDate(e.target.value)}
+              required
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

@@ -25,6 +25,8 @@ interface SocialMediaContent {
   description: string | null;
   google_drive_url: string | null;
   content_type: string | null;
+  posting_date: string | null;
+  tag: 'reels' | 'desafio_semana' | 'carrossel' | null;
   start_date: string;
   end_date: string;
   user_id: string;
@@ -44,6 +46,12 @@ const contentTypes = [
   { value: 'document', label: 'Documento' },
 ];
 
+const contentTags = [
+  { value: 'reels', label: 'Reels', color: 'bg-purple-500' },
+  { value: 'desafio_semana', label: 'Desafio da Semana', color: 'bg-red-500' },
+  { value: 'carrossel', label: 'Carrossel', color: 'bg-teal-500' },
+];
+
 const EditContentDialog = ({
   open,
   onOpenChange,
@@ -55,8 +63,8 @@ const EditContentDialog = ({
   const [description, setDescription] = useState('');
   const [googleDriveUrl, setGoogleDriveUrl] = useState('');
   const [contentType, setContentType] = useState('video');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [tag, setTag] = useState<string>('');
+  const [postingDate, setPostingDate] = useState('');
 
   useEffect(() => {
     if (content && open) {
@@ -64,8 +72,8 @@ const EditContentDialog = ({
       setDescription(content.description || '');
       setGoogleDriveUrl(content.google_drive_url || '');
       setContentType(content.content_type || 'video');
-      setStartDate(content.start_date);
-      setEndDate(content.end_date);
+      setTag(content.tag || '');
+      setPostingDate(content.posting_date || content.start_date);
     }
   }, [content, open]);
 
@@ -74,7 +82,7 @@ const EditContentDialog = ({
 
     if (!content) return;
 
-    if (!title || !startDate || !endDate) {
+    if (!title || !postingDate || !tag) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
@@ -88,8 +96,10 @@ const EditContentDialog = ({
         description: description || null,
         google_drive_url: googleDriveUrl || null,
         content_type: contentType,
-        start_date: startDate,
-        end_date: endDate,
+        posting_date: postingDate,
+        start_date: postingDate,
+        end_date: postingDate,
+        tag: tag as 'reels' | 'desafio_semana' | 'carrossel',
       })
       .eq('id', content.id);
 
@@ -124,6 +134,25 @@ const EditContentDialog = ({
               onChange={(e) => setTitle(e.target.value)}
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-tag">Tag *</Label>
+            <Select value={tag} onValueChange={setTag}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma tag" />
+              </SelectTrigger>
+              <SelectContent>
+                {contentTags.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    <div className="flex items-center gap-2">
+                      <span className={`w-3 h-3 rounded-full ${t.color}`} />
+                      {t.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -162,27 +191,15 @@ const EditContentDialog = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-startDate">Data Início *</Label>
-              <Input
-                id="edit-startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-endDate">Data Fim *</Label>
-              <Input
-                id="edit-endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-postingDate">Data de Postagem *</Label>
+            <Input
+              id="edit-postingDate"
+              type="date"
+              value={postingDate}
+              onChange={(e) => setPostingDate(e.target.value)}
+              required
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

@@ -31,6 +31,8 @@ interface SocialMediaContent {
   description: string | null;
   google_drive_url: string | null;
   content_type: string | null;
+  posting_date: string | null;
+  tag: 'reels' | 'desafio_semana' | 'carrossel' | null;
   start_date: string;
   end_date: string;
   user_id: string;
@@ -61,6 +63,12 @@ const CONTENT_TYPE_ICONS: Record<string, React.ComponentType<{ className?: strin
   document: FileText,
 };
 
+const TAG_CONFIG: Record<string, { label: string; className: string }> = {
+  reels: { label: 'Reels', className: 'bg-purple-500 text-white hover:bg-purple-600' },
+  desafio_semana: { label: 'Desafio da Semana', className: 'bg-red-500 text-white hover:bg-red-600' },
+  carrossel: { label: 'Carrossel', className: 'bg-teal-500 text-white hover:bg-teal-600' },
+};
+
 const ContentDetailsDialog = ({
   open,
   onOpenChange,
@@ -74,10 +82,10 @@ const ContentDetailsDialog = ({
 
   if (!content) return null;
 
-  const startDate = parseISO(content.start_date);
-  const endDate = parseISO(content.end_date);
+  const postingDate = content.posting_date ? parseISO(content.posting_date) : parseISO(content.start_date);
   const canEdit = isColaborador && (user?.id === content.user_id || isAdmin);
   const Icon = CONTENT_TYPE_ICONS[content.content_type || 'video'] || Video;
+  const tagConfig = content.tag ? TAG_CONFIG[content.tag] : null;
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -113,20 +121,26 @@ const ContentDetailsDialog = ({
               </div>
               <div className="flex-1">
                 <DialogTitle className="text-xl">{content.title}</DialogTitle>
-                <Badge variant="secondary" className="mt-1">
-                  {CONTENT_TYPE_LABELS[content.content_type || 'video'] || 'Vídeo'}
-                </Badge>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {tagConfig && (
+                    <Badge className={tagConfig.className}>
+                      {tagConfig.label}
+                    </Badge>
+                  )}
+                  <Badge variant="secondary">
+                    {CONTENT_TYPE_LABELS[content.content_type || 'video'] || 'Vídeo'}
+                  </Badge>
+                </div>
               </div>
             </div>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
-            {/* Dates */}
+            {/* Posting Date */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="h-4 w-4" />
               <span>
-                {format(startDate, "dd 'de' MMMM", { locale: ptBR })} -{' '}
-                {format(endDate, "dd 'de' MMMM", { locale: ptBR })}
+                {format(postingDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
               </span>
             </div>
 
