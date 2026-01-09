@@ -92,31 +92,6 @@ const ContentDetailsDialog = ({
     onDeleted();
   };
 
-  const handleDownload = () => {
-    if (!content.google_drive_url) return;
-    
-    let url = content.google_drive_url.trim();
-    
-    // Ensure URL has protocol
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url;
-    }
-    
-    // Try to open in new tab
-    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
-    
-    if (!newWindow) {
-      // Popup was blocked, copy URL to clipboard as fallback
-      navigator.clipboard.writeText(url).then(() => {
-        toast.info('Link copiado! Cole no navegador para acessar.', {
-          description: 'O popup foi bloqueado pelo navegador.'
-        });
-      }).catch(() => {
-        toast.error('Não foi possível abrir o link. Verifique se popups estão habilitados.');
-      });
-    }
-  };
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -157,12 +132,17 @@ const ContentDetailsDialog = ({
               <p className="text-sm text-muted-foreground">{content.description}</p>
             )}
 
-            {/* Download Button */}
+            {/* Download Button - Using anchor tag for better iframe compatibility */}
             {content.google_drive_url && (
-              <Button onClick={handleDownload} className="w-full gap-2" variant="outline">
+              <a
+                href={content.google_drive_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full px-4 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md text-sm font-medium transition-colors"
+              >
                 <Download className="h-4 w-4" />
                 Baixar do Google Drive
-              </Button>
+              </a>
             )}
 
             {/* Creator info */}
