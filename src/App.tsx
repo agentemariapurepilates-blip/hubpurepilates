@@ -12,6 +12,7 @@ import Perfil from "./pages/Perfil";
 import CalendarioMarketing from "./pages/CalendarioMarketing";
 import MidiasSociais from "./pages/MidiasSociais";
 import AdminUsuarios from "./pages/AdminUsuarios";
+import AguardandoAprovacao from "./pages/AguardandoAprovacao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ function App() {
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
             <Route path="/" element={<Index />} />
             <Route path="/feed" element={<Feed />} />
             <Route path="/calendario-marketing" element={<CalendarioMarketing />} />

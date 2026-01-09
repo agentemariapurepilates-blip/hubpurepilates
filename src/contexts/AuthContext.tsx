@@ -12,9 +12,13 @@ interface AuthContextType {
   isAdmin: boolean;
   isColaborador: boolean;
   userType: UserType | null;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  isApproved: boolean;
+  isPending: boolean;
+  requestedUserType: UserType | null;
+  signUp: (email: string, password: string, fullName: string, requestedType: UserType) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshApprovalStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,9 +37,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userType, setUserType] = useState<UserType | null>(null);
+  const [isApproved, setIsApproved] = useState(false);
+  const [requestedUserType, setRequestedUserType] = useState<UserType | null>(null);
 
   // Colaborador = pode criar conteúdo. Admin também é considerado colaborador.
   const isColaborador = userType === 'colaborador' || isAdmin;
+  
+  // Usuário está logado mas aguardando aprovação
+  const isPending = !!user && !isApproved && !loading;
 
   const checkUserRoleAndType = async (userId: string) => {
     try {
@@ -49,21 +58,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setIsAdmin(!!roleData);
 
-      // Check user type from profile
+      // Check user type and approval status from profile
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('user_type')
+        .select('user_type, is_approved, requested_user_type')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (profileData?.user_type) {
-        setUserType(profileData.user_type as UserType);
+      if (profileData) {
+        setIsApproved(profileData.is_approved ?? false);
+        setRequestedUserType(profileData.requested_user_type as UserType | null);
+        
+        if (profileData.user_type) {
+          setUserType(profileData.user_type as UserType);
+        } else {
+          setUserType('colaborador');
+        }
       } else {
-        setUserType('colaborador'); // Default
+        setIsApproved(false);
+        setUserType('colaborador');
       }
     } catch {
       setIsAdmin(false);
       setUserType('colaborador');
+      setIsApproved(false);
+    }
+  };
+
+  const refreshApprovalStatus = async () => {
+    if (user) {
+      await checkUserRoleAndType(user.id);
     }
   };
 
@@ -82,6 +106,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setIsAdmin(false);
           setUserType(null);
+          setIsApproved(false);
+          setRequestedUserType(null);
         }
       }
     );
@@ -104,14 +130,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return email.toLowerCase().endsWith('@purepilates.com.br');
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, requestedType: UserType) => {
     if (!validatePureEmail(email)) {
       return { error: new Error('Somente emails @purepilates.com.br são permitidos') };
     }
 
     const redirectUrl = `${window.location.origin}/`;
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -129,7 +155,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error };
     }
 
-    toast.success('Conta criada com sucesso!');
+    // Update the profile with the requested user type (is_approved defaults to false)
+    if (data.user) {
+      await supabase
+        .from('profiles')
+        .update({ 
+          requested_user_type: requestedType,
+          is_approved: false
+        })
+        .eq('user_id', data.user.id);
+    }
+
+    toast.success('Cadastro realizado! Aguarde aprovação do administrador.');
     return { error: null };
   };
 
@@ -158,11 +195,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
     setIsAdmin(false);
     setUserType(null);
+    setIsApproved(false);
+    setRequestedUserType(null);
     toast.success('Logout realizado com sucesso');
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, isColaborador, userType, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      isAdmin, 
+      isColaborador, 
+      userType, 
+      isApproved,
+      isPending,
+      requestedUserType,
+      signUp, 
+      signIn, 
+      signOut,
+      refreshApprovalStatus
+    }}>
       {children}
     </AuthContext.Provider>
   );
