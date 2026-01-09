@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import PostCard from '@/components/feed/PostCard';
 import CreatePostDialog from '@/components/feed/CreatePostDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, ShieldAlert } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +65,8 @@ const sectors = [
 const POSTS_PER_PAGE = 4;
 
 const Feed = () => {
+  const { isColaborador, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -235,6 +239,21 @@ const Feed = () => {
   };
 
   const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE);
+
+  // Restrict access to colaboradores only
+  if (!authLoading && !isColaborador) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+          <p className="text-muted-foreground text-center">
+            O Feed é exclusivo para colaboradores.
+          </p>
+          <Button onClick={() => navigate('/')}>Voltar ao Dashboard</Button>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>

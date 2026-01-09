@@ -7,10 +7,11 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
-import Onboarding from "./pages/Onboarding";
 import Metricas from "./pages/Metricas";
 import Perfil from "./pages/Perfil";
 import CalendarioMarketing from "./pages/CalendarioMarketing";
+import MidiasSociais from "./pages/MidiasSociais";
+import AdminUsuarios from "./pages/AdminUsuarios";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,9 +28,10 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/feed" element={<Feed />} />
             <Route path="/calendario-marketing" element={<CalendarioMarketing />} />
-            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/midias-sociais" element={<MidiasSociais />} />
             <Route path="/metricas" element={<Metricas />} />
             <Route path="/perfil" element={<Perfil />} />
+            <Route path="/admin/usuarios" element={<AdminUsuarios />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
