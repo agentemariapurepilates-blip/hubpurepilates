@@ -4,6 +4,7 @@ import Underline from '@tiptap/extension-underline';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
+import Heading from '@tiptap/extension-heading';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -18,7 +19,12 @@ import {
   Link as LinkIcon, 
   ImageIcon, 
   Smile,
-  Loader2
+  Loader2,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useCallback } from 'react';
@@ -76,10 +82,12 @@ const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o conteúdo.
     extensions: [
       StarterKit.configure({
         heading: false,
-        codeBlock: false,
-        code: false,
-        blockquote: false,
-        horizontalRule: false,
+        hardBreak: {
+          keepMarks: true,
+        },
+      }),
+      Heading.configure({
+        levels: [1, 2, 3],
       }),
       Underline,
       Image.configure({ 
@@ -106,7 +114,7 @@ const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o conteúdo.
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[200px] p-4',
+        class: 'prose prose-sm max-w-none focus:outline-none min-h-[250px] p-4',
       },
     },
   });
@@ -193,6 +201,28 @@ const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o conteúdo.
     <div className="border rounded-lg overflow-hidden bg-background">
       {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 border-b bg-muted/30 flex-wrap">
+        {/* Headings */}
+        <ToolbarButton
+          icon={<Heading1 className="h-4 w-4" />}
+          isActive={editor.isActive('heading', { level: 1 })}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          title="Título 1"
+        />
+        <ToolbarButton
+          icon={<Heading2 className="h-4 w-4" />}
+          isActive={editor.isActive('heading', { level: 2 })}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          title="Título 2"
+        />
+        <ToolbarButton
+          icon={<Heading3 className="h-4 w-4" />}
+          isActive={editor.isActive('heading', { level: 3 })}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          title="Título 3"
+        />
+
+        <Separator orientation="vertical" className="h-6 mx-1" />
+
         <ToolbarButton
           icon={<Bold className="h-4 w-4" />}
           isActive={editor.isActive('bold')}
@@ -210,6 +240,22 @@ const RichTextEditor = ({ content, onChange, placeholder = 'Escreva o conteúdo.
           isActive={editor.isActive('underline')}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           title="Sublinhado (Ctrl+U)"
+        />
+        
+        <Separator orientation="vertical" className="h-6 mx-1" />
+
+        {/* Lists */}
+        <ToolbarButton
+          icon={<List className="h-4 w-4" />}
+          isActive={editor.isActive('bulletList')}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          title="Lista com marcadores"
+        />
+        <ToolbarButton
+          icon={<ListOrdered className="h-4 w-4" />}
+          isActive={editor.isActive('orderedList')}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          title="Lista numerada"
         />
         
         <Separator orientation="vertical" className="h-6 mx-1" />

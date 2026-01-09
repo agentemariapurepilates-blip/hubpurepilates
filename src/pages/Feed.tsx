@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import PostCard from '@/components/feed/PostCard';
-import CreatePostDialog from '@/components/feed/CreatePostDialog';
+import CreateFeedPostDialog from '@/components/feed/CreateFeedPostDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -265,7 +265,7 @@ const Feed = () => {
             <h1 className="text-2xl font-heading font-bold">Feed da Sede</h1>
             <p className="text-muted-foreground">Acompanhe as novidades da sede Pure Pilates</p>
           </div>
-          <CreatePostDialog onPostCreated={fetchPosts} />
+          <CreateFeedPostDialog onPostCreated={fetchPosts} />
         </div>
 
         <div className="flex gap-3 mb-6">
