@@ -29,6 +29,7 @@ import { Plus, Loader2, Image, X, Smile } from 'lucide-react';
 
 interface CreatePostDialogProps {
   onPostCreated: () => void;
+  defaultPostType?: 'feed' | 'novidades';
 }
 
 const sectors = [
@@ -46,7 +47,7 @@ const emojis = [
   '🔥', '✨', '💡', '📢', '📌', '✅', '🚀', '💼',
 ];
 
-const CreatePostDialog = ({ onPostCreated }: CreatePostDialogProps) => {
+const CreatePostDialog = ({ onPostCreated, defaultPostType = 'feed' }: CreatePostDialogProps) => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -120,6 +121,7 @@ const CreatePostDialog = ({ onPostCreated }: CreatePostDialogProps) => {
       content,
       sector: sector as 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao',
       image_url: imageUrl,
+      post_type: defaultPostType,
     });
 
     setLoading(false);
