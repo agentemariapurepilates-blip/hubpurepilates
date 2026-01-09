@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, parseISO, addMonths, subMonths } from 'date-fns';
@@ -10,6 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import CreateSocialMediaDialog from '@/components/social-media/CreateContentDialog';
 import ContentDetailsDialog from '@/components/social-media/ContentDetailsDialog';
 import EditContentDialog from '@/components/social-media/EditContentDialog';
+import { cn } from '@/lib/utils';
 
 interface SocialMediaContent {
   id: string;
@@ -29,12 +29,23 @@ interface SocialMediaContent {
   } | null;
 }
 
-const TAG_CONFIG: Record<string, { label: string; bgColor: string }> = {
-  reels: { label: 'Reels', bgColor: 'bg-purple-500' },
-  desafio_semana: { label: 'Desafio', bgColor: 'bg-red-500' },
-  carrossel: { label: 'Carrossel', bgColor: 'bg-teal-500' },
+const TAG_LABELS: Record<string, string> = {
+  reels: 'Reels',
+  desafio_semana: 'Desafio da Semana',
+  carrossel: 'Carrossel',
 };
 
+const TAG_COLORS: Record<string, string> = {
+  reels: 'bg-purple-500 text-white',
+  desafio_semana: 'bg-red-500 text-white',
+  carrossel: 'bg-teal-500 text-white',
+};
+
+const TAG_LEGEND_COLORS: Record<string, string> = {
+  reels: 'bg-purple-500',
+  desafio_semana: 'bg-red-500',
+  carrossel: 'bg-teal-500',
+};
 
 const MidiasSociais = () => {
   const { isColaborador } = useAuth();
@@ -137,132 +148,139 @@ const MidiasSociais = () => {
     setIsEditDialogOpen(true);
   };
 
+  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-heading font-bold">Mídias Sociais</h1>
-            <p className="text-muted-foreground">Calendário de conteúdos para redes sociais</p>
+            <h1 className="text-3xl font-bold text-foreground">Mídias Sociais</h1>
+            <p className="text-muted-foreground mt-1">Calendário de conteúdos para redes sociais</p>
           </div>
           {isColaborador && (
-            <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
               Novo Conteúdo
             </Button>
           )}
         </div>
 
-        {/* Calendar */}
-        <Card className="card-pure">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg capitalize">
+        {/* Legend */}
+        <div className="flex flex-wrap gap-4 mb-6">
+          {Object.entries(TAG_LABELS).map(([key, label]) => (
+            <div key={key} className="flex items-center gap-2">
+              <span className={cn("w-4 h-4 rounded", TAG_LEGEND_COLORS[key])} />
+              <span className="text-sm text-muted-foreground">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+          {/* Month Navigation */}
+          <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30">
+            <Button variant="ghost" size="icon" onClick={handlePreviousMonth}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <h2 className="text-xl font-semibold capitalize">
               {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={handleNextMonth}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Legend */}
-            <div className="flex flex-wrap gap-3 mb-4 pb-4 border-b">
-              {Object.entries(TAG_CONFIG).map(([key, config]) => (
-                <div key={key} className="flex items-center gap-2">
-                  <span className={`w-3 h-3 rounded-full ${config.bgColor}`} />
-                  <span className="text-sm text-muted-foreground">{config.label}</span>
+            </h2>
+            <Button variant="ghost" size="icon" onClick={handleNextMonth}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Week Days Header */}
+          <div className="grid grid-cols-7 border-b border-border">
+            {weekDays.map(day => (
+              <div key={day} className="p-3 text-center text-sm font-medium text-muted-foreground bg-muted/20">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7">
+            {paddingDays.map((_, index) => (
+              <div key={`padding-${index}`} className="min-h-28 p-2 border-b border-r border-border bg-muted/10" />
+            ))}
+            {daysInMonth.map(day => {
+              const dayContent = getContentForDay(day);
+              const hasContent = dayContent.length > 0;
+              const isDayToday = isToday(day);
+
+              return (
+                <div
+                  key={day.toISOString()}
+                  onClick={() => handleDayClick(day)}
+                  className={cn(
+                    "min-h-28 p-2 border-b border-r border-border cursor-pointer transition-colors hover:bg-accent/50",
+                    !isSameMonth(day, currentDate) && "bg-muted/20 text-muted-foreground",
+                    isDayToday && "bg-primary/5"
+                  )}
+                >
+                  <div className={cn(
+                    "text-sm font-medium mb-1",
+                    isDayToday && "text-primary font-bold"
+                  )}>
+                    {format(day, 'd')}
+                  </div>
+                  {hasContent && (
+                    <div className="space-y-1">
+                      {dayContent.slice(0, 2).map(c => {
+                        const tag = c.tag || c.content_type;
+                        const colorClass = tag && TAG_COLORS[tag] ? TAG_COLORS[tag] : 'bg-primary text-primary-foreground';
+                        return (
+                          <div
+                            key={c.id}
+                            className={cn(
+                              "text-xs p-1.5 rounded truncate font-medium",
+                              colorClass
+                            )}
+                            title={c.title}
+                          >
+                            {c.title}
+                          </div>
+                        );
+                      })}
+                      {dayContent.length > 2 && (
+                        <div className="text-xs text-muted-foreground">
+                          +{dayContent.length - 2} mais
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
-                <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-1">
-              {paddingDays.map((_, index) => (
-                <div key={`padding-${index}`} className="min-h-[80px] p-1" />
-              ))}
-
-              {daysInMonth.map((date) => {
-                const dayContent = getContentForDay(date);
-                const hasContent = dayContent.length > 0;
-
-                return (
-                  <button
-                    key={date.toISOString()}
-                    onClick={() => handleDayClick(date)}
-                    className={`
-                      min-h-[80px] p-1 rounded-lg text-sm transition-colors flex flex-col
-                      ${isToday(date) ? 'ring-2 ring-primary' : ''}
-                      ${!isSameMonth(date, currentDate) ? 'text-muted-foreground/50' : ''}
-                      ${hasContent ? 'bg-muted/30 hover:bg-muted/50' : 'hover:bg-muted/30'}
-                    `}
-                  >
-                    <span className={`text-xs font-medium mb-1 ${isToday(date) ? 'text-primary font-bold' : ''}`}>
-                      {format(date, 'd')}
-                    </span>
-                    {hasContent && (
-                      <div className="flex flex-col gap-0.5 flex-1">
-                        {dayContent.slice(0, 2).map((c, i) => {
-                          const tagConfig = c.tag ? TAG_CONFIG[c.tag] : (c.content_type ? TAG_CONFIG[c.content_type] : null);
-                          return (
-                            <span 
-                              key={i} 
-                              className={`text-[10px] px-1 py-0.5 rounded text-white truncate ${tagConfig?.bgColor || 'bg-primary'}`}
-                            >
-                              {tagConfig?.label || 'Conteúdo'}
-                            </span>
-                          );
-                        })}
-                        {dayContent.length > 2 && (
-                          <span className="text-[10px] text-muted-foreground">
-                            +{dayContent.length - 2} mais
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Create Dialog */}
-        <CreateSocialMediaDialog
-          open={isCreateDialogOpen}
-          onOpenChange={setIsCreateDialogOpen}
-          selectedDate={selectedDate}
-          onContentCreated={fetchContent}
-        />
-
-        {/* Details Dialog */}
-        <ContentDetailsDialog
-          open={isDetailsDialogOpen}
-          onOpenChange={setIsDetailsDialogOpen}
-          content={selectedContent}
-          onDeleted={fetchContent}
-          onEditClick={handleEditClick}
-        />
-
-        {/* Edit Dialog */}
-        <EditContentDialog
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          content={selectedContent}
-          onContentUpdated={fetchContent}
-        />
+              );
+            })}
+          </div>
+        </div>
       </div>
+
+      {/* Create Dialog */}
+      <CreateSocialMediaDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        selectedDate={selectedDate}
+        onContentCreated={fetchContent}
+      />
+
+      {/* Details Dialog */}
+      <ContentDetailsDialog
+        open={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
+        content={selectedContent}
+        onDeleted={fetchContent}
+        onEditClick={handleEditClick}
+      />
+
+      {/* Edit Dialog */}
+      <EditContentDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        content={selectedContent}
+        onContentUpdated={fetchContent}
+      />
     </MainLayout>
   );
 };
