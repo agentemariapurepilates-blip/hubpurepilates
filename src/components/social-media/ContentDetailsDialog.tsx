@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Download, Edit, Trash2, User, Video, Image, Target, LayoutGrid, LucideIcon } from 'lucide-react';
+import { Calendar, Download, Edit, Trash2, User, Video, Image, Target, LayoutGrid, LucideIcon, Copy, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -68,6 +68,20 @@ const ContentDetailsDialog = ({
   const { user, isAdmin, isColaborador } = useAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCaption = async () => {
+    if (!content.description) return;
+    
+    try {
+      await navigator.clipboard.writeText(content.description);
+      setCopied(true);
+      toast.success('Legenda copiada!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Erro ao copiar legenda');
+    }
+  };
 
   if (!content) return null;
 
@@ -127,22 +141,43 @@ const ContentDetailsDialog = ({
               </span>
             </div>
 
-            {/* Description */}
-            {content.description && (
-              <p className="text-sm text-muted-foreground">{content.description}</p>
-            )}
-
-            {/* Download Button - Using anchor tag for better iframe compatibility */}
+            {/* Download Button - Red and prominent */}
             {content.google_drive_url && (
               <a
                 href={content.google_drive_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full px-4 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md text-sm font-medium transition-colors"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-md"
               >
-                <Download className="h-4 w-4" />
+                <Download className="h-5 w-5" />
                 Baixar do Google Drive
               </a>
+            )}
+
+            {/* Caption/Description - Below download button with emphasis */}
+            {content.description && (
+              <div className="space-y-3 bg-muted/50 rounded-lg p-4 border">
+                <h4 className="font-semibold text-base text-foreground">Legenda do Post</h4>
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{content.description}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2 w-full"
+                  onClick={handleCopyCaption}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4 text-green-600" />
+                      Copiado!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      Copiar Legenda
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
 
             {/* Creator info */}
