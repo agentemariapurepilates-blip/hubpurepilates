@@ -20,10 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Loader2, Upload, X } from 'lucide-react';
+import { Plus, Loader2, Upload, X, Video } from 'lucide-react';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import VideoEmbed, { parseVideoUrl } from '@/components/novidades/VideoEmbed';
 
 interface CreatePostDialogProps {
   onPostCreated: () => void;
@@ -49,8 +50,11 @@ const CreatePostDialog = ({ onPostCreated, defaultPostType = 'feed' }: CreatePos
   const [shortDescription, setShortDescription] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [targetMonth, setTargetMonth] = useState(format(new Date(), 'yyyy-MM-01'));
+  const [videoUrl, setVideoUrl] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const videoPreview = parseVideoUrl(videoUrl);
 
   const isNovidades = defaultPostType === 'novidades';
 
@@ -284,6 +288,31 @@ const CreatePostDialog = ({ onPostCreated, defaultPostType = 'feed' }: CreatePos
                 placeholder="Aparece no card. Se vazio, usa o primeiro parágrafo do conteúdo."
                 rows={2}
               />
+            </div>
+          )}
+
+          {/* Video URL - only for novidades */}
+          {isNovidades && (
+            <div className="space-y-2">
+              <Label htmlFor="videoUrl" className="flex items-center gap-2">
+                <Video className="h-4 w-4" />
+                Link do vídeo (opcional)
+              </Label>
+              <Input
+                id="videoUrl"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="Cole o link do YouTube, Vimeo ou Google Drive"
+              />
+              <p className="text-xs text-muted-foreground">
+                Suporta: YouTube, Vimeo e Google Drive
+              </p>
+              {videoPreview.type && videoPreview.id && (
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground mb-2">Prévia do vídeo:</p>
+                  <VideoEmbed url={videoUrl} title="Prévia" className="max-h-48" />
+                </div>
+              )}
             </div>
           )}
 
