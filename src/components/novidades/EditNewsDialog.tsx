@@ -19,10 +19,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import RichTextEditor from '@/components/ui/rich-text-editor';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Loader2, Upload, X, Video } from 'lucide-react';
 import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { NewsPost } from './NewsCard';
+import VideoEmbed, { parseVideoUrl } from './VideoEmbed';
 
 interface EditNewsDialogProps {
   post: NewsPost;
@@ -48,8 +49,11 @@ const EditNewsDialog = ({ post, open, onOpenChange, onPostUpdated }: EditNewsDia
   const [shortDescription, setShortDescription] = useState(post.short_description || '');
   const [coverImageUrl, setCoverImageUrl] = useState(post.cover_image_url || '');
   const [targetMonth, setTargetMonth] = useState(post.target_month || format(new Date(), 'yyyy-MM-01'));
+  const [videoUrl, setVideoUrl] = useState(post.video_url || '');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const videoPreview = parseVideoUrl(videoUrl);
 
   // Generate month options (3 months back + current + next 3 months)
   const generateMonthOptions = () => {
@@ -139,6 +143,7 @@ const EditNewsDialog = ({ post, open, onOpenChange, onPostUpdated }: EditNewsDia
         short_description: shortDescription || null,
         cover_image_url: coverImageUrl || null,
         target_month: targetMonth,
+        video_url: videoUrl || null,
       })
       .eq('id', post.id);
 
@@ -265,6 +270,29 @@ const EditNewsDialog = ({ post, open, onOpenChange, onPostUpdated }: EditNewsDia
               placeholder="Aparece no card. Se vazio, usa o primeiro parágrafo do conteúdo."
               rows={2}
             />
+          </div>
+
+          {/* Video URL */}
+          <div className="space-y-2">
+            <Label htmlFor="videoUrl" className="flex items-center gap-2">
+              <Video className="h-4 w-4" />
+              Link do vídeo (opcional)
+            </Label>
+            <Input
+              id="videoUrl"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="Cole o link do YouTube, Vimeo ou Google Drive"
+            />
+            <p className="text-xs text-muted-foreground">
+              Suporta: YouTube, Vimeo e Google Drive
+            </p>
+            {videoPreview.type && videoPreview.id && (
+              <div className="mt-2">
+                <p className="text-xs text-muted-foreground mb-2">Prévia do vídeo:</p>
+                <VideoEmbed url={videoUrl} title="Prévia" className="max-h-48" />
+              </div>
+            )}
           </div>
 
           {/* Content */}

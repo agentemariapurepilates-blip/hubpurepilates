@@ -147,6 +147,7 @@ const CreatePostDialog = ({ onPostCreated, defaultPostType = 'feed' }: CreatePos
       cover_image_url: isNovidades ? (coverImageUrl || null) : null,
       short_description: isNovidades ? (shortDescription || null) : null,
       target_month: isNovidades ? targetMonth : null,
+      video_url: isNovidades ? (videoUrl || null) : null,
     });
 
     setLoading(false);
@@ -162,6 +163,7 @@ const CreatePostDialog = ({ onPostCreated, defaultPostType = 'feed' }: CreatePos
     setSector('');
     setShortDescription('');
     setCoverImageUrl('');
+    setVideoUrl('');
     setTargetMonth(format(new Date(), 'yyyy-MM-01'));
     setOpen(false);
     onPostCreated();

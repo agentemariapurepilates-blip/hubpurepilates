@@ -155,6 +155,7 @@ const NovidadesDoMes = () => {
         cover_image_url: post.cover_image_url,
         short_description: post.short_description,
         target_month: post.target_month,
+        video_url: post.video_url,
         pinned: post.pinned || false,
         created_at: post.created_at,
         user_id: post.user_id,
