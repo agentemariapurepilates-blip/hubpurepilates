@@ -86,7 +86,7 @@ const Index = () => {
     <MainLayout>
       <div className="max-w-5xl mx-auto">
         {/* Hero Section - Pilates Balls Style */}
-        <section className="relative overflow-hidden rounded-2xl mb-12 min-h-[500px] md:min-h-[560px] bg-gradient-to-b from-muted/30 to-background">
+        <section className="relative overflow-hidden rounded-2xl mb-8 min-h-[380px] md:min-h-[420px] bg-gradient-to-b from-muted/30 to-background">
           {/* Decorative Pilates Balls */}
           {/* Large Dark Red Ball - Top Left */}
           <div 
@@ -185,7 +185,7 @@ const Index = () => {
           </div>
           
           {/* Content */}
-          <div className="relative z-10 px-6 py-20 md:py-28 flex flex-col items-center text-center">
+          <div className="relative z-10 px-6 py-12 md:py-16 flex flex-col items-center text-center">
             {/* Logo */}
             <img 
               src={logoHero} 
@@ -202,28 +202,6 @@ const Index = () => {
               <span className="font-bold text-primary">Hub Pure Pilates:</span> sua plataforma de comunicação interna
             </p>
 
-            {/* CTA Buttons */}
-            <div 
-              className="flex flex-col sm:flex-row gap-4 mt-10 opacity-0 animate-fade-in"
-              style={{ animationDelay: '0.7s' }}
-            >
-              <Button 
-                onClick={() => navigate('/novidades')}
-                className="gap-2 group bg-pure-red-dark hover:bg-primary text-white px-10 py-6 text-base font-bold rounded-lg shadow-xl"
-                size="lg"
-              >
-                Explorar plataforma
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-              <Button 
-                onClick={() => navigate('/midias-sociais')}
-                variant="outline"
-                className="gap-2 group border-2 border-foreground text-foreground bg-foreground text-background hover:bg-transparent hover:text-foreground px-10 py-6 text-base font-bold rounded-lg"
-                size="lg"
-              >
-                Ver mídias sociais
-              </Button>
-            </div>
           </div>
         </section>
 
