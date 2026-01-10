@@ -87,7 +87,7 @@ const Index = () => {
     <MainLayout>
       <div className="max-w-5xl mx-auto">
         {/* Hero Section - Pilates Balls Style */}
-        <section className="relative overflow-hidden rounded-2xl mb-8 min-h-[380px] md:min-h-[420px] bg-gradient-to-b from-muted/30 to-background">
+        <section className="relative overflow-hidden rounded-2xl mb-0 min-h-[280px] md:min-h-[320px] bg-gradient-to-b from-muted/30 to-background">
           {/* Decorative Pilates Balls */}
           {/* Large Dark Red Ball - Top Left */}
           <div 
@@ -186,12 +186,12 @@ const Index = () => {
           </div>
           
           {/* Content */}
-          <div className="relative z-10 px-6 py-10 md:py-14 flex flex-col items-center text-center">
+          <div className="relative z-10 px-6 py-6 md:py-8 flex flex-col items-center text-center">
             {/* Logo */}
             <img 
               src={logoHero} 
               alt="Pure Pilates - Muito mais que um studio de pilates" 
-              className="w-[280px] md:w-[400px] lg:w-[480px] h-auto mb-6 opacity-0 animate-fade-in drop-shadow-lg"
+              className="w-[280px] md:w-[400px] lg:w-[480px] h-auto opacity-0 animate-fade-in drop-shadow-lg"
               style={{ animationDelay: '0.3s' }}
             />
           </div>
@@ -199,20 +199,20 @@ const Index = () => {
 
         {/* Hero Card Section - Following Reference */}
         <section 
-          className="relative mb-12 py-12 md:py-16 opacity-0 animate-fade-in"
+          className="relative mb-12 -mt-8 md:-mt-12 opacity-0 animate-fade-in"
           style={{ animationDelay: '0.5s' }}
         >
-          <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+          <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
             {/* Text Side - No card, just text */}
             <div className="flex-1 text-left">
               {/* Label with line */}
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-0.5 bg-primary rounded-full" />
                 <span className="text-sm font-semibold text-primary uppercase tracking-wider">Bem-vindo</span>
               </div>
               
               {/* Title */}
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">
                 <span className="text-primary block">Hub Pure Pilates</span>
               </h2>
               
@@ -222,22 +222,22 @@ const Index = () => {
               </p>
             </div>
             
-            {/* Image Side - Floating Card */}
-            <div className="relative flex-shrink-0 md:w-[50%]">
+            {/* Image Side - Floating Card with 4:5 aspect ratio */}
+            <div className="relative flex-shrink-0 w-full md:w-[45%]">
               {/* Background pink area */}
               <div className="absolute inset-0 -right-8 md:-right-16 bg-primary/5 rounded-l-3xl" />
               
               {/* Decorative Circle - behind card */}
               <div 
-                className="absolute -bottom-8 -right-4 md:-bottom-12 md:right-8 w-28 h-28 md:w-40 md:h-40 rounded-full z-0"
+                className="absolute -bottom-6 -right-2 md:-bottom-10 md:right-4 w-24 h-24 md:w-36 md:h-36 rounded-full z-0"
                 style={{
                   background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.3), rgba(153, 27, 27, 0.2))',
                 }}
               />
               
-              {/* Photo Card */}
+              {/* Photo Card - 4:5 aspect ratio */}
               <div 
-                className="relative z-10 rounded-2xl overflow-hidden"
+                className="relative z-10 rounded-2xl overflow-hidden aspect-[4/5] max-w-[320px] md:max-w-none"
                 style={{
                   boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3), 0 12px 24px -8px rgba(0,0,0,0.2)'
                 }}
@@ -245,7 +245,7 @@ const Index = () => {
                 <img 
                   src={pilatesHero}
                   alt="Pure Pilates"
-                  className="w-full h-64 md:h-80 lg:h-96 object-cover"
+                  className="w-full h-full object-cover"
                 />
               </div>
             </div>
