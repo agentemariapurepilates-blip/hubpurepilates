@@ -134,6 +134,7 @@ const NovidadesDoMes = () => {
           id: comment.id,
           content: comment.content,
           emoji: comment.emoji,
+          user_id: comment.user_id,
           created_at: comment.created_at,
           profiles: profile,
         };
