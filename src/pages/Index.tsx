@@ -15,7 +15,7 @@ import {
   ArrowRight,
   Newspaper
 } from 'lucide-react';
-import logoHero from '@/assets/logo-hero.png';
+import logoHero from '@/assets/logo-hero.svg';
 
 const Index = () => {
   const navigate = useNavigate();
