@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import { Loader2, Upload, X } from 'lucide-react';
-import { format, addMonths } from 'date-fns';
+import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { NewsPost } from './NewsCard';
 
@@ -51,10 +51,21 @@ const EditNewsDialog = ({ post, open, onOpenChange, onPostUpdated }: EditNewsDia
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Generate month options (current + next 3 months)
+  // Generate month options (3 months back + current + next 3 months)
   const generateMonthOptions = () => {
     const months = [];
     const currentDate = new Date();
+    
+    // Add past months (3 months back)
+    for (let i = 3; i >= 1; i--) {
+      const date = subMonths(currentDate, i);
+      months.push({
+        value: format(date, 'yyyy-MM-01'),
+        label: format(date, 'MMMM yyyy', { locale: ptBR }),
+      });
+    }
+    
+    // Add current and future months
     for (let i = 0; i < 4; i++) {
       const date = addMonths(currentDate, i);
       months.push({
