@@ -197,40 +197,57 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Floating Card Section - Full Width */}
+        {/* Hero Card Section - Following Reference */}
         <section 
-          className="relative mb-12 opacity-0 animate-fade-in"
+          className="relative mb-12 py-12 md:py-16 opacity-0 animate-fade-in"
           style={{ animationDelay: '0.5s' }}
         >
-          <div className="flex flex-col md:flex-row items-stretch bg-white dark:bg-card rounded-2xl shadow-2xl overflow-hidden border border-primary/10">
-            {/* Text Side */}
-            <div className="flex-1 p-8 md:p-10 flex flex-col justify-center">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-1 bg-primary rounded-full" />
+          <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+            {/* Text Side - No card, just text */}
+            <div className="flex-1 text-left">
+              {/* Label with line */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-0.5 bg-primary rounded-full" />
                 <span className="text-sm font-semibold text-primary uppercase tracking-wider">Bem-vindo</span>
               </div>
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-3">
-                <span className="text-primary">Hub Pure Pilates</span>
+              
+              {/* Title */}
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                <span className="text-primary block">Hub Pure Pilates</span>
               </h2>
-              <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+              
+              {/* Description */}
+              <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-md">
                 sua plataforma de comunicação interna
               </p>
             </div>
             
-            {/* Image Side */}
-            <div className="relative flex-shrink-0 md:w-[45%] bg-muted/20">
-              {/* Decorative Circle */}
+            {/* Image Side - Floating Card */}
+            <div className="relative flex-shrink-0 md:w-[50%]">
+              {/* Background pink area */}
+              <div className="absolute inset-0 -right-8 md:-right-16 bg-primary/5 rounded-l-3xl" />
+              
+              {/* Decorative Circle - behind card */}
               <div 
-                className="absolute -bottom-10 -right-10 w-32 h-32 md:w-48 md:h-48 rounded-full opacity-30"
+                className="absolute -bottom-8 -right-4 md:-bottom-12 md:right-8 w-28 h-28 md:w-40 md:h-40 rounded-full z-0"
                 style={{
-                  background: 'radial-gradient(circle at 30% 30%, #dc2626, #991b1b 80%)',
+                  background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.3), rgba(153, 27, 27, 0.2))',
                 }}
               />
-              <img 
-                src={pilatesHero}
-                alt="Pure Pilates"
-                className="w-full h-48 md:h-full object-cover relative z-10"
-              />
+              
+              {/* Photo Card */}
+              <div 
+                className="relative z-10 rounded-2xl overflow-hidden"
+                style={{
+                  boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3), 0 12px 24px -8px rgba(0,0,0,0.2)'
+                }}
+              >
+                <img 
+                  src={pilatesHero}
+                  alt="Pure Pilates"
+                  className="w-full h-64 md:h-80 lg:h-96 object-cover"
+                />
+              </div>
             </div>
           </div>
         </section>
