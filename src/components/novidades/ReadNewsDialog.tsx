@@ -17,6 +17,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import SectorBadge from '@/components/feed/SectorBadge';
+import VideoEmbed from './VideoEmbed';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Heart, MessageCircle, Send, Loader2, Smile, Trash2 } from 'lucide-react';
@@ -179,6 +180,13 @@ const ReadNewsDialog = ({ post, open, onOpenChange, onCommentAdded }: ReadNewsDi
             </div>
           </div>
         </DialogHeader>
+
+        {/* Video Embed */}
+        {post.video_url && (
+          <div className="py-4">
+            <VideoEmbed url={post.video_url} title={post.title} />
+          </div>
+        )}
 
         {/* Content */}
         <div 

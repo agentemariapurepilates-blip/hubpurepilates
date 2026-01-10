@@ -47,6 +47,7 @@ export interface NewsPost {
   cover_image_url: string | null;
   short_description: string | null;
   target_month: string | null;
+  video_url: string | null;
   pinned: boolean;
   created_at: string;
   user_id: string;
