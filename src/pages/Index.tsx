@@ -16,6 +16,7 @@ import {
   Newspaper
 } from 'lucide-react';
 import logoHero from '@/assets/logo-hero.svg';
+import pilatesHero from '@/assets/pilates-hero.svg';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -185,22 +186,52 @@ const Index = () => {
           </div>
           
           {/* Content */}
-          <div className="relative z-10 px-6 py-12 md:py-16 flex flex-col items-center text-center">
+          <div className="relative z-10 px-6 py-10 md:py-14 flex flex-col items-center text-center">
             {/* Logo */}
             <img 
               src={logoHero} 
               alt="Pure Pilates - Muito mais que um studio de pilates" 
-              className="w-[320px] md:w-[480px] lg:w-[580px] h-auto mb-8 opacity-0 animate-fade-in drop-shadow-lg"
+              className="w-[280px] md:w-[400px] lg:w-[480px] h-auto mb-8 opacity-0 animate-fade-in drop-shadow-lg"
               style={{ animationDelay: '0.3s' }}
             />
             
-            {/* Subtitle */}
-            <p 
-              className="text-lg md:text-2xl font-medium text-foreground/80 opacity-0 animate-fade-in tracking-wide"
-              style={{ animationDelay: '0.5s' }}
+            {/* Floating Card with Image */}
+            <div 
+              className="flex flex-col md:flex-row items-center gap-4 md:gap-6 bg-white/90 dark:bg-card/90 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 opacity-0 animate-fade-in border border-primary/10 max-w-2xl"
+              style={{ 
+                animationDelay: '0.5s',
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(185,28,28,0.1)'
+              }}
             >
-              <span className="font-bold text-primary">Hub Pure Pilates:</span> sua plataforma de comunicação interna
-            </p>
+              {/* Text Side */}
+              <div className="flex-1 text-left">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-0.5 bg-primary rounded-full" />
+                  <span className="text-xs font-semibold text-primary uppercase tracking-wider">Bem-vindo</span>
+                </div>
+                <h2 className="text-lg md:text-xl font-bold text-foreground mb-1">
+                  <span className="text-primary">Hub Pure Pilates</span>
+                </h2>
+                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
+                  sua plataforma de comunicação interna
+                </p>
+              </div>
+              
+              {/* Image Side */}
+              <div className="relative flex-shrink-0">
+                <div 
+                  className="absolute -bottom-3 -right-3 w-16 h-16 md:w-20 md:h-20 rounded-full opacity-40"
+                  style={{
+                    background: 'radial-gradient(circle at 30% 30%, #dc2626, #991b1b 80%)',
+                  }}
+                />
+                <img 
+                  src={pilatesHero}
+                  alt="Pure Pilates"
+                  className="w-28 h-28 md:w-36 md:h-36 object-cover rounded-xl shadow-lg relative z-10"
+                />
+              </div>
+            </div>
 
           </div>
         </section>
