@@ -85,134 +85,123 @@ const Index = () => {
   return (
     <MainLayout>
       <div className="max-w-5xl mx-auto">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden rounded-2xl mb-12">
-          {/* Background decorative elements */}
-          <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/5 to-background pointer-events-none" />
-          <div className="absolute top-10 right-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-56 h-56 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+        {/* Hero Section - Pilates Balls Style */}
+        <section className="relative overflow-hidden rounded-2xl mb-12 min-h-[420px] md:min-h-[480px] bg-gradient-to-b from-muted/30 to-background">
+          {/* Floating Pilates Balls */}
+          {/* Large Red Ball - Top Left */}
+          <div 
+            className="absolute -top-8 -left-12 w-32 h-32 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-red-500 via-red-600 to-red-700 shadow-2xl animate-float opacity-0 animate-fade-in"
+            style={{ 
+              animationDelay: '0.2s',
+              boxShadow: '20px 20px 60px rgba(0,0,0,0.3), inset -10px -10px 30px rgba(0,0,0,0.2), inset 10px 10px 30px rgba(255,255,255,0.1)'
+            }}
+          >
+            <div className="absolute top-4 left-6 w-8 h-4 rounded-full bg-white/20 blur-sm" />
+          </div>
+
+          {/* Large Black Ball - Top Right */}
+          <div 
+            className="absolute -top-4 -right-8 w-28 h-28 md:w-40 md:h-40 rounded-full bg-gradient-to-br from-gray-700 via-gray-800 to-black shadow-2xl animate-float-delayed opacity-0 animate-fade-in"
+            style={{ 
+              animationDelay: '0.4s',
+              boxShadow: '20px 20px 60px rgba(0,0,0,0.4), inset -8px -8px 25px rgba(0,0,0,0.3), inset 8px 8px 25px rgba(255,255,255,0.05)'
+            }}
+          >
+            <div className="absolute top-3 left-5 w-6 h-3 rounded-full bg-white/10 blur-sm" />
+          </div>
+
+          {/* Medium Black Ball - Left Side */}
+          <div 
+            className="absolute top-1/2 -left-6 w-20 h-20 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-gray-600 via-gray-800 to-black shadow-xl animate-float-slow opacity-0 animate-fade-in"
+            style={{ 
+              animationDelay: '0.6s',
+              boxShadow: '15px 15px 40px rgba(0,0,0,0.35), inset -6px -6px 20px rgba(0,0,0,0.25), inset 6px 6px 20px rgba(255,255,255,0.05)'
+            }}
+          >
+            <div className="absolute top-2 left-4 w-4 h-2 rounded-full bg-white/10 blur-sm" />
+          </div>
+
+          {/* Medium Red Ball - Right Side */}
+          <div 
+            className="absolute bottom-20 -right-4 w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-red-400 via-red-600 to-red-700 shadow-xl animate-float opacity-0 animate-fade-in"
+            style={{ 
+              animationDelay: '0.5s',
+              boxShadow: '15px 15px 45px rgba(0,0,0,0.3), inset -8px -8px 25px rgba(0,0,0,0.15), inset 8px 8px 25px rgba(255,255,255,0.1)'
+            }}
+          >
+            <div className="absolute top-3 left-5 w-5 h-2.5 rounded-full bg-white/20 blur-sm" />
+          </div>
+
+          {/* Small Black Ball - Bottom Left */}
+          <div 
+            className="absolute bottom-12 left-8 w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-gray-700 via-gray-800 to-black shadow-lg animate-float-delayed opacity-0 animate-fade-in"
+            style={{ 
+              animationDelay: '0.7s',
+              boxShadow: '10px 10px 30px rgba(0,0,0,0.35), inset -4px -4px 15px rgba(0,0,0,0.2), inset 4px 4px 15px rgba(255,255,255,0.05)'
+            }}
+          >
+            <div className="absolute top-1.5 left-2.5 w-3 h-1.5 rounded-full bg-white/10 blur-sm" />
+          </div>
+
+          {/* Small Red Ball - Bottom Right */}
+          <div 
+            className="absolute bottom-4 right-20 w-10 h-10 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-red-500 via-red-600 to-red-700 shadow-lg animate-float-slow opacity-0 animate-fade-in"
+            style={{ 
+              animationDelay: '0.8s',
+              boxShadow: '8px 8px 25px rgba(0,0,0,0.25), inset -3px -3px 12px rgba(0,0,0,0.15), inset 3px 3px 12px rgba(255,255,255,0.1)'
+            }}
+          >
+            <div className="absolute top-1 left-2 w-2 h-1 rounded-full bg-white/20 blur-sm" />
+          </div>
           
-          <div className="relative z-10 px-6 py-12 md:py-16">
-            <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
-              {/* Left: Text content */}
-              <div className="flex-1 text-center lg:text-left">
-                {/* Logo */}
-                <img 
-                  src={logo} 
-                  alt="Pure Pilates" 
-                  className="h-14 md:h-16 mx-auto lg:mx-0 mb-6 opacity-0 animate-fade-in"
-                  style={{ animationDelay: '0.1s' }}
-                />
-                
-                {/* Title */}
-                <h1 
-                  className="text-4xl md:text-5xl font-heading font-bold bg-gradient-to-r from-primary via-primary to-primary/70 bg-clip-text text-transparent opacity-0 animate-fade-in-up"
-                  style={{ animationDelay: '0.2s' }}
-                >
-                  Hub Pure Pilates
-                </h1>
-                
-                {/* Subtitle */}
-                <p 
-                  className="text-lg md:text-xl text-muted-foreground mt-3 opacity-0 animate-fade-in-up"
-                  style={{ animationDelay: '0.3s' }}
-                >
-                  Sua plataforma de comunicação interna.
-                </p>
-                
-                {/* Description */}
-                <p 
-                  className="text-muted-foreground mt-5 max-w-lg mx-auto lg:mx-0 leading-relaxed opacity-0 animate-fade-in-up"
-                  style={{ animationDelay: '0.4s' }}
-                >
-                  Um espaço mais dinâmico, simples e fácil de usar, criado para centralizar informações, acessar links rápidos e acompanhar nossas redes.
-                </p>
+          {/* Content */}
+          <div className="relative z-10 px-6 py-16 md:py-24 flex flex-col items-center text-center">
+            {/* Title */}
+            <h1 
+              className="text-4xl md:text-6xl font-heading font-black opacity-0 animate-fade-in"
+              style={{ animationDelay: '0.3s' }}
+            >
+              <span className="text-foreground">Hub </span>
+              <span className="text-primary underline decoration-primary decoration-4 underline-offset-4">Pure Pilates</span>
+            </h1>
+            
+            {/* Subtitle */}
+            <p 
+              className="text-lg md:text-xl text-muted-foreground mt-4 opacity-0 animate-fade-in"
+              style={{ animationDelay: '0.4s' }}
+            >
+              Sua plataforma de comunicação interna.
+            </p>
+            
+            {/* Description */}
+            <p 
+              className="text-muted-foreground mt-5 max-w-xl leading-relaxed opacity-0 animate-fade-in"
+              style={{ animationDelay: '0.5s' }}
+            >
+              Um espaço mais dinâmico, simples e fácil de usar, criado para centralizar informações, acessar links rápidos e acompanhar nossas redes.
+            </p>
 
-                {/* CTA Button */}
-                <Button 
-                  onClick={() => navigate('/novidades')}
-                  className="mt-8 gap-2 opacity-0 animate-fade-in-up group"
-                  style={{ animationDelay: '0.5s' }}
-                  size="lg"
-                >
-                  Explorar plataforma
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </div>
-
-              {/* Right: Floating Mockups */}
-              <div className="flex-1 relative hidden md:flex justify-center items-center min-h-[300px]">
-                {/* Mockup 1 - Calendar */}
-                <div 
-                  className="absolute top-0 left-8 w-44 bg-card rounded-xl shadow-xl border p-4 animate-float opacity-0 animate-fade-in"
-                  style={{ animationDelay: '0.6s' }}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-lg bg-sector-academy/20 flex items-center justify-center">
-                      <CalendarDays className="h-4 w-4 text-sector-academy" />
-                    </div>
-                    <span className="text-xs font-medium">Calendário</span>
-                  </div>
-                  <div className="grid grid-cols-7 gap-1">
-                    {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
-                      <div key={i} className="text-[9px] text-muted-foreground text-center">{d}</div>
-                    ))}
-                    {[...Array(31)].map((_, i) => (
-                      <div 
-                        key={i} 
-                        className={`text-[9px] text-center py-0.5 rounded ${
-                          i === 14 ? 'bg-primary text-primary-foreground font-bold' : 
-                          i === 20 ? 'bg-sector-academy/30 text-sector-academy font-medium' : ''
-                        }`}
-                      >
-                        {i + 1}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Mockup 2 - Post Card */}
-                <div 
-                  className="absolute top-16 right-4 w-48 bg-card rounded-xl shadow-xl border overflow-hidden animate-float-delayed opacity-0 animate-fade-in"
-                  style={{ animationDelay: '0.7s' }}
-                >
-                  <div className="h-20 bg-gradient-to-br from-primary/20 to-primary/5" />
-                  <div className="p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                      <span className="text-[10px] text-primary font-medium">Marketing</span>
-                    </div>
-                    <div className="text-xs font-semibold mb-1">Campanha de Verão</div>
-                    <div className="text-[10px] text-muted-foreground">Novos materiais disponíveis...</div>
-                  </div>
-                </div>
-
-                {/* Mockup 3 - Media */}
-                <div 
-                  className="absolute bottom-4 left-16 w-40 bg-card rounded-xl shadow-xl border p-3 animate-float-slow opacity-0 animate-fade-in"
-                  style={{ animationDelay: '0.8s' }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-sector-franchising/20 flex items-center justify-center">
-                      <Video className="h-4 w-4 text-sector-franchising" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-medium block">Mídias Sociais</span>
-                      <span className="text-[9px] text-muted-foreground">3 novos conteúdos</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <div className="flex-1 h-12 rounded bg-muted animate-pulse" />
-                    <div className="flex-1 h-12 rounded bg-muted animate-pulse" style={{ animationDelay: '0.2s' }} />
-                    <div className="flex-1 h-12 rounded bg-muted animate-pulse" style={{ animationDelay: '0.4s' }} />
-                  </div>
-                </div>
-
-                {/* Decorative dots */}
-                <div className="absolute top-8 right-32 w-2 h-2 rounded-full bg-primary/40 animate-pulse" />
-                <div className="absolute bottom-20 right-8 w-3 h-3 rounded-full bg-sector-academy/40 animate-pulse" style={{ animationDelay: '0.5s' }} />
-                <div className="absolute top-32 left-4 w-2 h-2 rounded-full bg-sector-franchising/40 animate-pulse" style={{ animationDelay: '1s' }} />
-              </div>
+            {/* CTA Buttons */}
+            <div 
+              className="flex flex-col sm:flex-row gap-4 mt-8 opacity-0 animate-fade-in"
+              style={{ animationDelay: '0.6s' }}
+            >
+              <Button 
+                onClick={() => navigate('/novidades')}
+                className="gap-2 group bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-base font-semibold rounded-lg shadow-lg"
+                size="lg"
+              >
+                Explorar plataforma
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Button>
+              <Button 
+                onClick={() => navigate('/midias-sociais')}
+                variant="outline"
+                className="gap-2 group border-2 border-foreground/80 text-foreground hover:bg-foreground hover:text-background px-8 py-6 text-base font-semibold rounded-lg"
+                size="lg"
+              >
+                Ver mídias sociais
+              </Button>
             </div>
           </div>
         </section>
