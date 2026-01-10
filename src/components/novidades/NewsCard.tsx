@@ -29,6 +29,7 @@ interface Comment {
   id: string;
   content: string;
   emoji: string | null;
+  user_id: string;
   created_at: string;
   profiles: {
     full_name: string | null;
