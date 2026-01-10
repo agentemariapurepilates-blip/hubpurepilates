@@ -30,6 +30,7 @@ interface Comment {
   id: string;
   content: string;
   emoji: string | null;
+  user_id: string;
   created_at: string;
   profiles: {
     full_name: string | null;
@@ -170,6 +171,7 @@ const Feed = () => {
         id: comment.id,
         content: comment.content,
         emoji: comment.emoji,
+        user_id: comment.user_id,
         created_at: comment.created_at,
         profiles: profile,
       };

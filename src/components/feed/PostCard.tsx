@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { MessageCircle, Send, Pin, Smile, Heart } from 'lucide-react';
+import { MessageCircle, Send, Pin, Smile, Heart, Trash2 } from 'lucide-react';
 import SectorBadge from './SectorBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +20,7 @@ interface Comment {
   id: string;
   content: string;
   emoji: string | null;
+  user_id: string;
   created_at: string;
   profiles: {
     full_name: string | null;
@@ -57,17 +58,22 @@ const emojis = [
 ];
 
 const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [hasLiked, setHasLiked] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [localComments, setLocalComments] = useState<Comment[]>(post.comments || []);
 
   useEffect(() => {
     fetchLikes();
   }, [post.id, user]);
+
+  useEffect(() => {
+    setLocalComments(post.comments || []);
+  }, [post.comments]);
 
   const fetchLikes = async () => {
     // Get total likes count
@@ -143,6 +149,22 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
     toast.success('Comentário adicionado!');
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    const { error } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentId);
+
+    if (error) {
+      toast.error('Erro ao excluir comentário');
+      return;
+    }
+
+    setLocalComments((prev) => prev.filter((c) => c.id !== commentId));
+    toast.success('Comentário excluído');
+    onCommentAdded();
+  };
+
   const insertEmoji = (emoji: string) => {
     setNewComment((prev) => prev + emoji);
   };
@@ -215,19 +237,20 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
             onClick={() => setShowComments(!showComments)}
           >
             <MessageCircle className="h-4 w-4" />
-            {post.comments?.length || 0} comentário{(post.comments?.length || 0) !== 1 ? 's' : ''}
+            {localComments.length} comentário{localComments.length !== 1 ? 's' : ''}
           </Button>
         </div>
 
         {showComments && (
           <div className="mt-4 space-y-4 animate-fade-in">
             {/* Comments list */}
-            {post.comments?.map((comment) => {
+            {localComments.map((comment) => {
               const commentAuthor = comment.profiles?.full_name || comment.profiles?.email?.split('@')[0] || 'Usuário';
               const commentInitial = commentAuthor[0].toUpperCase();
+              const canDelete = user?.id === comment.user_id || isAdmin;
               
               return (
-                <div key={comment.id} className="flex gap-3">
+                <div key={comment.id} className="flex gap-3 group">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={comment.profiles?.avatar_url || undefined} alt={commentAuthor} />
                     <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
@@ -248,6 +271,16 @@ const PostCard = ({ post, onCommentAdded }: PostCardProps) => {
                           locale: ptBR 
                         })}
                       </span>
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleDeleteComment(comment.id)}
+                        >
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                     <p className="text-sm">{comment.content}</p>
                   </div>

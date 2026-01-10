@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Trash2 } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Send, Trash2, Smile } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -25,6 +30,13 @@ interface Comment {
 interface CommentSectionProps {
   contentId: string;
 }
+
+const emojis = [
+  '😀', '😃', '😄', '😁', '😊', '🥰', '😍', '🤩',
+  '👍', '👏', '🙌', '💪', '🎉', '🎊', '🏆', '⭐',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+  '🔥', '✨', '💡', '📢', '📌', '✅', '🚀', '💼',
+];
 
 const CommentSection = ({ contentId }: CommentSectionProps) => {
   const { user, isAdmin } = useAuth();
@@ -134,6 +146,10 @@ const CommentSection = ({ contentId }: CommentSectionProps) => {
     toast.success('Comentário excluído');
   };
 
+  const insertEmoji = (emoji: string) => {
+    setNewComment((prev) => prev + emoji);
+  };
+
   const getInitials = (name: string | null, email: string) => {
     if (name) {
       return name
@@ -180,7 +196,7 @@ const CommentSection = ({ contentId }: CommentSectionProps) => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
                         onClick={() => handleDelete(comment.id)}
                       >
                         <Trash2 className="h-3 w-3 text-destructive" />
@@ -195,16 +211,41 @@ const CommentSection = ({ contentId }: CommentSectionProps) => {
         </div>
       </ScrollArea>
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <Input
+      <form onSubmit={handleSubmit} className="space-y-2">
+        <Textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder="Adicionar comentário..."
-          className="flex-1"
+          className="min-h-[60px] resize-none"
         />
-        <Button type="submit" size="icon" disabled={!newComment.trim() || submitting}>
-          <Send className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center justify-between">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="ghost" size="sm" className="gap-1">
+                <Smile className="h-4 w-4" />
+                Emoji
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2" align="start">
+              <div className="grid grid-cols-8 gap-1">
+                {emojis.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => insertEmoji(emoji)}
+                    className="p-1.5 text-lg hover:bg-muted rounded transition-colors"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button type="submit" size="sm" disabled={!newComment.trim() || submitting} className="gap-2">
+            <Send className="h-4 w-4" />
+            Enviar
+          </Button>
+        </div>
       </form>
     </div>
   );
