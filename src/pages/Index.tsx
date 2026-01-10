@@ -15,7 +15,7 @@ import {
   ArrowRight,
   Newspaper
 } from 'lucide-react';
-import logo from '@/assets/logo-pure-pilates.png';
+import logoHero from '@/assets/logo-hero.png';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -86,109 +86,130 @@ const Index = () => {
     <MainLayout>
       <div className="max-w-5xl mx-auto">
         {/* Hero Section - Pilates Balls Style */}
-        <section className="relative overflow-hidden rounded-2xl mb-12 min-h-[420px] md:min-h-[480px] bg-gradient-to-b from-muted/30 to-background">
-          {/* Floating Pilates Balls */}
-          {/* Large Red Ball - Top Left */}
+        <section className="relative overflow-hidden rounded-2xl mb-12 min-h-[500px] md:min-h-[560px] bg-gradient-to-b from-muted/30 to-background">
+          {/* Decorative Pilates Balls */}
+          {/* Large Dark Red Ball - Top Left */}
           <div 
-            className="absolute -top-8 -left-12 w-32 h-32 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-red-500 via-red-600 to-red-700 shadow-2xl animate-float opacity-0 animate-fade-in"
+            className="absolute -top-10 -left-16 w-36 h-36 md:w-52 md:h-52 rounded-full opacity-0 animate-fade-in animate-float"
             style={{ 
               animationDelay: '0.2s',
-              boxShadow: '20px 20px 60px rgba(0,0,0,0.3), inset -10px -10px 30px rgba(0,0,0,0.2), inset 10px 10px 30px rgba(255,255,255,0.1)'
+              background: 'radial-gradient(circle at 30% 30%, #b91c1c, #991b1b 40%, #7f1d1d 80%)',
+              boxShadow: '25px 25px 60px rgba(0,0,0,0.4), inset -12px -12px 35px rgba(0,0,0,0.3), inset 12px 12px 35px rgba(255,255,255,0.1)'
             }}
           >
-            <div className="absolute top-4 left-6 w-8 h-4 rounded-full bg-white/20 blur-sm" />
+            <div className="absolute top-6 left-8 w-12 h-6 rounded-full bg-white/15 blur-md" />
           </div>
 
           {/* Large Black Ball - Top Right */}
           <div 
-            className="absolute -top-4 -right-8 w-28 h-28 md:w-40 md:h-40 rounded-full bg-gradient-to-br from-gray-700 via-gray-800 to-black shadow-2xl animate-float-delayed opacity-0 animate-fade-in"
+            className="absolute -top-6 -right-10 w-32 h-32 md:w-48 md:h-48 rounded-full opacity-0 animate-fade-in animate-float-delayed"
             style={{ 
               animationDelay: '0.4s',
-              boxShadow: '20px 20px 60px rgba(0,0,0,0.4), inset -8px -8px 25px rgba(0,0,0,0.3), inset 8px 8px 25px rgba(255,255,255,0.05)'
+              background: 'radial-gradient(circle at 30% 30%, #404040, #1a1a1a 50%, #0a0a0a 90%)',
+              boxShadow: '25px 25px 70px rgba(0,0,0,0.5), inset -10px -10px 30px rgba(0,0,0,0.4), inset 10px 10px 30px rgba(255,255,255,0.05)'
+            }}
+          >
+            <div className="absolute top-4 left-6 w-10 h-5 rounded-full bg-white/10 blur-md" />
+          </div>
+
+          {/* Medium Black Ball - Left Side */}
+          <div 
+            className="absolute top-1/2 -translate-y-1/2 -left-8 w-24 h-24 md:w-32 md:h-32 rounded-full opacity-0 animate-fade-in animate-float-slow"
+            style={{ 
+              animationDelay: '0.6s',
+              background: 'radial-gradient(circle at 30% 30%, #525252, #262626 50%, #0f0f0f 90%)',
+              boxShadow: '18px 18px 50px rgba(0,0,0,0.45), inset -8px -8px 25px rgba(0,0,0,0.35), inset 8px 8px 25px rgba(255,255,255,0.05)'
             }}
           >
             <div className="absolute top-3 left-5 w-6 h-3 rounded-full bg-white/10 blur-sm" />
           </div>
 
-          {/* Medium Black Ball - Left Side */}
+          {/* Medium Dark Red Ball - Right Side */}
           <div 
-            className="absolute top-1/2 -left-6 w-20 h-20 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-gray-600 via-gray-800 to-black shadow-xl animate-float-slow opacity-0 animate-fade-in"
-            style={{ 
-              animationDelay: '0.6s',
-              boxShadow: '15px 15px 40px rgba(0,0,0,0.35), inset -6px -6px 20px rgba(0,0,0,0.25), inset 6px 6px 20px rgba(255,255,255,0.05)'
-            }}
-          >
-            <div className="absolute top-2 left-4 w-4 h-2 rounded-full bg-white/10 blur-sm" />
-          </div>
-
-          {/* Medium Red Ball - Right Side */}
-          <div 
-            className="absolute bottom-20 -right-4 w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-red-400 via-red-600 to-red-700 shadow-xl animate-float opacity-0 animate-fade-in"
+            className="absolute bottom-24 -right-6 w-28 h-28 md:w-40 md:h-40 rounded-full opacity-0 animate-fade-in animate-float"
             style={{ 
               animationDelay: '0.5s',
-              boxShadow: '15px 15px 45px rgba(0,0,0,0.3), inset -8px -8px 25px rgba(0,0,0,0.15), inset 8px 8px 25px rgba(255,255,255,0.1)'
+              background: 'radial-gradient(circle at 30% 30%, #dc2626, #b91c1c 40%, #991b1b 80%)',
+              boxShadow: '20px 20px 55px rgba(0,0,0,0.4), inset -10px -10px 30px rgba(0,0,0,0.25), inset 10px 10px 30px rgba(255,255,255,0.1)'
             }}
           >
-            <div className="absolute top-3 left-5 w-5 h-2.5 rounded-full bg-white/20 blur-sm" />
+            <div className="absolute top-4 left-6 w-8 h-4 rounded-full bg-white/15 blur-md" />
           </div>
 
           {/* Small Black Ball - Bottom Left */}
           <div 
-            className="absolute bottom-12 left-8 w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-gray-700 via-gray-800 to-black shadow-lg animate-float-delayed opacity-0 animate-fade-in"
+            className="absolute bottom-16 left-12 w-16 h-16 md:w-20 md:h-20 rounded-full opacity-0 animate-fade-in animate-float-delayed"
             style={{ 
               animationDelay: '0.7s',
-              boxShadow: '10px 10px 30px rgba(0,0,0,0.35), inset -4px -4px 15px rgba(0,0,0,0.2), inset 4px 4px 15px rgba(255,255,255,0.05)'
+              background: 'radial-gradient(circle at 30% 30%, #404040, #1f1f1f 50%, #0a0a0a 90%)',
+              boxShadow: '12px 12px 35px rgba(0,0,0,0.4), inset -5px -5px 18px rgba(0,0,0,0.3), inset 5px 5px 18px rgba(255,255,255,0.05)'
             }}
           >
-            <div className="absolute top-1.5 left-2.5 w-3 h-1.5 rounded-full bg-white/10 blur-sm" />
+            <div className="absolute top-2 left-3 w-4 h-2 rounded-full bg-white/10 blur-sm" />
           </div>
 
-          {/* Small Red Ball - Bottom Right */}
+          {/* Small Dark Red Ball - Bottom Right */}
           <div 
-            className="absolute bottom-4 right-20 w-10 h-10 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-red-500 via-red-600 to-red-700 shadow-lg animate-float-slow opacity-0 animate-fade-in"
+            className="absolute bottom-8 right-24 w-14 h-14 md:w-18 md:h-18 rounded-full opacity-0 animate-fade-in animate-float-slow"
             style={{ 
               animationDelay: '0.8s',
-              boxShadow: '8px 8px 25px rgba(0,0,0,0.25), inset -3px -3px 12px rgba(0,0,0,0.15), inset 3px 3px 12px rgba(255,255,255,0.1)'
+              background: 'radial-gradient(circle at 30% 30%, #b91c1c, #991b1b 50%, #7f1d1d 90%)',
+              boxShadow: '10px 10px 30px rgba(0,0,0,0.35), inset -4px -4px 15px rgba(0,0,0,0.2), inset 4px 4px 15px rgba(255,255,255,0.1)'
             }}
           >
-            <div className="absolute top-1 left-2 w-2 h-1 rounded-full bg-white/20 blur-sm" />
+            <div className="absolute top-1.5 left-2.5 w-3 h-1.5 rounded-full bg-white/15 blur-sm" />
+          </div>
+
+          {/* Extra Small Black Ball - Top Center */}
+          <div 
+            className="absolute top-16 left-1/3 w-10 h-10 md:w-12 md:h-12 rounded-full opacity-0 animate-fade-in animate-float"
+            style={{ 
+              animationDelay: '0.9s',
+              background: 'radial-gradient(circle at 30% 30%, #525252, #262626 50%, #0f0f0f 90%)',
+              boxShadow: '8px 8px 25px rgba(0,0,0,0.35), inset -3px -3px 12px rgba(0,0,0,0.25), inset 3px 3px 12px rgba(255,255,255,0.05)'
+            }}
+          >
+            <div className="absolute top-1 left-2 w-2 h-1 rounded-full bg-white/10 blur-sm" />
+          </div>
+
+          {/* Extra Small Red Ball - Bottom Center */}
+          <div 
+            className="absolute bottom-28 right-1/3 w-8 h-8 md:w-10 md:h-10 rounded-full opacity-0 animate-fade-in animate-float-delayed"
+            style={{ 
+              animationDelay: '1s',
+              background: 'radial-gradient(circle at 30% 30%, #dc2626, #b91c1c 50%, #991b1b 90%)',
+              boxShadow: '6px 6px 20px rgba(0,0,0,0.3), inset -2px -2px 10px rgba(0,0,0,0.2), inset 2px 2px 10px rgba(255,255,255,0.1)'
+            }}
+          >
+            <div className="absolute top-1 left-1.5 w-1.5 h-0.5 rounded-full bg-white/15 blur-sm" />
           </div>
           
           {/* Content */}
-          <div className="relative z-10 px-6 py-16 md:py-24 flex flex-col items-center text-center">
-            {/* Title */}
-            <h1 
-              className="text-4xl md:text-6xl font-heading font-black opacity-0 animate-fade-in"
+          <div className="relative z-10 px-6 py-20 md:py-28 flex flex-col items-center text-center">
+            {/* Logo */}
+            <img 
+              src={logoHero} 
+              alt="Pure Pilates - Muito mais que um studio de pilates" 
+              className="w-[320px] md:w-[480px] lg:w-[580px] h-auto mb-8 opacity-0 animate-fade-in drop-shadow-lg"
               style={{ animationDelay: '0.3s' }}
-            >
-              <span className="text-foreground">Hub </span>
-              <span className="text-primary underline decoration-primary decoration-4 underline-offset-4">Pure Pilates</span>
-            </h1>
+            />
             
             {/* Subtitle */}
             <p 
-              className="text-lg md:text-xl text-muted-foreground mt-4 opacity-0 animate-fade-in"
-              style={{ animationDelay: '0.4s' }}
-            >
-              Sua plataforma de comunicação interna.
-            </p>
-            
-            {/* Description */}
-            <p 
-              className="text-muted-foreground mt-5 max-w-xl leading-relaxed opacity-0 animate-fade-in"
+              className="text-lg md:text-2xl font-medium text-foreground/80 opacity-0 animate-fade-in tracking-wide"
               style={{ animationDelay: '0.5s' }}
             >
-              Um espaço mais dinâmico, simples e fácil de usar, criado para centralizar informações, acessar links rápidos e acompanhar nossas redes.
+              <span className="font-bold text-primary">Hub Pure Pilates:</span> sua plataforma de comunicação interna
             </p>
 
             {/* CTA Buttons */}
             <div 
-              className="flex flex-col sm:flex-row gap-4 mt-8 opacity-0 animate-fade-in"
-              style={{ animationDelay: '0.6s' }}
+              className="flex flex-col sm:flex-row gap-4 mt-10 opacity-0 animate-fade-in"
+              style={{ animationDelay: '0.7s' }}
             >
               <Button 
                 onClick={() => navigate('/novidades')}
-                className="gap-2 group bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-base font-semibold rounded-lg shadow-lg"
+                className="gap-2 group bg-pure-red-dark hover:bg-primary text-white px-10 py-6 text-base font-bold rounded-lg shadow-xl"
                 size="lg"
               >
                 Explorar plataforma
@@ -197,7 +218,7 @@ const Index = () => {
               <Button 
                 onClick={() => navigate('/midias-sociais')}
                 variant="outline"
-                className="gap-2 group border-2 border-foreground/80 text-foreground hover:bg-foreground hover:text-background px-8 py-6 text-base font-semibold rounded-lg"
+                className="gap-2 group border-2 border-foreground text-foreground bg-foreground text-background hover:bg-transparent hover:text-foreground px-10 py-6 text-base font-bold rounded-lg"
                 size="lg"
               >
                 Ver mídias sociais
