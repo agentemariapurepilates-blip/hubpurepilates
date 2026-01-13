@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
@@ -21,13 +21,15 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, X, Image, Loader2 } from 'lucide-react';
+import { CalendarIcon, X, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { Demand } from '@/pages/PedidosDemanda';
 
-interface CreateDemandDialogProps {
+interface EditDemandDialogProps {
+  demand: Demand | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
@@ -50,13 +52,10 @@ const departments = [
   'Parceiros externos',
 ];
 
-const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialogProps) => {
+const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandDialogProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
-  const [attachments, setAttachments] = useState<{ url: string; name: string }[]>([]);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -66,6 +65,26 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [deadline, setDeadline] = useState<Date | undefined>();
   const [selectedAssignees, setSelectedAssignees] = useState<Colaborador[]>([]);
+
+  // Load demand data
+  useEffect(() => {
+    if (demand && open) {
+      setTitle(demand.title);
+      setDescription(demand.description || '');
+      setFromDepartment(demand.from_department);
+      setToDepartment(demand.to_department);
+      setPriority(demand.priority);
+      setDeadline(demand.deadline ? new Date(demand.deadline) : undefined);
+      
+      // Load assignees
+      const assignees = demand.assignees?.map(a => ({
+        user_id: a.user_id,
+        full_name: a.profile?.full_name || null,
+        avatar_url: a.profile?.avatar_url || null,
+      })) || [];
+      setSelectedAssignees(assignees);
+    }
+  }, [demand, open]);
 
   // Fetch colaboradores
   useEffect(() => {
@@ -85,69 +104,6 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
     }
   }, [open]);
 
-  // Handle paste for images
-  const handlePaste = useCallback(async (e: ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        e.preventDefault();
-        const file = item.getAsFile();
-        if (file) {
-          await uploadImage(file);
-        }
-        break;
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea && open) {
-      textarea.addEventListener('paste', handlePaste);
-      return () => textarea.removeEventListener('paste', handlePaste);
-    }
-  }, [open, handlePaste]);
-
-  const uploadImage = async (file: File) => {
-    setUploadingImage(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `demands/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('demand-attachments')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('demand-attachments')
-        .getPublicUrl(filePath);
-
-      setAttachments(prev => [...prev, { url: publicUrl, name: file.name }]);
-      toast({
-        title: "Imagem anexada",
-        description: "A imagem foi anexada com sucesso."
-      });
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao fazer upload da imagem",
-        variant: "destructive"
-      });
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const removeAttachment = (url: string) => {
-    setAttachments(prev => prev.filter(a => a.url !== url));
-  };
-
   const toggleAssignee = (colaborador: Colaborador) => {
     setSelectedAssignees(prev => {
       const exists = prev.find(a => a.user_id === colaborador.user_id);
@@ -161,7 +117,7 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title.trim() || !fromDepartment || !toDepartment) {
+    if (!demand || !title.trim() || !fromDepartment || !toDepartment) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha o briefing e os departamentos",
@@ -172,24 +128,27 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
 
     setLoading(true);
     try {
-      // Create demand
-      const { data: demand, error: demandError } = await supabase
+      // Update demand
+      const { error: demandError } = await supabase
         .from('demands')
-        .insert({
+        .update({
           title,
           description,
           from_department: fromDepartment,
           to_department: toDepartment,
           priority,
           deadline: deadline ? format(deadline, 'yyyy-MM-dd') : null,
-          created_by: user?.id,
         })
-        .select()
-        .single();
+        .eq('id', demand.id);
 
       if (demandError) throw demandError;
 
-      // Add assignees
+      // Update assignees - delete existing and insert new
+      await supabase
+        .from('demand_assignees')
+        .delete()
+        .eq('demand_id', demand.id);
+
       if (selectedAssignees.length > 0) {
         const assigneesData = selectedAssignees.map(a => ({
           demand_id: demand.id,
@@ -201,52 +160,19 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
           .insert(assigneesData);
 
         if (assigneesError) throw assigneesError;
-
-        // Create notifications for assignees
-        const notificationsData = selectedAssignees.map(a => ({
-          user_id: a.user_id,
-          demand_id: demand.id,
-          notification_type: 'assignment',
-          message: `Você foi atribuído(a) à demanda: ${title}`,
-          created_by: user?.id,
-        }));
-
-        await supabase.from('demand_notifications').insert(notificationsData);
-      }
-
-      // Add attachments
-      if (attachments.length > 0) {
-        const attachmentsData = attachments.map(a => ({
-          demand_id: demand.id,
-          file_url: a.url,
-          file_name: a.name,
-          uploaded_by: user?.id,
-        }));
-
-        await supabase.from('demand_attachments').insert(attachmentsData);
       }
 
       toast({
-        title: "Demanda criada",
-        description: "A demanda foi criada com sucesso."
+        title: "Demanda atualizada",
+        description: "A demanda foi atualizada com sucesso."
       });
-
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setFromDepartment('');
-      setToDepartment('');
-      setPriority('medium');
-      setDeadline(undefined);
-      setSelectedAssignees([]);
-      setAttachments([]);
       
       onSuccess();
     } catch (error) {
-      console.error('Error creating demand:', error);
+      console.error('Error updating demand:', error);
       toast({
         title: "Erro",
-        description: "Erro ao criar demanda",
+        description: "Erro ao atualizar demanda",
         variant: "destructive"
       });
     } finally {
@@ -254,11 +180,13 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
     }
   };
 
+  if (!demand) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nova Demanda</DialogTitle>
+          <DialogTitle>Editar Demanda</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -274,48 +202,16 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
             />
           </div>
 
-          {/* Description with paste support */}
+          {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description">Descrição Detalhada</Label>
             <Textarea
-              ref={textareaRef}
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
             />
-            {uploadingImage && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Enviando imagem...
-              </div>
-            )}
           </div>
-
-          {/* Attachments Preview */}
-          {attachments.length > 0 && (
-            <div className="space-y-2">
-              <Label>Anexos</Label>
-              <div className="flex flex-wrap gap-2">
-                {attachments.map((attachment, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={attachment.url}
-                      alt={attachment.name}
-                      className="h-16 w-16 object-cover rounded-lg border"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(attachment.url)}
-                      className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Departments */}
           <div className="grid grid-cols-2 gap-3">
@@ -439,7 +335,7 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                'Criar Demanda'
+                'Salvar Alterações'
               )}
             </Button>
           </div>
@@ -449,4 +345,4 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
   );
 };
 
-export default CreateDemandDialog;
+export default EditDemandDialog;
