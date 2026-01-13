@@ -218,7 +218,6 @@ const Notificacoes = () => {
                         addSuffix: true,
                         locale: ptBR
                       })}
-                      })}
                     </p>
                   </div>
                   {!notification.is_read && (

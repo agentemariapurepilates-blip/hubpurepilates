@@ -32,7 +32,7 @@ import {
   Building2,
   Trash2
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -528,7 +528,6 @@ const DemandDetailsSheet = ({ demand, open, onOpenChange, onUpdate }: DemandDeta
                         <span className="text-xs text-muted-foreground">
                           há {formatDistanceToNowStrict(new Date(comment.created_at), {
                             locale: ptBR
-                          })}
                           })}
                         </span>
                         {(comment.user_id === user?.id || isAdmin) && (
