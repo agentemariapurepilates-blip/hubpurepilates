@@ -81,6 +81,198 @@ export type Database = {
           },
         ]
       }
+      demand_assignees: {
+        Row: {
+          created_at: string
+          demand_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          demand_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          demand_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_assignees_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: false
+            referencedRelation: "demands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_attachments: {
+        Row: {
+          comment_id: string | null
+          created_at: string
+          demand_id: string | null
+          file_name: string
+          file_type: string | null
+          file_url: string
+          id: string
+          uploaded_by: string
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string
+          demand_id?: string | null
+          file_name: string
+          file_type?: string | null
+          file_url: string
+          id?: string
+          uploaded_by: string
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string
+          demand_id?: string | null
+          file_name?: string
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_attachments_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "demand_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demand_attachments_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: false
+            referencedRelation: "demands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_comments: {
+        Row: {
+          content: string
+          created_at: string
+          demand_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          demand_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          demand_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_comments_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: false
+            referencedRelation: "demands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_notifications: {
+        Row: {
+          created_at: string
+          created_by: string
+          demand_id: string
+          id: string
+          is_read: boolean
+          message: string
+          notification_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          demand_id: string
+          id?: string
+          is_read?: boolean
+          message: string
+          notification_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          demand_id?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          notification_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_notifications_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: false
+            referencedRelation: "demands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demands: {
+        Row: {
+          created_at: string
+          created_by: string
+          deadline: string | null
+          description: string | null
+          from_department: string
+          id: string
+          priority: Database["public"]["Enums"]["demand_priority"]
+          status: Database["public"]["Enums"]["demand_status"]
+          title: string
+          to_department: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          deadline?: string | null
+          description?: string | null
+          from_department: string
+          id?: string
+          priority?: Database["public"]["Enums"]["demand_priority"]
+          status?: Database["public"]["Enums"]["demand_status"]
+          title: string
+          to_department: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          deadline?: string | null
+          description?: string | null
+          from_department?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["demand_priority"]
+          status?: Database["public"]["Enums"]["demand_status"]
+          title?: string
+          to_department?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       marketing_events: {
         Row: {
           created_at: string
@@ -415,9 +607,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_colaborador: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
+      demand_priority: "low" | "medium" | "high"
+      demand_status: "pending" | "in_progress" | "completed" | "cancelled"
       event_tag: "pacotes" | "pure_pass" | "pure_club"
       profile_type: "colaborador" | "professor" | "franqueado"
       sector_type:
@@ -560,6 +755,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      demand_priority: ["low", "medium", "high"],
+      demand_status: ["pending", "in_progress", "completed", "cancelled"],
       event_tag: ["pacotes", "pure_pass", "pure_club"],
       profile_type: ["colaborador", "professor", "franqueado"],
       sector_type: [
