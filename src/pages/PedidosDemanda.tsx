@@ -10,7 +10,8 @@ import { toast } from '@/hooks/use-toast';
 import DemandListView from '@/components/demands/DemandListView';
 import DemandKanbanView from '@/components/demands/DemandKanbanView';
 import CreateDemandDialog from '@/components/demands/CreateDemandDialog';
-import DemandDetailsSheet from '@/components/demands/DemandDetailsSheet';
+import DemandDetailsDialog from '@/components/demands/DemandDetailsDialog';
+import EditDemandDialog from '@/components/demands/EditDemandDialog';
 
 export interface Demand {
   id: string;
@@ -46,6 +47,7 @@ const PedidosDemanda = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   // Redirect non-colaboradores
   useEffect(() => {
@@ -226,12 +228,27 @@ const PedidosDemanda = () => {
           }}
         />
 
-        {/* Details Sheet */}
-        <DemandDetailsSheet
+        {/* Details Dialog */}
+        <DemandDetailsDialog
           demand={selectedDemand}
           open={detailsOpen}
           onOpenChange={setDetailsOpen}
           onUpdate={fetchDemands}
+          onEditClick={() => {
+            setDetailsOpen(false);
+            setEditOpen(true);
+          }}
+        />
+
+        {/* Edit Dialog */}
+        <EditDemandDialog
+          demand={selectedDemand}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSuccess={() => {
+            fetchDemands();
+            setEditOpen(false);
+          }}
         />
       </div>
     </MainLayout>
