@@ -18,7 +18,8 @@ import {
   UsersRound,
   Settings,
   FileText,
-  ClipboardList
+  ClipboardList,
+  Bell
 } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState } from 'react';
@@ -64,7 +65,8 @@ const Sidebar = () => {
   // Colaboradores section - only for colaboradores and admins
   const colaboradoresNavigation = [
     { name: 'Feed da Sede', href: '/feed', icon: Newspaper },
-    { name: 'Solicitação de Demandas', href: '#', icon: ClipboardList, disabled: true },
+    { name: 'Pedidos de Demanda', href: '/pedidos-demanda', icon: ClipboardList },
+    { name: 'Notificações', href: '/notificacoes', icon: Bell },
   ];
 
   // Admin section
@@ -143,33 +145,22 @@ const Sidebar = () => {
               </p>
             </div>
             {colaboradoresNavigation.map((item) => (
-              item.disabled ? (
-                <div
-                  key={item.name}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground/50 cursor-not-allowed"
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
-                  <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0">Em breve</Badge>
-                </div>
-              ) : (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200',
-                      isActive
-                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-                    )
-                  }
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
-                </NavLink>
-              )
+              <NavLink
+                key={item.name}
+                to={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200',
+                    isActive
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                  )
+                }
+              >
+                <item.icon className="h-5 w-5" />
+                {item.name}
+              </NavLink>
             ))}
           </>
         )}

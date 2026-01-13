@@ -13,6 +13,8 @@ import CalendarioMarketing from "./pages/CalendarioMarketing";
 import MidiasSociais from "./pages/MidiasSociais";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import AguardandoAprovacao from "./pages/AguardandoAprovacao";
+import PedidosDemanda from "./pages/PedidosDemanda";
+import Notificacoes from "./pages/Notificacoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +36,8 @@ function App() {
             <Route path="/calendario-marketing" element={<CalendarioMarketing />} />
             <Route path="/midias-sociais" element={<MidiasSociais />} />
             <Route path="/perfil" element={<Perfil />} />
+            <Route path="/pedidos-demanda" element={<PedidosDemanda />} />
+            <Route path="/notificacoes" element={<Notificacoes />} />
             <Route path="/admin/usuarios" element={<AdminUsuarios />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
