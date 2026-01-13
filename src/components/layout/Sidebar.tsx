@@ -18,8 +18,7 @@ import {
   UsersRound,
   Settings,
   FileText,
-  ClipboardList,
-  Bell
+  ClipboardList
 } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState } from 'react';
@@ -65,8 +64,7 @@ const Sidebar = () => {
   // Colaboradores section - only for colaboradores and admins
   const colaboradoresNavigation = [
     { name: 'Feed da Sede', href: '/feed', icon: Newspaper },
-    { name: 'Pedidos de Demanda', href: '/pedidos-demanda', icon: ClipboardList },
-    { name: 'Notificações', href: '/notificacoes', icon: Bell },
+    { name: 'Solicitação de demandas', href: '/pedidos-demanda', icon: ClipboardList },
   ];
 
   // Admin section
