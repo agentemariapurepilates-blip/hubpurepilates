@@ -192,7 +192,7 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandD
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Title / Briefing */}
           <div className="space-y-2">
-            <Label htmlFor="title">Briefing da Demanda *</Label>
+            <Label htmlFor="title">Título *</Label>
             <Input
               id="title"
               value={title}
