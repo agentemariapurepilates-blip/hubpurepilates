@@ -15,6 +15,7 @@ import AdminUsuarios from "./pages/AdminUsuarios";
 import AguardandoAprovacao from "./pages/AguardandoAprovacao";
 import PedidosDemanda from "./pages/PedidosDemanda";
 import Notificacoes from "./pages/Notificacoes";
+import ArtesProntas from "./pages/ArtesProntas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ function App() {
             <Route path="/perfil" element={<Perfil />} />
             <Route path="/pedidos-demanda" element={<PedidosDemanda />} />
             <Route path="/notificacoes" element={<Notificacoes />} />
+            <Route path="/artes-prontas" element={<ArtesProntas />} />
             <Route path="/admin/usuarios" element={<AdminUsuarios />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
