@@ -23,7 +23,6 @@ import { Calendar, Download, Edit, Trash2, User, Video, Image, Target, LayoutGri
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import CommentSection from './CommentSection';
 
 interface SocialMediaContent {
   id: string;
@@ -189,8 +188,6 @@ const ContentDetailsDialog = ({
               </span>
             </div>
 
-            {/* Comments Section */}
-            <CommentSection contentId={content.id} />
 
             {/* Actions */}
             {canEdit && (
