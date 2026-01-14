@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      artes_prontas: {
+        Row: {
+          canva_url: string
+          created_at: string
+          display_order: number
+          id: string
+          image_url: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          canva_url: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          canva_url?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       comment_reactions: {
         Row: {
           comment_id: string
