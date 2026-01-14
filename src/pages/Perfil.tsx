@@ -49,7 +49,7 @@ const Perfil = () => {
       .from('profiles')
       .select('full_name, avatar_url, sector')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching profile:', error);

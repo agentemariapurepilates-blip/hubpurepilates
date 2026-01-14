@@ -28,7 +28,16 @@ const NovidadesDoMes = () => {
   const { user, loading: authLoading, isApproved, isColaborador } = useAuth();
   const [posts, setPosts] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  // Default to previous month if we're at the start of the month
+  const getDefaultMonth = () => {
+    const today = new Date();
+    // If we're in the first week of the month, show previous month by default
+    if (today.getDate() <= 7) {
+      return subMonths(today, 1);
+    }
+    return today;
+  };
+  const [selectedMonth, setSelectedMonth] = useState(getDefaultMonth);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Generate last 12 months for filter
