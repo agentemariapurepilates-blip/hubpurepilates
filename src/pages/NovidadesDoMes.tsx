@@ -112,47 +112,6 @@ const NovidadesDoMes = () => {
         (profilesData || []).map(p => [p.user_id, { full_name: p.full_name, email: p.email, avatar_url: p.avatar_url }])
       );
 
-      // Fetch all comments for these posts
-      const postIds = filteredPosts.map(p => p.id);
-      const { data: commentsData } = await supabase
-        .from('comments')
-        .select('id, content, emoji, created_at, user_id, post_id')
-        .in('post_id', postIds)
-        .order('created_at', { ascending: true });
-
-      // Fetch profiles for comment authors
-      const commentUserIds = [...new Set((commentsData || []).map(c => c.user_id))];
-      if (commentUserIds.length > 0) {
-        const { data: commentProfilesData } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, email, avatar_url')
-          .in('user_id', commentUserIds);
-
-        (commentProfilesData || []).forEach(p => {
-          if (!profilesMap.has(p.user_id)) {
-            profilesMap.set(p.user_id, { full_name: p.full_name, email: p.email, avatar_url: p.avatar_url });
-          }
-        });
-      }
-
-      // Group comments by post_id
-      const commentsMap = new Map<string, NewsPost['comments']>();
-      (commentsData || []).forEach(comment => {
-        const profile = profilesMap.get(comment.user_id) || null;
-        const commentWithProfile = {
-          id: comment.id,
-          content: comment.content,
-          emoji: comment.emoji,
-          user_id: comment.user_id,
-          created_at: comment.created_at,
-          profiles: profile,
-        };
-        
-        if (!commentsMap.has(comment.post_id)) {
-          commentsMap.set(comment.post_id, []);
-        }
-        commentsMap.get(comment.post_id)!.push(commentWithProfile);
-      });
 
       // Combine everything
       const postsWithDetails: NewsPost[] = filteredPosts.map(post => ({
@@ -169,7 +128,7 @@ const NovidadesDoMes = () => {
         created_at: post.created_at,
         user_id: post.user_id,
         profiles: profilesMap.get(post.user_id) || null,
-        comments: commentsMap.get(post.id) || [],
+        comments: [],
       }));
 
       setPosts(postsWithDetails);
