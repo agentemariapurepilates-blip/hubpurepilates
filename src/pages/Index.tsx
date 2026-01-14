@@ -235,27 +235,7 @@ const Index = () => {
         </section>
 
         {/* Features Section */}
-        <section className="mb-12">
-          <h2 className="text-xl md:text-2xl font-heading font-bold text-center mb-8 opacity-0 animate-fade-in-up" style={{
-          animationDelay: '0.6s'
-        }}>
-            O que você encontra aqui
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {features.map((feature, index) => <Card key={feature.title} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 opacity-0 animate-fade-in-up border-0 bg-card/50 backdrop-blur-sm" style={{
-            animationDelay: `${0.7 + index * 0.1}s`
-          }}>
-                <CardContent className="p-6">
-                  <div className={`w-12 h-12 rounded-xl ${feature.bgColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                    <feature.icon className={`h-6 w-6 ${feature.color}`} />
-                  </div>
-                  <h3 className="font-heading font-semibold text-lg mb-2">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
-                </CardContent>
-              </Card>)}
-          </div>
-        </section>
+        
 
         {/* CTA Section */}
         <section className="mb-12 relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-8 md:p-10 opacity-0 animate-fade-in-up" style={{
@@ -271,27 +251,7 @@ const Index = () => {
         </section>
 
         {/* Quick Links Section */}
-        <section className="opacity-0 animate-fade-in-up" style={{
-        animationDelay: '1.1s'
-      }}>
-          <h2 className="text-lg font-heading font-semibold mb-4 text-muted-foreground">
-            Acesso rápido
-          </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickLinks.map((link, index) => <Card key={link.href} className="cursor-pointer group hover:shadow-md transition-all duration-300 hover:-translate-y-0.5" onClick={() => navigate(link.href)}>
-                <CardContent className="p-4">
-                  <div className={`w-10 h-10 rounded-lg ${link.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
-                    <link.icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="font-medium text-sm mb-1 flex items-center justify-between">
-                    {link.title}
-                    <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h3>
-                  <p className="text-xs text-muted-foreground">{link.description}</p>
-                </CardContent>
-              </Card>)}
-          </div>
-        </section>
+        
       </div>
     </MainLayout>;
 };
