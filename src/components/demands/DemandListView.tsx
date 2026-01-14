@@ -1,10 +1,12 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, ChevronRight, Users } from 'lucide-react';
+import { Calendar, ChevronRight, Users, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { Demand } from '@/pages/PedidosDemanda';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useState } from 'react';
 
 interface DemandListViewProps {
   demands: Demand[];
@@ -13,10 +15,10 @@ interface DemandListViewProps {
 }
 
 const statusConfig = {
-  pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-  in_progress: { label: 'Em Andamento', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  completed: { label: 'Concluído', color: 'bg-green-100 text-green-800 border-green-200' },
-  cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-800 border-red-200' },
+  pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', headerColor: 'bg-yellow-50 border-yellow-200' },
+  in_progress: { label: 'Em Andamento', color: 'bg-blue-100 text-blue-800 border-blue-200', headerColor: 'bg-blue-50 border-blue-200' },
+  completed: { label: 'Concluído', color: 'bg-green-100 text-green-800 border-green-200', headerColor: 'bg-green-50 border-green-200' },
+  cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-800 border-red-200', headerColor: 'bg-red-50 border-red-200' },
 };
 
 const priorityConfig = {
@@ -25,7 +27,25 @@ const priorityConfig = {
   high: { label: 'Alta', color: 'bg-red-100 text-red-700' },
 };
 
+const statusOrder: Demand['status'][] = ['pending', 'in_progress', 'completed', 'cancelled'];
+
 const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    pending: true,
+    in_progress: true,
+    completed: true,
+    cancelled: true,
+  });
+
+  const toggleSection = (status: string) => {
+    setOpenSections(prev => ({ ...prev, [status]: !prev[status] }));
+  };
+
+  const groupedDemands = statusOrder.reduce((acc, status) => {
+    acc[status] = demands.filter(d => d.status === status);
+    return acc;
+  }, {} as Record<Demand['status'], Demand[]>);
+
   if (demands.length === 0) {
     return (
       <Card className="p-8 text-center">
@@ -39,84 +59,116 @@ const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
   }
 
   return (
-    <div className="space-y-2">
-      {demands.map((demand) => (
-        <Card
-          key={demand.id}
-          className="p-3 sm:p-4 cursor-pointer hover:bg-muted/50 transition-colors active:scale-[0.99]"
-          onClick={() => onDemandClick(demand)}
-        >
-          <div className="flex items-start gap-3">
-            {/* Creator Avatar */}
-            <Avatar className="h-10 w-10 shrink-0">
-              <AvatarImage src={demand.creator_profile?.avatar_url || undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                {demand.creator_profile?.full_name?.[0] || 'U'}
-              </AvatarFallback>
-            </Avatar>
+    <div className="space-y-4">
+      {statusOrder.map((status) => {
+        const statusDemands = groupedDemands[status];
+        const config = statusConfig[status];
+        
+        return (
+          <Collapsible
+            key={status}
+            open={openSections[status]}
+            onOpenChange={() => toggleSection(status)}
+          >
+            <Card className="overflow-hidden">
+              <CollapsibleTrigger className="w-full">
+                <div className={`flex items-center justify-between p-3 sm:p-4 border-b ${config.headerColor}`}>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className={config.color}>
+                      {config.label}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {statusDemands.length} {statusDemands.length === 1 ? 'demanda' : 'demandas'}
+                    </span>
+                  </div>
+                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${openSections[status] ? 'rotate-180' : ''}`} />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                {statusDemands.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    Nenhuma demanda com este status
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {statusDemands.map((demand) => (
+                      <div
+                        key={demand.id}
+                        className="p-3 sm:p-4 cursor-pointer hover:bg-muted/50 transition-colors active:scale-[0.995]"
+                        onClick={() => onDemandClick(demand)}
+                      >
+                        <div className="flex items-start gap-3">
+                          {/* Creator Avatar */}
+                          <Avatar className="h-10 w-10 shrink-0">
+                            <AvatarImage src={demand.creator_profile?.avatar_url || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                              {demand.creator_profile?.full_name?.[0] || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="font-medium text-sm sm:text-base line-clamp-2">
-                  {demand.title}
-                </h3>
-                <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-              </div>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-medium text-sm sm:text-base line-clamp-2">
+                                {demand.title}
+                              </h3>
+                              <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                            </div>
 
-              {/* Meta Info */}
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                <Badge 
-                  variant="outline" 
-                  className={`text-xs ${statusConfig[demand.status].color}`}
-                >
-                  {statusConfig[demand.status].label}
-                </Badge>
-                <Badge 
-                  variant="secondary" 
-                  className={`text-xs ${priorityConfig[demand.priority].color}`}
-                >
-                  {priorityConfig[demand.priority].label}
-                </Badge>
-              </div>
+                            {/* Meta Info */}
+                            <div className="flex flex-wrap items-center gap-2 mt-2">
+                              <Badge 
+                                variant="secondary" 
+                                className={`text-xs ${priorityConfig[demand.priority].color}`}
+                              >
+                                {priorityConfig[demand.priority].label}
+                              </Badge>
+                            </div>
 
-              {/* Departments & Deadline */}
-              <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted-foreground">
-                <span className="truncate">
-                  {demand.from_department} → {demand.to_department}
-                </span>
-                {demand.deadline && (
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {format(new Date(demand.deadline), 'dd/MM', { locale: ptBR })}
-                  </span>
-                )}
-              </div>
+                            {/* Departments & Deadline */}
+                            <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted-foreground">
+                              <span className="truncate">
+                                {demand.from_department} → {demand.to_department}
+                              </span>
+                              {demand.deadline && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {format(new Date(demand.deadline), 'dd/MM', { locale: ptBR })}
+                                </span>
+                              )}
+                            </div>
 
-              {/* Assignees */}
-              {demand.assignees && demand.assignees.length > 0 && (
-                <div className="flex items-center gap-1 mt-2">
-                  <div className="flex -space-x-2">
-                    {demand.assignees.slice(0, 3).map((assignee) => (
-                      <Avatar key={assignee.user_id} className="h-6 w-6 border-2 border-background">
-                        <AvatarImage src={assignee.profile?.avatar_url || undefined} />
-                        <AvatarFallback className="bg-muted text-[10px]">
-                          {assignee.profile?.full_name?.[0] || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
+                            {/* Assignees */}
+                            {demand.assignees && demand.assignees.length > 0 && (
+                              <div className="flex items-center gap-1 mt-2">
+                                <div className="flex -space-x-2">
+                                  {demand.assignees.slice(0, 3).map((assignee) => (
+                                    <Avatar key={assignee.user_id} className="h-6 w-6 border-2 border-background">
+                                      <AvatarImage src={assignee.profile?.avatar_url || undefined} />
+                                      <AvatarFallback className="bg-muted text-[10px]">
+                                        {assignee.profile?.full_name?.[0] || 'U'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  ))}
+                                </div>
+                                {demand.assignees.length > 3 && (
+                                  <span className="text-xs text-muted-foreground">
+                                    +{demand.assignees.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
-                  {demand.assignees.length > 3 && (
-                    <span className="text-xs text-muted-foreground">
-                      +{demand.assignees.length - 3}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </Card>
-      ))}
+                )}
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        );
+      })}
     </div>
   );
 };
