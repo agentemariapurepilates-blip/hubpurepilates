@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, forwardRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -40,7 +40,7 @@ const sectors = [
   { value: 'implantacao', label: 'Implantação' },
 ];
 
-const EditNewsDialog = ({ post, open, onOpenChange, onPostUpdated }: EditNewsDialogProps) => {
+const EditNewsDialog = forwardRef<HTMLDivElement, EditNewsDialogProps>(({ post, open, onOpenChange, onPostUpdated }, ref) => {
   const [loading, setLoading] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [title, setTitle] = useState(post.title);
@@ -325,6 +325,8 @@ const EditNewsDialog = ({ post, open, onOpenChange, onPostUpdated }: EditNewsDia
       </DialogContent>
     </Dialog>
   );
-};
+});
+
+EditNewsDialog.displayName = 'EditNewsDialog';
 
 export default EditNewsDialog;
