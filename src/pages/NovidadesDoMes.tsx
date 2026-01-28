@@ -212,10 +212,10 @@ const NovidadesDoMes = () => {
           <div>
             <h1 className="text-xl sm:text-2xl font-heading font-bold flex items-center gap-2">
               <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-              Novidades do Mês
+              Timeline do Mês
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Atualizações e comunicados importantes
+            <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+              Nossa timeline agora mudou e está muito mais fácil de acessar. Através do nosso hub, você consegue ver todos os conteúdos do mês atual e os anteriores, garantindo mais transparência e facilidade.
             </p>
           </div>
 
