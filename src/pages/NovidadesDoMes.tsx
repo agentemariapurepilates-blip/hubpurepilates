@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkles, MessageCircle } from 'lucide-react';
 import NewsCard, { NewsPost } from '@/components/novidades/NewsCard';
 import CreatePostDialog from '@/components/feed/CreatePostDialog';
-import { format, startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
@@ -26,83 +26,85 @@ const POSTS_PER_PAGE = 4;
 const NovidadesDoMes = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, isApproved, isColaborador } = useAuth();
-  const [posts, setPosts] = useState<NewsPost[]>([]);
+  const [allPosts, setAllPosts] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
-  // Default to previous month if we're at the start of the month
-  const getDefaultMonth = () => {
-    const today = new Date();
-    // If we're in the first week of the month, show previous month by default
-    if (today.getDate() <= 7) {
-      return subMonths(today, 1);
-    }
-    return today;
-  };
-  const [selectedMonth, setSelectedMonth] = useState(getDefaultMonth);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Generate last 12 months for filter
-  const generateMonthOptions = () => {
-    const months = [];
-    const currentDate = new Date();
-    for (let i = 0; i < 12; i++) {
-      const date = subMonths(currentDate, i);
-      months.push({
-        date,
-        label: format(date, 'MMMM yyyy', { locale: ptBR }),
-        value: format(date, 'yyyy-MM'),
+  // Generate month options based on posts that have content
+  const availableMonths = useMemo(() => {
+    if (allPosts.length === 0) return [];
+    
+    const monthsSet = new Set<string>();
+    
+    allPosts.forEach(post => {
+      let monthKey: string;
+      if (post.target_month) {
+        monthKey = format(parseISO(post.target_month), 'yyyy-MM');
+      } else {
+        monthKey = format(new Date(post.created_at), 'yyyy-MM');
+      }
+      monthsSet.add(monthKey);
+    });
+    
+    // Convert to array and sort descending (newest first)
+    return Array.from(monthsSet)
+      .sort((a, b) => b.localeCompare(a))
+      .map(monthKey => {
+        const [year, month] = monthKey.split('-');
+        const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+        return {
+          date,
+          label: format(date, 'MMMM yyyy', { locale: ptBR }),
+          value: monthKey,
+        };
       });
-    }
-    return months;
-  };
+  }, [allPosts]);
 
-  const monthOptions = generateMonthOptions();
+  // Auto-select first available month when data loads
+  useEffect(() => {
+    if (availableMonths.length > 0 && !selectedMonth) {
+      setSelectedMonth(availableMonths[0].value);
+    }
+  }, [availableMonths, selectedMonth]);
+
+  // Filter posts by selected month
+  const filteredPosts = useMemo(() => {
+    if (!selectedMonth) return [];
+    
+    return allPosts.filter(post => {
+      let monthKey: string;
+      if (post.target_month) {
+        monthKey = format(parseISO(post.target_month), 'yyyy-MM');
+      } else {
+        monthKey = format(new Date(post.created_at), 'yyyy-MM');
+      }
+      return monthKey === selectedMonth;
+    });
+  }, [allPosts, selectedMonth]);
 
   const fetchPosts = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
     try {
-      const monthStart = format(startOfMonth(selectedMonth), 'yyyy-MM-dd');
-      const monthEnd = format(endOfMonth(selectedMonth), 'yyyy-MM-dd');
-
-      // First try to filter by target_month
-      let query = supabase
+      const { data: postsData, error: postsError } = await supabase
         .from('posts')
         .select('*')
-        .eq('post_type', 'novidades');
-
-      // Filter by target_month if set, otherwise fall back to created_at
-      const { data: postsData, error: postsError } = await query
+        .eq('post_type', 'novidades')
         .order('pinned', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (postsError) throw postsError;
 
       if (!postsData || postsData.length === 0) {
-        setPosts([]);
-        setLoading(false);
-        return;
-      }
-
-      // Filter posts by target_month or created_at (for backward compatibility)
-      const filteredPosts = postsData.filter(post => {
-        if (post.target_month) {
-          const targetDate = parseISO(post.target_month);
-          return format(targetDate, 'yyyy-MM') === format(selectedMonth, 'yyyy-MM');
-        }
-        // Fall back to created_at for old posts without target_month
-        const createdDate = new Date(post.created_at);
-        return format(createdDate, 'yyyy-MM') === format(selectedMonth, 'yyyy-MM');
-      });
-
-      if (filteredPosts.length === 0) {
-        setPosts([]);
+        setAllPosts([]);
         setLoading(false);
         return;
       }
 
       // Fetch profiles for all post authors
-      const userIds = [...new Set(filteredPosts.map(p => p.user_id))];
+      const userIds = [...new Set(postsData.map(p => p.user_id))];
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('user_id, full_name, email, avatar_url')
@@ -112,9 +114,8 @@ const NovidadesDoMes = () => {
         (profilesData || []).map(p => [p.user_id, { full_name: p.full_name, email: p.email, avatar_url: p.avatar_url }])
       );
 
-
       // Combine everything
-      const postsWithDetails: NewsPost[] = filteredPosts.map(post => ({
+      const postsWithDetails: NewsPost[] = postsData.map(post => ({
         id: post.id,
         title: post.title,
         content: post.content,
@@ -131,14 +132,14 @@ const NovidadesDoMes = () => {
         comments: [],
       }));
 
-      setPosts(postsWithDetails);
-      setCurrentPage(1); // Reset to first page when month changes
+      setAllPosts(postsWithDetails);
+      setCurrentPage(1);
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {
       setLoading(false);
     }
-  }, [user, selectedMonth]);
+  }, [user]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -179,10 +180,15 @@ const NovidadesDoMes = () => {
     };
   }, [user, fetchPosts]);
 
+  // Reset page when month changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedMonth]);
+
   // Pagination logic
-  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE);
+  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
   const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
-  const paginatedPosts = posts.slice(startIndex, startIndex + POSTS_PER_PAGE);
+  const paginatedPosts = filteredPosts.slice(startIndex, startIndex + POSTS_PER_PAGE);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -221,26 +227,28 @@ const NovidadesDoMes = () => {
           )}
         </div>
 
-        {/* Month filter */}
-        <ScrollArea className="w-full mb-6">
-          <div className="flex gap-2 pb-2">
-            {monthOptions.map((month) => {
-              const isSelected = format(selectedMonth, 'yyyy-MM') === month.value;
-              return (
-                <Button
-                  key={month.value}
-                  variant={isSelected ? 'default' : 'outline'}
-                  size="sm"
-                  className="whitespace-nowrap capitalize"
-                  onClick={() => setSelectedMonth(month.date)}
-                >
-                  {month.label}
-                </Button>
-              );
-            })}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        {/* Month filter - only show if there are months with content */}
+        {availableMonths.length > 0 && (
+          <ScrollArea className="w-full mb-6">
+            <div className="flex gap-2 pb-2">
+              {availableMonths.map((month) => {
+                const isSelected = selectedMonth === month.value;
+                return (
+                  <Button
+                    key={month.value}
+                    variant={isSelected ? 'default' : 'outline'}
+                    size="sm"
+                    className="whitespace-nowrap capitalize"
+                    onClick={() => setSelectedMonth(month.value)}
+                  >
+                    {month.label}
+                  </Button>
+                );
+              })}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        )}
 
         {/* Posts grid */}
         {loading ? (
@@ -258,11 +266,15 @@ const NovidadesDoMes = () => {
               </Card>
             ))}
           </div>
-        ) : posts.length === 0 ? (
+        ) : filteredPosts.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhuma novidade neste mês</h3>
+              <h3 className="text-lg font-medium mb-2">
+                {availableMonths.length === 0 
+                  ? 'Nenhuma novidade cadastrada'
+                  : 'Nenhuma novidade neste mês'}
+              </h3>
               <p className="text-muted-foreground text-center">
                 {isColaborador 
                   ? 'Seja o primeiro a postar uma novidade!'
