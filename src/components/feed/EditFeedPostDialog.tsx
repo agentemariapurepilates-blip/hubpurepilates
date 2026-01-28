@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -19,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 
 type SectorType = 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao';
 
@@ -50,10 +50,19 @@ const EditFeedPostDialog = ({ post, open, onOpenChange, onPostUpdated }: EditFee
   const [content, setContent] = useState(post.content);
   const [sector, setSector] = useState<SectorType>(post.sector);
 
+  // Reset form when post changes
+  useEffect(() => {
+    setTitle(post.title);
+    setContent(post.content);
+    setSector(post.sector);
+  }, [post]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!content.trim()) {
+    // Check if content has actual text (strip HTML tags)
+    const textContent = content.replace(/<[^>]*>/g, '').trim();
+    if (!textContent) {
       toast.error('Por favor, adicione conteúdo à publicação');
       return;
     }
@@ -83,7 +92,7 @@ const EditFeedPostDialog = ({ post, open, onOpenChange, onPostUpdated }: EditFee
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Publicação</DialogTitle>
         </DialogHeader>
@@ -116,14 +125,11 @@ const EditFeedPostDialog = ({ post, open, onOpenChange, onPostUpdated }: EditFee
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-content">Conteúdo</Label>
-            <Textarea
-              id="edit-content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
+            <Label>Conteúdo</Label>
+            <RichTextEditor
+              content={content}
+              onChange={setContent}
               placeholder="Escreva o conteúdo da publicação..."
-              rows={6}
-              required
             />
           </div>
 
