@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -21,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Loader2 } from 'lucide-react';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 
 interface CreateFeedPostDialogProps {
   onPostCreated: () => void;
@@ -46,7 +46,9 @@ const CreateFeedPostDialog = ({ onPostCreated }: CreateFeedPostDialogProps) => {
     e.preventDefault();
     if (!user || !sector) return;
 
-    if (!content.trim()) {
+    // Check if content has actual text (strip HTML tags)
+    const textContent = content.replace(/<[^>]*>/g, '').trim();
+    if (!textContent) {
       toast.error('Por favor, adicione conteúdo à publicação');
       return;
     }
@@ -84,7 +86,7 @@ const CreateFeedPostDialog = ({ onPostCreated }: CreateFeedPostDialogProps) => {
           Nova Publicação
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar Nova Publicação</DialogTitle>
         </DialogHeader>
@@ -117,14 +119,11 @@ const CreateFeedPostDialog = ({ onPostCreated }: CreateFeedPostDialogProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content">Conteúdo</Label>
-            <Textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
+            <Label>Conteúdo</Label>
+            <RichTextEditor
+              content={content}
+              onChange={setContent}
               placeholder="Escreva o conteúdo da publicação..."
-              rows={6}
-              required
             />
           </div>
 
