@@ -56,7 +56,7 @@ const Sidebar = () => {
   // Main navigation - accessible by everyone (no section label)
   const mainNavigation = [
     { name: 'Comece aqui', href: '/', icon: Home },
-    { name: 'Novidades do Mês', href: '/novidades', icon: Sparkles },
+    { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
     { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
     { name: 'Artes Prontas', href: '/artes-prontas', icon: Palette },
