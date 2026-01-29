@@ -24,8 +24,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Users, UserCheck, Building2, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Users, UserCheck, Building2, Clock, CheckCircle, XCircle, Ban, Trash2, MoreHorizontal, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type UserType = 'colaborador' | 'franqueado';
 
@@ -108,12 +125,15 @@ const PendingUserRow = ({
 };
 
 const AdminUsuarios = () => {
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, loading: authLoading, user: currentUser } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+  const [userToDeactivate, setUserToDeactivate] = useState<UserProfile | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
@@ -213,25 +233,72 @@ const AdminUsuarios = () => {
   };
 
   const rejectUser = async (userId: string) => {
-    // Delete the user from auth (this will cascade delete profile due to trigger)
-    const { error } = await supabase.auth.admin.deleteUser(userId);
+    // For pending users, just set is_approved to false (they already aren't approved)
+    // and we can simply remove their profile since they haven't been approved yet
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('user_id', userId);
 
     if (error) {
-      // If admin API fails, just delete the profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', userId);
-
-      if (profileError) {
-        toast.error('Erro ao rejeitar usuário');
-        console.error('Error rejecting user:', profileError);
-        return;
-      }
+      toast.error('Erro ao rejeitar usuário');
+      console.error('Error rejecting user:', error);
+      return;
     }
 
     toast.success('Solicitação rejeitada');
     setUsers((prev) => prev.filter((u) => u.user_id !== userId));
+  };
+
+  const deactivateUser = async (userId: string) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_approved: false })
+      .eq('user_id', userId);
+
+    if (error) {
+      toast.error('Erro ao desativar usuário');
+      console.error('Error deactivating user:', error);
+      return;
+    }
+
+    toast.success('Usuário desativado com sucesso');
+    await fetchUsers();
+    setUserToDeactivate(null);
+  };
+
+  const deleteUserPermanently = async (userId: string) => {
+    setIsDeleting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionData.session?.access_token}`,
+          },
+          body: JSON.stringify({ userId }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao excluir usuário');
+      }
+
+      toast.success('Usuário excluído permanentemente');
+      setUsers((prev) => prev.filter((u) => u.user_id !== userId));
+      setUserToDelete(null);
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao excluir usuário');
+      console.error('Error deleting user:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const pendingUsers = users.filter((u) => !u.is_approved);
@@ -430,7 +497,8 @@ const AdminUsuarios = () => {
                       <TableHead>Email</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Função</TableHead>
-                      <TableHead className="text-right">Alterar Tipo</TableHead>
+                      <TableHead>Alterar Tipo</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -441,54 +509,90 @@ const AdminUsuarios = () => {
                           <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                           <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                          <TableCell><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                         </TableRow>
                       ))
                     ) : filteredApprovedUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           Nenhum usuário encontrado
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredApprovedUsers.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-medium">
-                            {user.full_name || 'Sem nome'}
-                          </TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={user.user_type === 'colaborador' ? 'default' : 'secondary'}
-                            >
-                              {user.user_type === 'colaborador' ? 'Colaborador' : 'Franqueado'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {user.isAdmin && (
-                              <Badge variant="outline" className="border-primary text-primary">
-                                Admin
+                      filteredApprovedUsers.map((user) => {
+                        const isCurrentUser = currentUser?.id === user.user_id;
+                        return (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">
+                              {user.full_name || 'Sem nome'}
+                              {isCurrentUser && (
+                                <span className="ml-2 text-xs text-muted-foreground">(você)</span>
+                              )}
+                            </TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={user.user_type === 'colaborador' ? 'default' : 'secondary'}
+                              >
+                                {user.user_type === 'colaborador' ? 'Colaborador' : 'Franqueado'}
                               </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Select
-                              value={user.user_type || 'colaborador'}
-                              onValueChange={(value) =>
-                                updateUserType(user.user_id, value as UserType)
-                              }
-                            >
-                              <SelectTrigger className="w-32 ml-auto">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="colaborador">Colaborador</SelectItem>
-                                <SelectItem value="franqueado">Franqueado</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                            </TableCell>
+                            <TableCell>
+                              {user.isAdmin && (
+                                <Badge variant="outline" className="border-primary text-primary">
+                                  Admin
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={user.user_type || 'colaborador'}
+                                onValueChange={(value) =>
+                                  updateUserType(user.user_id, value as UserType)
+                                }
+                                disabled={isCurrentUser}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="colaborador">Colaborador</SelectItem>
+                                  <SelectItem value="franqueado">Franqueado</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {!isCurrentUser && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={() => setUserToDeactivate(user)}
+                                      className="text-amber-600"
+                                    >
+                                      <Ban className="mr-2 h-4 w-4" />
+                                      Desativar acesso
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => setUserToDelete(user)}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Excluir permanentemente
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -496,9 +600,72 @@ const AdminUsuarios = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Deactivate User Dialog */}
+        <AlertDialog open={!!userToDeactivate} onOpenChange={() => setUserToDeactivate(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Desativar usuário</AlertDialogTitle>
+              <AlertDialogDescription>
+                Você está prestes a desativar o acesso de{' '}
+                <strong>{userToDeactivate?.full_name || userToDeactivate?.email}</strong>.
+                <br /><br />
+                O usuário não poderá mais acessar a plataforma, mas você pode reativá-lo a qualquer momento.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => userToDeactivate && deactivateUser(userToDeactivate.user_id)}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                <Ban className="mr-2 h-4 w-4" />
+                Desativar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete User Dialog */}
+        <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir usuário permanentemente</AlertDialogTitle>
+              <AlertDialogDescription>
+                <span className="text-destructive font-semibold">⚠️ Esta ação é irreversível!</span>
+                <br /><br />
+                Você está prestes a excluir permanentemente{' '}
+                <strong>{userToDelete?.full_name || userToDelete?.email}</strong>.
+                <br /><br />
+                Todos os dados do usuário serão removidos do sistema.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => userToDelete && deleteUserPermanently(userToDelete.user_id)}
+                className="bg-destructive hover:bg-destructive/90"
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir permanentemente
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );
 };
+
 
 export default AdminUsuarios;
