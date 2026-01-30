@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Handshake, Calendar } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { Aviso } from '@/pages/Avisos';
@@ -16,40 +16,22 @@ const AvisoDetailsDialog = ({ aviso, open, onOpenChange }: AvisoDetailsDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl pr-8">{aviso.title}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {aviso.image_url && (
-            <div className="rounded-lg overflow-hidden">
-              <img 
-                src={aviso.image_url} 
-                alt={aviso.title}
-                className="w-full h-auto max-h-64 object-cover"
-              />
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {aviso.partner_name && (
-              <Badge variant="secondary" className="gap-1">
-                <Handshake className="h-3 w-3" />
-                {aviso.partner_name}
-              </Badge>
-            )}
-            <Badge variant="outline" className="gap-1">
-              <Calendar className="h-3 w-3" />
-              {format(new Date(aviso.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-            </Badge>
-          </div>
+          <Badge variant="outline" className="gap-1">
+            <Calendar className="h-3 w-3" />
+            {format(new Date(aviso.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+          </Badge>
 
           {aviso.content && (
             <div className="prose prose-sm max-w-none">
               <div 
                 dangerouslySetInnerHTML={{ __html: aviso.content }}
-                className="text-muted-foreground whitespace-pre-wrap"
+                className="text-foreground [&_img]:rounded-lg [&_img]:max-w-full"
               />
             </div>
           )}

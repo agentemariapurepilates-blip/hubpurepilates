@@ -20,18 +20,14 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
-    content: '',
-    partner_name: '',
-    image_url: ''
+    content: ''
   });
 
   useEffect(() => {
     if (aviso) {
       setFormData({
         title: aviso.title,
-        content: aviso.content || '',
-        partner_name: aviso.partner_name || '',
-        image_url: aviso.image_url || ''
+        content: aviso.content || ''
       });
     }
   }, [aviso]);
@@ -46,9 +42,7 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
         .from('avisos')
         .update({
           title: formData.title,
-          content: formData.content || null,
-          partner_name: formData.partner_name || null,
-          image_url: formData.image_url || null
+          content: formData.content || null
         })
         .eq('id', aviso.id);
 
@@ -92,32 +86,11 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-partner_name">Nome do Parceiro</Label>
-            <Input
-              id="edit-partner_name"
-              value={formData.partner_name}
-              onChange={(e) => setFormData(prev => ({ ...prev, partner_name: e.target.value }))}
-              placeholder="Ex: O Boticário"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Descrição</Label>
+            <Label>Conteúdo</Label>
             <RichTextEditor
               content={formData.content}
               onChange={(html) => setFormData(prev => ({ ...prev, content: html }))}
-              placeholder="Descreva os detalhes do aviso..."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="edit-image_url">URL da Imagem de Capa (opcional)</Label>
-            <Input
-              id="edit-image_url"
-              type="url"
-              value={formData.image_url}
-              onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-              placeholder="https://..."
+              placeholder="Escreva o conteúdo do aviso..."
             />
           </div>
 
