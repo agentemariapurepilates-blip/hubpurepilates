@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const TAG_LABELS: Record<string, string> = {
   pacotes: 'Pacotes',
@@ -49,9 +50,13 @@ interface EventDetailsDialogProps {
 }
 
 export const EventDetailsDialog = ({ open, onOpenChange, event, onEventDeleted, onEditClick }: EventDetailsDialogProps) => {
+  const { user, isColaborador, isAdmin } = useAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
+
+  // Only collaborators who own the event or admins can edit/delete
+  const canEdit = isColaborador && (user?.id === event?.user_id || isAdmin);
 
   if (!event) return null;
 
@@ -138,27 +143,29 @@ export const EventDetailsDialog = ({ open, onOpenChange, event, onEventDeleted, 
 
             <Separator />
 
-            <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  onOpenChange(false);
-                  onEditClick?.();
-                }}
-                className="gap-2"
-              >
-                <Pencil className="h-4 w-4" />
-                Editar Evento
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={() => setShowDeleteConfirm(true)}
-                className="gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                Excluir Evento
-              </Button>
-            </div>
+            {canEdit && (
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    onOpenChange(false);
+                    onEditClick?.();
+                  }}
+                  className="gap-2"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Editar Evento
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Excluir Evento
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
