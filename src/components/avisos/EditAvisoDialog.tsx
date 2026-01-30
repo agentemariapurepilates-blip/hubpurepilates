@@ -3,11 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Aviso } from '@/pages/Avisos';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 
 interface EditAvisoDialogProps {
   aviso: Aviso | null;
@@ -74,7 +74,7 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Aviso</DialogTitle>
         </DialogHeader>
@@ -102,18 +102,16 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-content">Descrição</Label>
-            <Textarea
-              id="edit-content"
-              value={formData.content}
-              onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+            <Label>Descrição</Label>
+            <RichTextEditor
+              content={formData.content}
+              onChange={(html) => setFormData(prev => ({ ...prev, content: html }))}
               placeholder="Descreva os detalhes do aviso..."
-              rows={4}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-image_url">URL da Imagem</Label>
+            <Label htmlFor="edit-image_url">URL da Imagem de Capa (opcional)</Label>
             <Input
               id="edit-image_url"
               type="url"
