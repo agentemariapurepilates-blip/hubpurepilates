@@ -67,7 +67,7 @@ const TAG_ICONS: Record<string, LucideIcon> = {
 };
 
 const MidiasSociais = () => {
-  const { isColaborador } = useAuth();
+  const { isColaborador, isAdmin } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [content, setContent] = useState<SocialMediaContent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,8 +156,8 @@ const MidiasSociais = () => {
     if (dayContent.length > 0) {
       setSelectedContent(dayContent[0]);
       setIsDetailsDialogOpen(true);
-    } else if (isColaborador) {
-      // Only collaborators can create content
+    } else if (isColaborador || isAdmin) {
+      // Only collaborators or admins can create content
       setSelectedDate(date);
       setIsCreateDialogOpen(true);
     }
@@ -180,7 +180,7 @@ const MidiasSociais = () => {
             <h1 className="text-xl sm:text-3xl font-bold text-foreground">Mídias Sociais</h1>
             <p className="text-sm sm:text-base text-muted-foreground mt-1">Calendário de conteúdos para redes sociais</p>
           </div>
-          {isColaborador && (
+          {(isColaborador || isAdmin) && (
             <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Novo Conteúdo
