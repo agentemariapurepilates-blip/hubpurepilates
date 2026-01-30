@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 
 const TAG_OPTIONS = [
   { value: 'pacotes', label: 'Pacotes' },
@@ -65,7 +65,7 @@ export const CreateEventDialog = ({ open, onOpenChange, selectedDate, onSuccess 
 
     const { error } = await supabase.from('marketing_events').insert({
       title: title.trim(),
-      description: description.trim() || null,
+      description: description || null,
       start_date: format(startDate, 'yyyy-MM-dd'),
       end_date: format(endDate, 'yyyy-MM-dd'),
       user_id: user.id,
@@ -98,7 +98,7 @@ export const CreateEventDialog = ({ open, onOpenChange, selectedDate, onSuccess 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Evento de Marketing</DialogTitle>
         </DialogHeader>
@@ -115,13 +115,11 @@ export const CreateEventDialog = ({ open, onOpenChange, selectedDate, onSuccess 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+            <Label>Descrição</Label>
+            <RichTextEditor
+              content={description}
+              onChange={setDescription}
               placeholder="Detalhes da campanha..."
-              rows={4}
             />
           </div>
 
