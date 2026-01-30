@@ -171,8 +171,8 @@ const Avisos = () => {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredAvisos.map((aviso) => {
-              // Only the creator (if colaborador) or admin can edit/delete
+          {filteredAvisos.map((aviso) => {
+              // Only creator (if colaborador) or admin can edit/delete
               const canEditThis = isColaborador && (user?.id === aviso.created_by || isAdmin);
               return (
                 <AvisoCard

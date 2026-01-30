@@ -65,13 +65,13 @@ interface NewsCardProps {
 }
 
 const NewsCard = ({ post, onPostUpdated }: NewsCardProps) => {
-  const { user, isColaborador } = useAuth();
+  const { user, isColaborador, isAdmin } = useAuth();
   const [showReadDialog, setShowReadDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Only collaborators who own the post can edit/delete
-  const canEdit = isColaborador && user?.id === post.user_id;
+  // Only creator (if colaborador) or admin can edit/delete
+  const canEdit = isColaborador && (user?.id === post.user_id || isAdmin);
   const authorName = post.profiles?.full_name || post.profiles?.email || 'Usuário';
   const authorInitials = authorName.substring(0, 2).toUpperCase();
 
