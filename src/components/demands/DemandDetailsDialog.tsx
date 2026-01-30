@@ -86,7 +86,7 @@ const statusConfig = {
 };
 
 const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick }: DemandDetailsDialogProps) => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isColaborador } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
@@ -434,6 +434,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
   if (!demand) return null;
 
   const canEdit = demand.created_by === user?.id || isAdmin;
+  const canChangeStatus = isColaborador || isAdmin;
 
   return (
     <>
@@ -450,7 +451,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
               <div className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Status:</span>
-                {canEdit ? (
+                {canChangeStatus ? (
                   <Select value={demand.status} onValueChange={(v) => handleStatusChange(v as Demand['status'])}>
                     <SelectTrigger className="h-8 w-auto">
                       <Badge className={statusConfig[demand.status].color}>

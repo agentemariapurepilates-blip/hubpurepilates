@@ -4,8 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ExternalLink, Palette, Sparkles, Plus, Pencil, Trash2, Loader2, Upload } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { ExternalLink, Palette, Sparkles, Plus, Pencil, Trash2, Loader2, Upload, Search } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -30,6 +30,7 @@ const ArtesProntas = () => {
   const [arteToDelete, setArteToDelete] = useState<Arte | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Form state
   const [formTitle, setFormTitle] = useState('');
@@ -62,6 +63,14 @@ const ArtesProntas = () => {
       setLoading(false);
     }
   };
+
+  const filteredArtes = useMemo(() => {
+    if (!searchTerm) return artes;
+    const searchLower = searchTerm.toLowerCase();
+    return artes.filter(arte => 
+      arte.title.toLowerCase().includes(searchLower)
+    );
+  }, [artes, searchTerm]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -335,19 +344,28 @@ const ArtesProntas = () => {
           </div>
         </div>
 
-        {/* Admin Add Button */}
-        {isAdmin && (
-          <div className="flex justify-end">
+        {/* Search and Admin Add Button */}
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar artes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          {isAdmin && (
             <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
               <Plus className="w-4 h-4" />
               Adicionar modelo
             </Button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {artes.map((arte) => (
+          {filteredArtes.map((arte) => (
             <Card
               key={arte.id}
               className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 border-2 hover:border-primary/30"
@@ -408,10 +426,12 @@ const ArtesProntas = () => {
           ))}
         </div>
 
-        {artes.length === 0 && (
+        {filteredArtes.length === 0 && (
           <div className="text-center py-12">
             <Palette className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Nenhuma arte pronta disponível no momento.</p>
+            <p className="text-muted-foreground">
+              {searchTerm ? 'Nenhuma arte encontrada para sua busca.' : 'Nenhuma arte pronta disponível no momento.'}
+            </p>
           </div>
         )}
 

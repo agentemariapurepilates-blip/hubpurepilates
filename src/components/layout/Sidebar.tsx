@@ -19,7 +19,8 @@ import {
   Settings,
   FileText,
   ClipboardList,
-  Palette
+  Palette,
+  Megaphone
 } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState } from 'react';
@@ -57,6 +58,7 @@ const Sidebar = () => {
   const mainNavigation = [
     { name: 'Comece aqui', href: '/', icon: Home },
     { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
+    { name: 'Avisos', href: '/avisos', icon: Megaphone },
     { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
     { name: 'Artes Prontas', href: '/artes-prontas', icon: Palette },

@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sparkles, MessageCircle, Filter } from 'lucide-react';
+import { Sparkles, MessageCircle, Filter, Search } from 'lucide-react';
 import NewsCard, { NewsPost } from '@/components/novidades/NewsCard';
 import CreatePostDialog from '@/components/feed/CreatePostDialog';
 import { format, parseISO } from 'date-fns';
@@ -45,6 +46,7 @@ const NovidadesDoMes = () => {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedSector, setSelectedSector] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Generate month options based on posts that have content
   const availableMonths = useMemo(() => {
@@ -103,7 +105,7 @@ const NovidadesDoMes = () => {
     }
   }, [availableMonths, selectedMonth]);
 
-  // Filter posts by selected month and sector
+  // Filter posts by selected month and sector and search term
   const filteredPosts = useMemo(() => {
     if (!selectedMonth) return [];
     
@@ -122,9 +124,19 @@ const NovidadesDoMes = () => {
         return false;
       }
 
+      // Filter by search term
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          post.title.toLowerCase().includes(searchLower) ||
+          post.content.toLowerCase().includes(searchLower) ||
+          post.short_description?.toLowerCase().includes(searchLower)
+        );
+      }
+
       return true;
     });
-  }, [allPosts, selectedMonth, selectedSector]);
+  }, [allPosts, selectedMonth, selectedSector, searchTerm]);
 
   const fetchPosts = useCallback(async () => {
     if (!user) return;
@@ -259,23 +271,36 @@ const NovidadesDoMes = () => {
     <MainLayout>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-heading font-bold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-              Timeline do Mês
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-              Nossa timeline agora mudou e está muito mais fácil de acessar. Através do nosso hub, você consegue ver todos os conteúdos do mês atual e os anteriores, garantindo mais transparência e facilidade.
-            </p>
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-heading font-bold flex items-center gap-2">
+                <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                Timeline do Mês
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+                Nossa timeline agora mudou e está muito mais fácil de acessar. Através do nosso hub, você consegue ver todos os conteúdos do mês atual e os anteriores, garantindo mais transparência e facilidade.
+              </p>
+            </div>
+
+            {isColaborador && (
+              <CreatePostDialog 
+                onPostCreated={fetchPosts} 
+                defaultPostType="novidades"
+              />
+            )}
           </div>
 
-          {isColaborador && (
-            <CreatePostDialog 
-              onPostCreated={fetchPosts} 
-              defaultPostType="novidades"
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar novidades..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
             />
-          )}
+          </div>
         </div>
 
         {/* Month filter - only show if there are months with content */}
