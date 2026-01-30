@@ -40,7 +40,7 @@ const SECTORS = [
 
 const NovidadesDoMes = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading, isApproved, isColaborador } = useAuth();
+  const { user, loading: authLoading, isApproved, isColaborador, isAdmin } = useAuth();
   const [allPosts, setAllPosts] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -283,7 +283,7 @@ const NovidadesDoMes = () => {
               </p>
             </div>
 
-            {isColaborador && (
+            {(isColaborador || isAdmin) && (
               <CreatePostDialog 
                 onPostCreated={fetchPosts} 
                 defaultPostType="novidades"
@@ -406,7 +406,7 @@ const NovidadesDoMes = () => {
                         : 'Nenhuma novidade neste mês'}
                   </h3>
                   <p className="text-muted-foreground text-center">
-                    {isColaborador 
+                    {(isColaborador || isAdmin) 
                       ? 'Seja o primeiro a postar uma novidade!'
                       : 'Volte mais tarde para conferir as atualizações.'}
                   </p>

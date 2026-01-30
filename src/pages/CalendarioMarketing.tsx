@@ -37,7 +37,7 @@ const tagConfig = {
 };
 
 const CalendarioMarketing = () => {
-  const { isColaborador } = useAuth();
+  const { isColaborador, isAdmin } = useAuth();
   const [events, setEvents] = useState<MarketingEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -176,7 +176,7 @@ const CalendarioMarketing = () => {
               <Calendar className="h-6 w-6 text-primary" />
               <h1 className="text-xl sm:text-2xl font-bold">Próximas Promoções</h1>
             </div>
-            {isColaborador && (
+            {(isColaborador || isAdmin) && (
               <Button 
                 onClick={() => setIsCreateDialogOpen(true)}
                 size="sm"
