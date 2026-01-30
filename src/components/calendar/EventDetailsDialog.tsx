@@ -55,7 +55,7 @@ export const EventDetailsDialog = ({ open, onOpenChange, event, onEventDeleted, 
   const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
 
-  // Only collaborators who own the event or admins can edit/delete
+  // Only creator (if colaborador) or admin can edit/delete
   const canEdit = isColaborador && (user?.id === event?.user_id || isAdmin);
 
   if (!event) return null;

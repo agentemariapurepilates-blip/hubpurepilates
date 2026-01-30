@@ -85,6 +85,7 @@ const ContentDetailsDialog = ({
   if (!content) return null;
 
   const postingDate = content.posting_date ? parseISO(content.posting_date) : parseISO(content.start_date);
+  // Only creator (if colaborador) or admin can edit/delete
   const canEdit = isColaborador && (user?.id === content.user_id || isAdmin);
   const tagConfig = content.tag ? TAG_CONFIG[content.tag] : (content.content_type ? TAG_CONFIG[content.content_type] : null);
 
