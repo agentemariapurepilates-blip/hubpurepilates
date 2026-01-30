@@ -157,9 +157,11 @@ const MidiasSociais = () => {
       setSelectedContent(dayContent[0]);
       setIsDetailsDialogOpen(true);
     } else if (isColaborador) {
+      // Only collaborators can create content
       setSelectedDate(date);
       setIsCreateDialogOpen(true);
     }
+    // Franqueados cannot create, so clicking on empty day does nothing
   };
 
   const handleEditClick = () => {

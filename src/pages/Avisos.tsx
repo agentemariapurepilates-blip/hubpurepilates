@@ -28,7 +28,7 @@ export interface Aviso {
 }
 
 const Avisos = () => {
-  const { isColaborador, isAdmin } = useAuth();
+  const { user, isColaborador, isAdmin } = useAuth();
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -171,16 +171,20 @@ const Avisos = () => {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredAvisos.map((aviso) => (
-              <AvisoCard
-                key={aviso.id}
-                aviso={aviso}
-                onClick={() => handleAvisoClick(aviso)}
-                onEdit={() => handleEditClick(aviso)}
-                onDelete={() => handleDelete(aviso.id)}
-                canEdit={canCreate}
-              />
-            ))}
+            {filteredAvisos.map((aviso) => {
+              // Only the creator (if colaborador) or admin can edit/delete
+              const canEditThis = isColaborador && (user?.id === aviso.created_by || isAdmin);
+              return (
+                <AvisoCard
+                  key={aviso.id}
+                  aviso={aviso}
+                  onClick={() => handleAvisoClick(aviso)}
+                  onEdit={() => handleEditClick(aviso)}
+                  onDelete={() => handleDelete(aviso.id)}
+                  canEdit={canEditThis}
+                />
+              );
+            })}
           </div>
         )}
 

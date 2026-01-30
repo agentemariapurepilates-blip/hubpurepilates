@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +37,7 @@ const tagConfig = {
 };
 
 const CalendarioMarketing = () => {
+  const { isColaborador } = useAuth();
   const [events, setEvents] = useState<MarketingEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -174,15 +176,17 @@ const CalendarioMarketing = () => {
               <Calendar className="h-6 w-6 text-primary" />
               <h1 className="text-xl sm:text-2xl font-bold">Próximas Promoções</h1>
             </div>
-            <Button 
-              onClick={() => setIsCreateDialogOpen(true)}
-              size="sm"
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Nova Promoção</span>
-              <span className="sm:hidden">Nova</span>
-            </Button>
+            {isColaborador && (
+              <Button 
+                onClick={() => setIsCreateDialogOpen(true)}
+                size="sm"
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Nova Promoção</span>
+                <span className="sm:hidden">Nova</span>
+              </Button>
+            )}
           </div>
           
           {/* Search */}
