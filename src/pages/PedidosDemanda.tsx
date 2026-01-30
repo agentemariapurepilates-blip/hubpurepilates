@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, List, LayoutGrid } from 'lucide-react';
+import { Plus, List, LayoutGrid, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import DemandListView from '@/components/demands/DemandListView';
 import DemandKanbanView from '@/components/demands/DemandKanbanView';
+import DepartmentSelector from '@/components/demands/DepartmentSelector';
 import CreateDemandDialog from '@/components/demands/CreateDemandDialog';
 import DemandDetailsDialog from '@/components/demands/DemandDetailsDialog';
 import EditDemandDialog from '@/components/demands/EditDemandDialog';
@@ -41,13 +43,15 @@ export interface Demand {
 const PedidosDemanda = () => {
   const { user, isColaborador, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Redirect non-colaboradores
   useEffect(() => {
@@ -130,6 +134,36 @@ const PedidosDemanda = () => {
     };
   }, []);
 
+  // Calculate demand counts by department
+  const demandCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    demands.forEach(d => {
+      counts[d.to_department] = (counts[d.to_department] || 0) + 1;
+    });
+    return counts;
+  }, [demands]);
+
+  // Filter demands by department and search
+  const filteredDemands = useMemo(() => {
+    return demands.filter(d => {
+      // Filter by department
+      if (selectedDepartment !== 'all' && d.to_department !== selectedDepartment) {
+        return false;
+      }
+      // Filter by search
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          d.title.toLowerCase().includes(searchLower) ||
+          d.description?.toLowerCase().includes(searchLower) ||
+          d.from_department.toLowerCase().includes(searchLower) ||
+          d.to_department.toLowerCase().includes(searchLower)
+        );
+      }
+      return true;
+    });
+  }, [demands, selectedDepartment, searchTerm]);
+
   const handleDemandClick = (demand: Demand) => {
     setSelectedDemand(demand);
     setDetailsOpen(true);
@@ -170,9 +204,9 @@ const PedidosDemanda = () => {
     <MainLayout>
       <div className="max-w-7xl mx-auto px-2 sm:px-4">
         {/* Mobile-first Header */}
-        <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col gap-4 mb-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl sm:text-2xl font-bold">Pedidos de Demanda</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Solicitação de Demandas</h1>
             <Button 
               onClick={() => setIsCreateOpen(true)}
               size="sm"
@@ -183,17 +217,35 @@ const PedidosDemanda = () => {
               <span className="sm:hidden">Nova</span>
             </Button>
           </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar demandas..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Department Selector */}
+          <DepartmentSelector
+            selectedDepartment={selectedDepartment}
+            onDepartmentChange={setSelectedDepartment}
+            demandCounts={demandCounts}
+          />
           
           {/* View Toggle */}
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'list' | 'kanban')} className="w-full">
             <TabsList className="grid w-full grid-cols-2 h-10">
-              <TabsTrigger value="list" className="gap-2">
-                <List className="h-4 w-4" />
-                Lista
-              </TabsTrigger>
               <TabsTrigger value="kanban" className="gap-2">
                 <LayoutGrid className="h-4 w-4" />
                 Quadro
+              </TabsTrigger>
+              <TabsTrigger value="list" className="gap-2">
+                <List className="h-4 w-4" />
+                Lista
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -206,13 +258,13 @@ const PedidosDemanda = () => {
           </div>
         ) : viewMode === 'list' ? (
           <DemandListView 
-            demands={demands} 
+            demands={filteredDemands} 
             onDemandClick={handleDemandClick}
             onStatusChange={handleStatusChange}
           />
         ) : (
           <DemandKanbanView 
-            demands={demands} 
+            demands={filteredDemands} 
             onDemandClick={handleDemandClick}
             onStatusChange={handleStatusChange}
           />
