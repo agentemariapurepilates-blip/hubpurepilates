@@ -23,6 +23,16 @@ const AvisoCard = ({ aviso, onClick, onEdit, onDelete, canEdit }: AvisoCardProps
       className="cursor-pointer hover:shadow-md transition-all hover:scale-[1.01] overflow-hidden"
       onClick={onClick}
     >
+      {aviso.image_url && (
+        <div className="h-40 overflow-hidden">
+          <img 
+            src={aviso.image_url} 
+            alt={aviso.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+      
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">

@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ImagePlus, X } from 'lucide-react';
 import { Aviso } from '@/pages/Avisos';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 
@@ -17,7 +18,11 @@ interface EditAvisoDialogProps {
 }
 
 const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDialogProps) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     title: '',
     content: ''
@@ -29,8 +34,48 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
         title: aviso.title,
         content: aviso.content || ''
       });
+      setCoverImage(aviso.image_url || null);
     }
   }, [aviso]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Erro", description: "A imagem deve ter no máximo 5MB", variant: "destructive" });
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `avisos/${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('post-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('post-images')
+        .getPublicUrl(fileName);
+
+      setCoverImage(publicUrl);
+      toast({ title: "Sucesso", description: "Imagem de capa atualizada!" });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({ title: "Erro", description: "Erro ao fazer upload da imagem", variant: "destructive" });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeCoverImage = () => {
+    setCoverImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,25 +87,18 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
         .from('avisos')
         .update({
           title: formData.title,
-          content: formData.content || null
+          content: formData.content || null,
+          image_url: coverImage
         })
         .eq('id', aviso.id);
 
       if (error) throw error;
 
-      toast({
-        title: "Sucesso",
-        description: "Aviso atualizado com sucesso"
-      });
-      
+      toast({ title: "Sucesso", description: "Aviso atualizado com sucesso" });
       onSuccess();
     } catch (error) {
       console.error('Error updating aviso:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar aviso",
-        variant: "destructive"
-      });
+      toast({ title: "Erro", description: "Erro ao atualizar aviso", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -82,6 +120,46 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               placeholder="Ex: Parceria com Boticário"
               required
+            />
+          </div>
+
+          {/* Cover Image Upload */}
+          <div className="space-y-2">
+            <Label>Imagem de Capa</Label>
+            {coverImage ? (
+              <div className="relative rounded-lg overflow-hidden">
+                <img src={coverImage} alt="Capa" className="w-full h-48 object-cover" />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-8 w-8"
+                  onClick={removeCoverImage}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+              >
+                {uploadingImage ? (
+                  <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <ImagePlus className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">Clique para adicionar uma imagem de capa</p>
+                  </>
+                )}
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
             />
           </div>
 
