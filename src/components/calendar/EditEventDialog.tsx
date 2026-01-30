@@ -6,13 +6,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 
 interface MarketingEvent {
   id: string;
@@ -90,7 +90,7 @@ export const EditEventDialog = ({ open, onOpenChange, event, onSuccess }: EditEv
       .from('marketing_events')
       .update({
         title: title.trim(),
-        description: description.trim() || null,
+        description: description || null,
         start_date: format(startDate, 'yyyy-MM-dd'),
         end_date: format(endDate, 'yyyy-MM-dd'),
         tag: tag || null,
@@ -120,7 +120,7 @@ export const EditEventDialog = ({ open, onOpenChange, event, onSuccess }: EditEv
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Evento</DialogTitle>
         </DialogHeader>
@@ -137,13 +137,11 @@ export const EditEventDialog = ({ open, onOpenChange, event, onSuccess }: EditEv
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-description">Descrição</Label>
-            <Textarea
-              id="edit-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+            <Label>Descrição</Label>
+            <RichTextEditor
+              content={description}
+              onChange={setDescription}
               placeholder="Detalhes da campanha..."
-              rows={4}
             />
           </div>
 
