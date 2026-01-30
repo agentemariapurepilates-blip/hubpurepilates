@@ -123,9 +123,9 @@ const NewsCard = ({ post, onPostUpdated }: NewsCardProps) => {
     <>
       <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-200">
         <div className="flex flex-col">
-          {/* Cover Image - Full width at top */}
+          {/* Cover Image - 16:9 aspect ratio */}
           {coverImage && (
-            <div className="w-full h-48 sm:h-56 bg-muted relative">
+            <div className="w-full aspect-video bg-muted relative">
               <img
                 src={coverImage}
                 alt={post.title}
