@@ -4,10 +4,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 
 interface CreateAvisoDialogProps {
   open: boolean;
@@ -64,7 +64,7 @@ const CreateAvisoDialog = ({ open, onOpenChange, onSuccess }: CreateAvisoDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Aviso</DialogTitle>
         </DialogHeader>
@@ -92,18 +92,16 @@ const CreateAvisoDialog = ({ open, onOpenChange, onSuccess }: CreateAvisoDialogP
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content">Descrição</Label>
-            <Textarea
-              id="content"
-              value={formData.content}
-              onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+            <Label>Descrição</Label>
+            <RichTextEditor
+              content={formData.content}
+              onChange={(html) => setFormData(prev => ({ ...prev, content: html }))}
               placeholder="Descreva os detalhes do aviso..."
-              rows={4}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="image_url">URL da Imagem</Label>
+            <Label htmlFor="image_url">URL da Imagem de Capa (opcional)</Label>
             <Input
               id="image_url"
               type="url"
