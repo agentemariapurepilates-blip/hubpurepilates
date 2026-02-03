@@ -109,9 +109,14 @@ const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
                           {/* Content */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
-                              <h3 className="font-medium text-sm sm:text-base line-clamp-2">
-                                {demand.title}
-                              </h3>
+                              <div className="min-w-0">
+                                <h3 className="font-medium text-sm sm:text-base line-clamp-2">
+                                  {demand.title}
+                                </h3>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  por {demand.creator_profile?.full_name || 'Usuário'}
+                                </p>
+                              </div>
                               <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                             </div>
 

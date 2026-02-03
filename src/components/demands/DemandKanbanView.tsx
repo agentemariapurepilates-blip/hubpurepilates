@@ -66,13 +66,26 @@ const DemandKanbanView = ({ demands, onDemandClick }: DemandKanbanViewProps) => 
                         {demand.title}
                       </h4>
 
-                      {/* Priority */}
-                      <Badge 
-                        variant="secondary" 
-                        className={`text-xs mb-2 ${priorityConfig[demand.priority].color}`}
-                      >
-                        {priorityConfig[demand.priority].label}
-                      </Badge>
+                      {/* Creator & Priority */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Avatar className="h-4 w-4 shrink-0">
+                            <AvatarImage src={demand.creator_profile?.avatar_url || undefined} />
+                            <AvatarFallback className="text-[8px]">
+                              {demand.creator_profile?.full_name?.[0] || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs text-muted-foreground truncate">
+                            {demand.creator_profile?.full_name || 'Usuário'}
+                          </span>
+                        </div>
+                        <Badge 
+                          variant="secondary" 
+                          className={`text-xs shrink-0 ${priorityConfig[demand.priority].color}`}
+                        >
+                          {priorityConfig[demand.priority].label}
+                        </Badge>
+                      </div>
 
                       {/* Department */}
                       <p className="text-xs text-muted-foreground truncate mb-2">
