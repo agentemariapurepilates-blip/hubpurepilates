@@ -122,9 +122,14 @@ export const EventDetailsDialog = ({ open, onOpenChange, event, onEventDeleted, 
           <div className="space-y-6">
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Descrição</h4>
-              <p className="text-foreground leading-relaxed">
-                {event.description || 'Sem descrição disponível.'}
-              </p>
+              {event.description ? (
+                <div 
+                  className="prose prose-sm max-w-none text-foreground leading-relaxed [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_a]:text-primary [&_img]:rounded-lg [&_img]:max-w-full"
+                  dangerouslySetInnerHTML={{ __html: event.description }}
+                />
+              ) : (
+                <p className="text-muted-foreground">Sem descrição disponível.</p>
+              )}
             </div>
 
             <Separator />
