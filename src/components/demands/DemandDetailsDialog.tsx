@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Separator } from '@/components/ui/separator';
 import {
   Select,
@@ -439,12 +439,12 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col p-0">
-          <DialogHeader className="p-4 pb-0">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-0 shrink-0">
             <DialogTitle className="text-left line-clamp-2 pr-8">{demand.title}</DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-4">
+          <div className="flex-1 overflow-y-auto px-4">
             {/* Meta Info */}
             <div className="space-y-4 py-4">
               {/* Status */}
@@ -533,6 +533,19 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                 </div>
               )}
 
+              {/* Creator */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-5 w-5">
+                  <AvatarImage src={demand.creator_profile?.avatar_url || undefined} />
+                  <AvatarFallback className="text-[10px]">
+                    {demand.creator_profile?.full_name?.[0] || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-muted-foreground">
+                  Aberto por <span className="font-medium text-foreground">{demand.creator_profile?.full_name || 'Usuário'}</span>
+                </span>
+              </div>
+
               {/* Description */}
               {demand.description && (
                 <div className="pt-2">
@@ -612,7 +625,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Comment Input */}
           <div className="p-4 border-t bg-background">
