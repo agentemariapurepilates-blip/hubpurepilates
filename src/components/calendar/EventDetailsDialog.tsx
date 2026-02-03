@@ -95,7 +95,7 @@ export const EventDetailsDialog = ({ open, onOpenChange, event, onEventDeleted, 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="sm:max-w-[550px] max-h-[90vh] flex flex-col">
           <DialogHeader>
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -119,7 +119,7 @@ export const EventDetailsDialog = ({ open, onOpenChange, event, onEventDeleted, 
 
           <Separator className="my-4" />
 
-          <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto space-y-6 pr-2">
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Descrição</h4>
               {event.description ? (
