@@ -10,28 +10,32 @@ const AguardandoAprovacao = () => {
   const navigate = useNavigate();
   const { user, signOut, isApproved, loading, profileLoading } = useAuth();
 
-  // Esperar até que auth e profile estejam carregados
-  const isFullyLoaded = !loading && !profileLoading;
-
   useEffect(() => {
-    if (!isFullyLoaded) return;
+    // Se ainda está carregando a sessão auth, aguardar
+    if (loading) return;
     
+    // Se não tem usuário (logout ou não logado), ir para auth
     if (!user) {
-      navigate('/auth');
+      navigate('/auth', { replace: true });
       return;
     }
     
+    // Se ainda está carregando o perfil, aguardar
+    if (profileLoading) return;
+    
+    // Se está aprovado, ir para home
     if (isApproved) {
-      navigate('/');
+      navigate('/', { replace: true });
     }
-  }, [user, isApproved, isFullyLoaded, navigate]);
+  }, [user, isApproved, loading, profileLoading, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
   };
 
-  if (!isFullyLoaded) {
+  // Mostrar loading enquanto carrega auth ou perfil
+  if (loading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center gradient-hero">
         <p className="text-muted-foreground">Carregando...</p>
