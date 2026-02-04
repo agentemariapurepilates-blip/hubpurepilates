@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Users, UserCheck, Building2, Clock, CheckCircle, XCircle, Ban, Trash2, MoreHorizontal, Loader2, Key } from 'lucide-react';
+import { Search, Users, UserCheck, Building2, Clock, CheckCircle, XCircle, Ban, Trash2, MoreHorizontal, Loader2, Key, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -57,6 +57,15 @@ interface UserProfile {
   is_approved: boolean;
   created_at: string;
   isAdmin: boolean;
+}
+
+interface PasswordResetRequest {
+  id: string;
+  email: string;
+  full_name: string | null;
+  status: string;
+  created_at: string;
+  user_id: string | null;
 }
 
 // Component for pending user row with its own state
@@ -134,8 +143,10 @@ const AdminUsuarios = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
   const [userToDeactivate, setUserToDeactivate] = useState<UserProfile | null>(null);
-  const [userToSetPassword, setUserToSetPassword] = useState<UserProfile | null>(null);
+  const [userToSetPassword, setUserToSetPassword] = useState<{ user_id: string; email: string; full_name: string | null } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [passwordResetRequests, setPasswordResetRequests] = useState<PasswordResetRequest[]>([]);
+  const [loadingResetRequests, setLoadingResetRequests] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
@@ -182,9 +193,45 @@ const AdminUsuarios = () => {
     setLoading(false);
   };
 
+  const fetchPasswordResetRequests = async () => {
+    setLoadingResetRequests(true);
+    const { data, error } = await supabase
+      .from('password_reset_requests')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching password reset requests:', error);
+    } else {
+      setPasswordResetRequests(data || []);
+    }
+    setLoadingResetRequests(false);
+  };
+
+  const markResetRequestResolved = async (requestId: string) => {
+    const { error } = await supabase
+      .from('password_reset_requests')
+      .update({ 
+        status: 'resolved',
+        resolved_at: new Date().toISOString(),
+        resolved_by: currentUser?.id
+      })
+      .eq('id', requestId);
+
+    if (error) {
+      toast.error('Erro ao marcar como resolvido');
+      console.error('Error updating request:', error);
+    } else {
+      toast.success('Solicitação marcada como resolvida');
+      fetchPasswordResetRequests();
+    }
+  };
+
   useEffect(() => {
     if (isAdmin) {
       fetchUsers();
+      fetchPasswordResetRequests();
     }
   }, [isAdmin]);
 
@@ -404,9 +451,18 @@ const AdminUsuarios = () => {
           </Card>
         </div>
 
-        {/* Tabs for Pending and Approved Users */}
-        <Tabs defaultValue={pendingUsers.length > 0 ? 'pending' : 'approved'} className="space-y-4">
+        {/* Tabs for Pending, Password Reset Requests and Approved Users */}
+        <Tabs defaultValue={passwordResetRequests.length > 0 ? 'password-reset' : (pendingUsers.length > 0 ? 'pending' : 'approved')} className="space-y-4">
           <TabsList>
+            <TabsTrigger value="password-reset" className="gap-2">
+              <KeyRound className="h-4 w-4" />
+              Recuperação de Senha
+              {passwordResetRequests.length > 0 && (
+                <Badge variant="destructive" className="ml-1">
+                  {passwordResetRequests.length}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="pending" className="gap-2">
               Pedidos de Acesso
               {pendingUsers.length > 0 && (
@@ -417,6 +473,101 @@ const AdminUsuarios = () => {
             </TabsTrigger>
             <TabsTrigger value="approved">Usuários Aprovados</TabsTrigger>
           </TabsList>
+
+          {/* Password Reset Requests Tab */}
+          <TabsContent value="password-reset" className="space-y-4">
+            <Card className="card-pure">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <KeyRound className="h-5 w-5" />
+                  Solicitações de Senha Temporária
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Data da Solicitação</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingResetRequests ? (
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-8 w-32 ml-auto" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : passwordResetRequests.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          Nenhuma solicitação de senha pendente
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      passwordResetRequests.map((request) => {
+                        // Find the user in the approved users list by email
+                        const matchedUser = approvedUsers.find(u => u.email.toLowerCase() === request.email.toLowerCase());
+                        
+                        return (
+                          <TableRow key={request.id}>
+                            <TableCell className="font-medium">
+                              {request.full_name || 'Sem nome'}
+                            </TableCell>
+                            <TableCell>{request.email}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {new Date(request.created_at).toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center gap-2 justify-end">
+                                {matchedUser ? (
+                                  <Button
+                                    size="sm"
+                                    className="gap-1"
+                                    onClick={() => setUserToSetPassword({
+                                      user_id: matchedUser.user_id,
+                                      email: matchedUser.email,
+                                      full_name: matchedUser.full_name
+                                    })}
+                                  >
+                                    <Key className="h-4 w-4" />
+                                    Definir Senha
+                                  </Button>
+                                ) : (
+                                  <Badge variant="outline" className="text-amber-600 border-amber-300">
+                                    Usuário não encontrado
+                                  </Badge>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => markResetRequestResolved(request.id)}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Resolvido
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="pending" className="space-y-4">
             <Card className="card-pure">
@@ -677,6 +828,7 @@ const AdminUsuarios = () => {
           open={!!userToSetPassword}
           onOpenChange={() => setUserToSetPassword(null)}
           user={userToSetPassword}
+          onSuccess={fetchPasswordResetRequests}
         />
       </div>
     </MainLayout>

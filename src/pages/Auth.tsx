@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,9 +16,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, AlertCircle, UserCheck, Building2, HelpCircle } from 'lucide-react';
+import { Loader2, AlertCircle, UserCheck, Building2, HelpCircle, CheckCircle } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { z } from 'zod';
+import { toast } from 'sonner';
 
 const emailSchema = z.string().email('Email inválido').refine(
   (email) => email.toLowerCase().endsWith('@purepilates.com.br'),
@@ -35,6 +37,10 @@ const Auth = () => {
   const [error, setError] = useState<string | null>(null);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordName, setForgotPasswordName] = useState('');
+  const [submittingReset, setSubmittingReset] = useState(false);
+  const [resetRequestSent, setResetRequestSent] = useState(false);
   
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -365,41 +371,123 @@ const Auth = () => {
         </p>
 
         {/* Forgot Password Dialog */}
-        <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <Dialog open={showForgotPassword} onOpenChange={(open) => {
+          setShowForgotPassword(open);
+          if (!open) {
+            setForgotPasswordEmail('');
+            setForgotPasswordName('');
+            setResetRequestSent(false);
+          }
+        }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <HelpCircle className="h-5 w-5" />
-                Esqueceu sua senha?
+                {resetRequestSent ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <HelpCircle className="h-5 w-5" />
+                )}
+                {resetRequestSent ? 'Solicitação Enviada!' : 'Esqueceu sua senha?'}
               </DialogTitle>
               <DialogDescription>
-                Como recuperar o acesso à sua conta
+                {resetRequestSent 
+                  ? 'O administrador foi notificado'
+                  : 'Solicite uma senha temporária ao administrador'
+                }
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                <p className="text-sm">
-                  Para recuperar sua senha, siga os passos abaixo:
-                </p>
-                <ol className="text-sm space-y-2 list-decimal list-inside">
-                  <li>Entre em contato com o <strong>administrador</strong> do sistema</li>
-                  <li>Solicite uma <strong>senha temporária</strong></li>
-                  <li>Faça login com a senha temporária</li>
-                  <li>Acesse seu <strong>Perfil</strong> e altere para uma nova senha</li>
-                </ol>
+            
+            {resetRequestSent ? (
+              <div className="space-y-4 py-4">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <p className="text-green-800 dark:text-green-200 text-sm font-medium">
+                    ✅ Sua solicitação foi registrada!
+                  </p>
+                  <p className="text-green-700 dark:text-green-300 text-sm mt-2">
+                    Aguarde o administrador definir uma senha temporária para você. 
+                    Quando isso acontecer, você poderá fazer login e alterar sua senha no perfil.
+                  </p>
+                </div>
+                <Button onClick={() => setShowForgotPassword(false)} className="w-full">
+                  Entendi
+                </Button>
               </div>
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                <p className="text-sm text-primary font-medium">
-                  📧 Contato do Administrador
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  admin@purepilates.com.br
-                </p>
+            ) : (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-name">Seu nome</Label>
+                  <Input
+                    id="forgot-name"
+                    type="text"
+                    value={forgotPasswordName}
+                    onChange={(e) => setForgotPasswordName(e.target.value)}
+                    placeholder="Digite seu nome completo"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email">Seu e-mail</Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    placeholder="seu.nome@purepilates.com.br"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowForgotPassword(false)}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      if (!forgotPasswordEmail || !forgotPasswordName) {
+                        toast.error('Preencha todos os campos');
+                        return;
+                      }
+                      if (!forgotPasswordEmail.toLowerCase().endsWith('@purepilates.com.br')) {
+                        toast.error('Use seu e-mail @purepilates.com.br');
+                        return;
+                      }
+                      
+                      setSubmittingReset(true);
+                      try {
+                        const { error } = await supabase
+                          .from('password_reset_requests')
+                          .insert({
+                            email: forgotPasswordEmail.toLowerCase(),
+                            full_name: forgotPasswordName,
+                            status: 'pending'
+                          });
+                        
+                        if (error) throw error;
+                        setResetRequestSent(true);
+                        toast.success('Solicitação enviada!');
+                      } catch (err: any) {
+                        toast.error('Erro ao enviar solicitação');
+                        console.error(err);
+                      } finally {
+                        setSubmittingReset(false);
+                      }
+                    }}
+                    disabled={submittingReset}
+                    className="flex-1"
+                  >
+                    {submittingReset ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      'Solicitar Senha'
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
-            <Button onClick={() => setShowForgotPassword(false)} className="w-full">
-              Entendi
-            </Button>
+            )}
           </DialogContent>
         </Dialog>
       </div>
