@@ -8,23 +8,30 @@ import { useEffect } from 'react';
 
 const AguardandoAprovacao = () => {
   const navigate = useNavigate();
-  const { user, signOut, isApproved, loading } = useAuth();
+  const { user, signOut, isApproved, loading, profileLoading } = useAuth();
+
+  // Esperar até que auth e profile estejam carregados
+  const isFullyLoaded = !loading && !profileLoading;
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!isFullyLoaded) return;
+    
+    if (!user) {
       navigate('/auth');
+      return;
     }
-    if (!loading && isApproved) {
+    
+    if (isApproved) {
       navigate('/');
     }
-  }, [user, isApproved, loading, navigate]);
+  }, [user, isApproved, isFullyLoaded, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
   };
 
-  if (loading) {
+  if (!isFullyLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center gradient-hero">
         <p className="text-muted-foreground">Carregando...</p>
