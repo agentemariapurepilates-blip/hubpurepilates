@@ -31,7 +31,7 @@ const AguardandoAprovacao = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    // O useEffect vai redirecionar automaticamente quando user se tornar null
   };
 
   // Mostrar loading enquanto carrega auth ou perfil

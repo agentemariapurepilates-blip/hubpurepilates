@@ -129,6 +129,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (session?.user) {
         checkUserRoleAndType(session.user.id);
+      } else {
+        // Se não há sessão, também marcar profileLoading como false
+        setProfileLoading(false);
       }
     });
 
