@@ -16,6 +16,7 @@ import {
 import { Camera, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import MainLayout from '@/components/layout/MainLayout';
+import { ChangePasswordSection } from '@/components/profile/ChangePasswordSection';
 
 const sectors = [
   { value: 'consultoras', label: 'Consultoras' },
@@ -243,6 +244,8 @@ const Perfil = () => {
             </Button>
           </CardContent>
         </Card>
+
+        <ChangePasswordSection />
       </div>
     </MainLayout>
   );
