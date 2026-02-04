@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Users, UserCheck, Building2, Clock, CheckCircle, XCircle, Ban, Trash2, MoreHorizontal, Loader2, Mail } from 'lucide-react';
+import { Search, Users, UserCheck, Building2, Clock, CheckCircle, XCircle, Ban, Trash2, MoreHorizontal, Loader2, Key } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -43,6 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { SetTemporaryPasswordDialog } from '@/components/admin/SetTemporaryPasswordDialog';
 
 type UserType = 'colaborador' | 'franqueado';
 
@@ -133,8 +134,8 @@ const AdminUsuarios = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
   const [userToDeactivate, setUserToDeactivate] = useState<UserProfile | null>(null);
+  const [userToSetPassword, setUserToSetPassword] = useState<UserProfile | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [sendingResetTo, setSendingResetTo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
@@ -299,38 +300,6 @@ const AdminUsuarios = () => {
       console.error('Error deleting user:', error);
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  const sendPasswordReset = async (email: string) => {
-    setSendingResetTo(email);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-password-reset`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionData.session?.access_token}`,
-          },
-          body: JSON.stringify({ email }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Erro ao enviar email');
-      }
-
-      toast.success('Link de recuperação enviado para ' + email);
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao enviar link de recuperação');
-      console.error('Error sending password reset:', error);
-    } finally {
-      setSendingResetTo(null);
     }
   };
 
@@ -605,15 +574,10 @@ const AdminUsuarios = () => {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem
-                                      onClick={() => sendPasswordReset(user.email)}
-                                      disabled={sendingResetTo === user.email}
+                                      onClick={() => setUserToSetPassword(user)}
                                     >
-                                      {sendingResetTo === user.email ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <Mail className="mr-2 h-4 w-4" />
-                                      )}
-                                      Enviar link de recuperação
+                                      <Key className="mr-2 h-4 w-4" />
+                                      Definir senha temporária
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
@@ -707,10 +671,16 @@ const AdminUsuarios = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Set Temporary Password Dialog */}
+        <SetTemporaryPasswordDialog
+          open={!!userToSetPassword}
+          onOpenChange={() => setUserToSetPassword(null)}
+          user={userToSetPassword}
+        />
       </div>
     </MainLayout>
   );
 };
-
 
 export default AdminUsuarios;

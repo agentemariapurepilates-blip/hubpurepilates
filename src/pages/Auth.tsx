@@ -8,7 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, AlertCircle, UserCheck, Building2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Loader2, AlertCircle, UserCheck, Building2, HelpCircle } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { z } from 'zod';
 
@@ -27,6 +34,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signupSuccess, setSignupSuccess] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -229,6 +237,15 @@ const Auth = () => {
                       'Entrar'
                     )}
                   </Button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="w-full text-sm text-primary hover:underline flex items-center justify-center gap-1"
+                  >
+                    <HelpCircle className="h-3 w-3" />
+                    Esqueci minha senha
+                  </button>
                 </form>
               </TabsContent>
 
@@ -346,6 +363,45 @@ const Auth = () => {
         <p className="text-center text-sm text-muted-foreground mt-6">
           Acesso exclusivo para colaboradores e franqueados Pure Pilates
         </p>
+
+        {/* Forgot Password Dialog */}
+        <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <HelpCircle className="h-5 w-5" />
+                Esqueceu sua senha?
+              </DialogTitle>
+              <DialogDescription>
+                Como recuperar o acesso à sua conta
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                <p className="text-sm">
+                  Para recuperar sua senha, siga os passos abaixo:
+                </p>
+                <ol className="text-sm space-y-2 list-decimal list-inside">
+                  <li>Entre em contato com o <strong>administrador</strong> do sistema</li>
+                  <li>Solicite uma <strong>senha temporária</strong></li>
+                  <li>Faça login com a senha temporária</li>
+                  <li>Acesse seu <strong>Perfil</strong> e altere para uma nova senha</li>
+                </ol>
+              </div>
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                <p className="text-sm text-primary font-medium">
+                  📧 Contato do Administrador
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  admin@purepilates.com.br
+                </p>
+              </div>
+            </div>
+            <Button onClick={() => setShowForgotPassword(false)} className="w-full">
+              Entendi
+            </Button>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
