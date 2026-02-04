@@ -22,6 +22,7 @@ interface SetTemporaryPasswordDialogProps {
     email: string;
     full_name: string | null;
   } | null;
+  onSuccess?: () => void;
 }
 
 function generateTemporaryPassword(): string {
@@ -37,6 +38,7 @@ export function SetTemporaryPasswordDialog({
   open,
   onOpenChange,
   user,
+  onSuccess,
 }: SetTemporaryPasswordDialogProps) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -90,6 +92,7 @@ export function SetTemporaryPasswordDialog({
 
       setSuccess(true);
       toast.success('Senha temporária definida com sucesso!');
+      onSuccess?.();
     } catch (error: any) {
       toast.error(error.message || 'Erro ao definir senha temporária');
       console.error('Error setting temporary password:', error);
