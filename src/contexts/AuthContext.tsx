@@ -9,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  profileLoading: boolean;
   isAdmin: boolean;
   isColaborador: boolean;
   userType: UserType | null;
@@ -35,6 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userType, setUserType] = useState<UserType | null>(null);
   const [isApproved, setIsApproved] = useState(false);
@@ -43,10 +45,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Colaborador = pode criar conteúdo. Admin também é considerado colaborador.
   const isColaborador = userType === 'colaborador' || isAdmin;
   
+  // Loading completo inclui carregamento do perfil
+  const isFullyLoaded = !loading && !profileLoading;
+  
   // Usuário está logado mas aguardando aprovação
-  const isPending = !!user && !isApproved && !loading;
+  const isPending = !!user && !isApproved && isFullyLoaded;
 
   const checkUserRoleAndType = async (userId: string) => {
+    setProfileLoading(true);
     try {
       // Check admin role
       const { data: roleData } = await supabase
@@ -82,6 +88,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAdmin(false);
       setUserType('colaborador');
       setIsApproved(false);
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -108,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUserType(null);
           setIsApproved(false);
           setRequestedUserType(null);
+          setProfileLoading(false);
         }
       }
     );
@@ -205,6 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, 
       session, 
       loading, 
+      profileLoading,
       isAdmin, 
       isColaborador, 
       userType, 
