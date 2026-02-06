@@ -505,8 +505,16 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
               {demand.description && (
                 <div className="pt-2">
                   <div 
-                    className="text-sm text-muted-foreground prose prose-sm max-w-none"
+                    className="text-sm text-muted-foreground prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
                     dangerouslySetInnerHTML={{ __html: demand.description }}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.tagName === 'A') {
+                        e.preventDefault();
+                        const href = target.getAttribute('href');
+                        if (href) window.open(href, '_blank', 'noopener,noreferrer');
+                      }
+                    }}
                   />
                 </div>
               )}
@@ -558,8 +566,16 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                           )}
                         </div>
                         <div 
-                          className="text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none"
+                          className="text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
                           dangerouslySetInnerHTML={{ __html: comment.content }}
+                          onClick={(e) => {
+                            const target = e.target as HTMLElement;
+                            if (target.tagName === 'A') {
+                              e.preventDefault();
+                              const href = target.getAttribute('href');
+                              if (href) window.open(href, '_blank', 'noopener,noreferrer');
+                            }
+                          }}
                         />
                         {/* Comment Attachments */}
                         {comment.attachments && comment.attachments.length > 0 && (
