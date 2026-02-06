@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import DemandRichTextEditor from './DemandRichTextEditor';
 import {
   Select,
   SelectContent,
@@ -202,14 +202,14 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandD
             />
           </div>
 
-          {/* Description */}
+          {/* Description with rich text editor */}
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição Detalhada</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
+            <Label>Descrição Detalhada</Label>
+            <DemandRichTextEditor
+              content={description}
+              onChange={setDescription}
+              placeholder="Descreva a demanda em detalhes... Use @ para mencionar alguém"
+              minHeight="100px"
             />
           </div>
 

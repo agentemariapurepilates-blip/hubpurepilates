@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import DemandRichTextEditor from './DemandRichTextEditor';
 import {
   Select,
   SelectContent,
@@ -274,22 +274,15 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
             />
           </div>
 
-          {/* Description with paste support */}
+          {/* Description with rich text editor */}
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição Detalhada</Label>
-            <Textarea
-              ref={textareaRef}
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
+            <Label>Descrição Detalhada</Label>
+            <DemandRichTextEditor
+              content={description}
+              onChange={setDescription}
+              placeholder="Descreva a demanda em detalhes... Use @ para mencionar alguém"
+              minHeight="100px"
             />
-            {uploadingImage && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Enviando imagem...
-              </div>
-            )}
           </div>
 
           {/* Attachments Preview */}
