@@ -82,6 +82,32 @@ const statusConfig = {
   cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-800' },
 };
 
+// Convert plain text URLs in HTML content to clickable links
+const linkifyHtml = (html: string): string => {
+  // Create a temporary element to parse HTML
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  
+  const walkNode = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || '';
+      // Match URLs not already inside an anchor tag
+      const urlRegex = /(https?:\/\/[^\s<]+)/g;
+      if (urlRegex.test(text)) {
+        const span = document.createElement('span');
+        span.innerHTML = text.replace(urlRegex, '<a href="$1" class="text-primary underline cursor-pointer" target="_blank" rel="noopener noreferrer">$1</a>');
+        node.parentNode?.replaceChild(span, node);
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName !== 'A') {
+      // Don't process children of existing <a> tags
+      Array.from(node.childNodes).forEach(walkNode);
+    }
+  };
+  
+  Array.from(div.childNodes).forEach(walkNode);
+  return div.innerHTML;
+};
+
 const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick }: DemandDetailsDialogProps) => {
   const { user, isAdmin, isColaborador } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -506,7 +532,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                 <div className="pt-2">
                   <div 
                     className="text-sm text-muted-foreground prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
-                    dangerouslySetInnerHTML={{ __html: demand.description }}
+                    dangerouslySetInnerHTML={{ __html: linkifyHtml(demand.description) }}
                     onClick={(e) => {
                       const target = e.target as HTMLElement;
                       if (target.tagName === 'A') {
@@ -567,7 +593,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                         </div>
                         <div 
                           className="text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
-                          dangerouslySetInnerHTML={{ __html: comment.content }}
+                          dangerouslySetInnerHTML={{ __html: linkifyHtml(comment.content) }}
                           onClick={(e) => {
                             const target = e.target as HTMLElement;
                             if (target.tagName === 'A') {
