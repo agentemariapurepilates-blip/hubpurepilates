@@ -1,11 +1,14 @@
+import { DndContext, DragEndEvent, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { useState } from 'react';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { Demand } from '@/pages/PedidosDemanda';
+import KanbanDroppableColumn from './KanbanDroppableColumn';
 
 interface DemandKanbanViewProps {
   demands: Demand[];
@@ -26,109 +29,120 @@ const priorityConfig = {
   high: { label: 'Alta', color: 'bg-red-100 text-red-700' },
 };
 
-const DemandKanbanView = ({ demands, onDemandClick }: DemandKanbanViewProps) => {
+const DemandKanbanView = ({ demands, onDemandClick, onStatusChange }: DemandKanbanViewProps) => {
+  const [activeDemand, setActiveDemand] = useState<Demand | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 },
+    })
+  );
+
   const getDemandsForStatus = (status: Demand['status']) => {
     return demands.filter(d => d.status === status);
   };
 
+  const handleDragStart = (event: DragEndEvent) => {
+    const demand = event.active.data.current?.demand as Demand | undefined;
+    if (demand) setActiveDemand(demand);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDemand(null);
+
+    if (!over) return;
+
+    const demandId = active.id as string;
+    const newStatus = over.id as Demand['status'];
+    const demand = demands.find(d => d.id === demandId);
+
+    if (demand && demand.status !== newStatus) {
+      onStatusChange(demandId, newStatus);
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveDemand(null);
+  };
+
   return (
-    <ScrollArea className="w-full">
-      <div className="flex gap-3 pb-4 min-w-max">
-        {columns.map((column) => {
-          const columnDemands = getDemandsForStatus(column.id);
-          
-          return (
-            <div key={column.id} className="w-72 shrink-0">
-              {/* Column Header */}
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <div className={`w-3 h-3 rounded-full ${column.color}`} />
-                <h3 className="font-semibold text-sm">{column.label}</h3>
-                <Badge variant="secondary" className="ml-auto text-xs">
-                  {columnDemands.length}
-                </Badge>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <ScrollArea className="w-full">
+        <div className="flex gap-3 pb-4 min-w-max">
+          {columns.map((column) => (
+            <KanbanDroppableColumn
+              key={column.id}
+              id={column.id}
+              label={column.label}
+              color={column.color}
+              demands={getDemandsForStatus(column.id)}
+              onDemandClick={onDemandClick}
+            />
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+
+      {/* Drag Overlay - follows cursor */}
+      <DragOverlay>
+        {activeDemand ? (
+          <Card className="p-3 w-72 shadow-xl rotate-2 opacity-90 border-primary/30">
+            <h4 className="font-medium text-sm line-clamp-2 mb-2">
+              {activeDemand.title}
+            </h4>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Avatar className="h-4 w-4 shrink-0">
+                  <AvatarImage src={activeDemand.creator_profile?.avatar_url || undefined} />
+                  <AvatarFallback className="text-[8px]">
+                    {activeDemand.creator_profile?.full_name?.[0] || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs text-muted-foreground truncate">
+                  {activeDemand.creator_profile?.full_name || 'Usuário'}
+                </span>
               </div>
-
-              {/* Column Content */}
-              <div className="space-y-2 min-h-[200px] bg-muted/30 rounded-lg p-2">
-                {columnDemands.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    Nenhuma demanda
-                  </div>
-                ) : (
-                  columnDemands.map((demand) => (
-                    <Card
-                      key={demand.id}
-                      className="p-3 cursor-pointer hover:bg-muted/50 transition-colors active:scale-[0.98]"
-                      onClick={() => onDemandClick(demand)}
-                    >
-                      {/* Title */}
-                      <h4 className="font-medium text-sm line-clamp-2 mb-2">
-                        {demand.title}
-                      </h4>
-
-                      {/* Creator & Priority */}
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <Avatar className="h-4 w-4 shrink-0">
-                            <AvatarImage src={demand.creator_profile?.avatar_url || undefined} />
-                            <AvatarFallback className="text-[8px]">
-                              {demand.creator_profile?.full_name?.[0] || 'U'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs text-muted-foreground truncate">
-                            {demand.creator_profile?.full_name || 'Usuário'}
-                          </span>
-                        </div>
-                        <Badge 
-                          variant="secondary" 
-                          className={`text-xs shrink-0 ${priorityConfig[demand.priority].color}`}
-                        >
-                          {priorityConfig[demand.priority].label}
-                        </Badge>
-                      </div>
-
-                      {/* Department */}
-                      <p className="text-xs text-muted-foreground truncate mb-2">
-                        {demand.from_department} → {demand.to_department}
-                      </p>
-
-                      {/* Footer */}
-                      <div className="flex items-center justify-between">
-                        {/* Assignees */}
-                        <div className="flex -space-x-2">
-                          {demand.assignees?.slice(0, 3).map((assignee) => (
-                            <Avatar key={assignee.user_id} className="h-6 w-6 border-2 border-background">
-                              <AvatarImage src={assignee.profile?.avatar_url || undefined} />
-                              <AvatarFallback className="bg-muted text-[10px]">
-                                {assignee.profile?.full_name?.[0] || 'U'}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
-                          {(demand.assignees?.length || 0) > 3 && (
-                            <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[10px] border-2 border-background">
-                              +{(demand.assignees?.length || 0) - 3}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Deadline */}
-                        {demand.deadline && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(demand.deadline), 'dd/MM', { locale: ptBR })}
-                          </span>
-                        )}
-                      </div>
-                    </Card>
-                  ))
-                )}
-              </div>
+              <Badge 
+                variant="secondary" 
+                className={`text-xs shrink-0 ${priorityConfig[activeDemand.priority].color}`}
+              >
+                {priorityConfig[activeDemand.priority].label}
+              </Badge>
             </div>
-          );
-        })}
-      </div>
-      <ScrollBar orientation="horizontal" />
-    </ScrollArea>
+            <p className="text-xs text-muted-foreground truncate mb-2">
+              {activeDemand.from_department} → {activeDemand.to_department}
+            </p>
+            <div className="flex items-center justify-between">
+              <div className="flex -space-x-2">
+                {activeDemand.assignees?.slice(0, 3).map((assignee) => (
+                  <Avatar key={assignee.user_id} className="h-6 w-6 border-2 border-background">
+                    <AvatarImage src={assignee.profile?.avatar_url || undefined} />
+                    <AvatarFallback className="bg-muted text-[10px]">
+                      {assignee.profile?.full_name?.[0] || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
+              {activeDemand.deadline && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(activeDemand.deadline), 'dd/MM', { locale: ptBR })}
+                </span>
+              )}
+            </div>
+          </Card>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 };
 
