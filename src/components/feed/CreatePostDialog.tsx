@@ -37,6 +37,10 @@ const sectors = [
   { value: 'academy', label: 'Academy' },
   { value: 'consultoras', label: 'Consultoras' },
   { value: 'implantacao', label: 'Implantação' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'tecnologia', label: 'Tecnologia' },
+  { value: 'expansao', label: 'Expansão' },
+  { value: 'pure_store', label: 'Pure Store' },
 ];
 
 const CreatePostDialog = ({ onPostCreated, defaultPostType = 'feed' }: CreatePostDialogProps) => {
@@ -142,7 +146,7 @@ const CreatePostDialog = ({ onPostCreated, defaultPostType = 'feed' }: CreatePos
       user_id: user.id,
       title,
       content,
-      sector: sector as 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao',
+      sector: sector as 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao' | 'marketing' | 'tecnologia' | 'expansao' | 'pure_store',
       post_type: defaultPostType,
       cover_image_url: isNovidades ? (coverImageUrl || null) : null,
       short_description: isNovidades ? (shortDescription || null) : null,

@@ -51,7 +51,7 @@ interface Post {
   id: string;
   title: string;
   content: string;
-  sector: 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao';
+  sector: 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao' | 'marketing' | 'tecnologia' | 'expansao' | 'pure_store';
   image_url: string | null;
   pinned: boolean;
   created_at: string;

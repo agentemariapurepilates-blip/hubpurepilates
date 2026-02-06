@@ -20,7 +20,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 
-type SectorType = 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao';
+type SectorType = 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao' | 'marketing' | 'tecnologia' | 'expansao' | 'pure_store';
 
 interface Post {
   id: string;
@@ -42,6 +42,10 @@ const sectors = [
   { value: 'academy', label: 'Academy' },
   { value: 'consultoras', label: 'Consultoras' },
   { value: 'implantacao', label: 'Implantação' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'tecnologia', label: 'Tecnologia' },
+  { value: 'expansao', label: 'Expansão' },
+  { value: 'pure_store', label: 'Pure Store' },
 ];
 
 const EditFeedPostDialog = ({ post, open, onOpenChange, onPostUpdated }: EditFeedPostDialogProps) => {
