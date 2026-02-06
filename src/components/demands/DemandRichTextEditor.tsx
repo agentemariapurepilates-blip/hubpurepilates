@@ -247,6 +247,8 @@ const DemandRichTextEditor = ({
       }),
       Link.configure({
         openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
         HTMLAttributes: {
           class: 'text-primary underline cursor-pointer',
         },
