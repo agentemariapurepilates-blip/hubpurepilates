@@ -348,3 +348,24 @@
 .prose-post a:hover {
   opacity: 0.8;
 }
+
+/* Mention styles */
+.mention {
+  background-color: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Tippy.js mention dropdown */
+.tippy-box {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.tippy-content {
+  padding: 0 !important;
+}

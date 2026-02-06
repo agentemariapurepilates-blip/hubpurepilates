@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import DemandRichTextEditor from './DemandRichTextEditor';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -34,7 +34,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { 
   CalendarIcon, 
   Send, 
-  Smile, 
   Loader2,
   Clock,
   Users,
@@ -47,8 +46,6 @@ import { ptBR } from 'date-fns/locale/pt-BR';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Demand } from '@/pages/PedidosDemanda';
-import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
 
 interface DemandDetailsDialogProps {
   demand: Demand | null;
@@ -91,15 +88,11 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
-  const [showMentions, setShowMentions] = useState(false);
-  const [mentionSearch, setMentionSearch] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [commentAttachments, setCommentAttachments] = useState<{ url: string; name: string }[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch comments
@@ -232,54 +225,22 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
     }
   };
 
-  // Handle @ mentions
-  const handleInputChange = (value: string) => {
-    setNewComment(value);
-    
-    const lastAtIndex = value.lastIndexOf('@');
-    if (lastAtIndex !== -1 && lastAtIndex === value.length - 1) {
-      setShowMentions(true);
-      setMentionSearch('');
-    } else if (lastAtIndex !== -1) {
-      const textAfterAt = value.slice(lastAtIndex + 1);
-      if (!textAfterAt.includes(' ')) {
-        setShowMentions(true);
-        setMentionSearch(textAfterAt.toLowerCase());
-      } else {
-        setShowMentions(false);
-      }
-    } else {
-      setShowMentions(false);
-    }
-  };
-
-  const insertMention = (colaborador: Colaborador) => {
-    const lastAtIndex = newComment.lastIndexOf('@');
-    const newValue = newComment.slice(0, lastAtIndex) + `@${colaborador.full_name} `;
-    setNewComment(newValue);
-    setShowMentions(false);
-    inputRef.current?.focus();
-  };
-
-  const insertEmoji = (emoji: { native: string }) => {
-    setNewComment(prev => prev + emoji.native);
-    setShowEmojiPicker(false);
-    inputRef.current?.focus();
-  };
 
   const handleSendComment = async () => {
-    if (!newComment.trim() && commentAttachments.length === 0) return;
+    // Check if there's actual content (strip HTML tags to check)
+    const textContent = newComment.replace(/<[^>]*>/g, '').trim();
+    if (!textContent && commentAttachments.length === 0) return;
     if (!demand || !user) return;
 
     setSendingComment(true);
     try {
-      // Create comment
+      // Create comment with HTML content
       const { data: comment, error } = await supabase
         .from('demand_comments')
         .insert({
           demand_id: demand.id,
           user_id: user.id,
-          content: newComment.trim()
+          content: newComment
         })
         .select()
         .single();
@@ -299,26 +260,23 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
         await supabase.from('demand_attachments').insert(attachmentsData);
       }
 
-      // Check for mentions and create notifications
-      const mentionRegex = /@(\w+\s\w+)/g;
-      const mentions = newComment.match(mentionRegex);
-      
-      if (mentions) {
-        for (const mention of mentions) {
-          const name = mention.slice(1); // Remove @
-          const mentionedUser = colaboradores.find(c => 
-            c.full_name?.toLowerCase() === name.toLowerCase()
-          );
-          
-          if (mentionedUser && mentionedUser.user_id !== user.id) {
-            await supabase.from('demand_notifications').insert({
-              user_id: mentionedUser.user_id,
-              demand_id: demand.id,
-              notification_type: 'mention',
-              message: `Você foi mencionado(a) em um comentário na demanda: ${demand.title}`,
-              created_by: user.id,
-            });
-          }
+      // Check for mentions in HTML (data-mention-id attributes) and create notifications
+      const mentionIdRegex = /data-mention-id="([^"]+)"/g;
+      let match;
+      const mentionedIds = new Set<string>();
+      while ((match = mentionIdRegex.exec(newComment)) !== null) {
+        mentionedIds.add(match[1]);
+      }
+
+      for (const mentionedUserId of mentionedIds) {
+        if (mentionedUserId !== user.id) {
+          await supabase.from('demand_notifications').insert({
+            user_id: mentionedUserId,
+            demand_id: demand.id,
+            notification_type: 'mention',
+            message: `Você foi mencionado(a) em um comentário na demanda: ${demand.title}`,
+            created_by: user.id,
+          });
         }
       }
 
@@ -427,9 +385,6 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
     }
   };
 
-  const filteredColaboradores = colaboradores.filter(c => 
-    c.full_name?.toLowerCase().includes(mentionSearch)
-  );
 
   if (!demand) return null;
 
@@ -549,9 +504,10 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
               {/* Description */}
               {demand.description && (
                 <div className="pt-2">
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {demand.description}
-                  </p>
+                  <div 
+                    className="text-sm text-muted-foreground prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: demand.description }}
+                  />
                 </div>
               )}
             </div>
@@ -601,9 +557,10 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                             </Button>
                           )}
                         </div>
-                        <p className="text-sm whitespace-pre-wrap break-words">
-                          {comment.content}
-                        </p>
+                        <div 
+                          className="text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ __html: comment.content }}
+                        />
                         {/* Comment Attachments */}
                         {comment.attachments && comment.attachments.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
@@ -628,7 +585,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
           </div>
 
           {/* Comment Input */}
-          <div className="p-4 border-t bg-background">
+          <div className="p-4 border-t bg-background space-y-2">
             {/* Attachments Preview */}
             {commentAttachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2">
@@ -647,74 +604,31 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
               </div>
             )}
 
-            {/* Mentions Dropdown */}
-            {showMentions && filteredColaboradores.length > 0 && (
-              <div className="absolute bottom-20 left-4 right-4 bg-popover border rounded-lg shadow-lg max-h-40 overflow-y-auto z-50">
-                {filteredColaboradores.map((colaborador) => (
-                  <div
-                    key={colaborador.user_id}
-                    className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer"
-                    onClick={() => insertMention(colaborador)}
-                  >
-                    <span className="text-sm">{colaborador.full_name}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <DemandRichTextEditor
+              content={newComment}
+              onChange={setNewComment}
+              placeholder="Escreva um comentário... Use @ para mencionar"
+              minHeight="60px"
+              compact
+            />
 
-            <div className="flex items-center gap-2">
-              {/* Emoji Picker */}
-              <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="shrink-0">
-                    <Smile className="h-5 w-5" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-auto p-0">
-                  <Picker
-                    data={data}
-                    onEmojiSelect={insertEmoji}
-                    theme="light"
-                    locale="pt"
-                    previewPosition="none"
-                    skinTonePosition="none"
-                  />
-                </PopoverContent>
-              </Popover>
-
-              {/* Input */}
-              <Input
-                ref={inputRef}
-                value={newComment}
-                onChange={(e) => handleInputChange(e.target.value)}
-                onPaste={handlePaste}
-                placeholder="Digite @ para mencionar..."
-                className="flex-1"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendComment();
-                  }
-                }}
-              />
-
-              {/* Send Button */}
+            <div className="flex justify-end">
               <Button 
-                size="icon" 
+                size="sm"
+                className="gap-2"
                 onClick={handleSendComment}
-                disabled={sendingComment || (!newComment.trim() && commentAttachments.length === 0)}
+                disabled={sendingComment || (!newComment.trim() && !newComment.includes('<') && commentAttachments.length === 0)}
               >
                 {sendingComment ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <>
+                    <Send className="h-4 w-4" />
+                    Enviar
+                  </>
                 )}
               </Button>
             </div>
-            
-            {uploadingImage && (
-              <p className="text-xs text-muted-foreground mt-1">Enviando imagem...</p>
-            )}
           </div>
 
           {/* Edit/Delete Actions */}
