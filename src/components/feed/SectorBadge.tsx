@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-type SectorType = 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao';
+type SectorType = 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao' | 'marketing' | 'tecnologia' | 'expansao' | 'pure_store';
 
 interface SectorBadgeProps {
   sector: SectorType;
@@ -13,6 +13,10 @@ const sectorLabels: Record<SectorType, string> = {
   academy: 'Academy',
   consultoras: 'Consultoras',
   implantacao: 'Implantação',
+  marketing: 'Marketing',
+  tecnologia: 'Tecnologia',
+  expansao: 'Expansão',
+  pure_store: 'Pure Store',
 };
 
 const SectorBadge = ({ sector, className }: SectorBadgeProps) => {

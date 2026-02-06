@@ -32,6 +32,10 @@ const sectors = [
   { value: 'academy', label: 'Academy' },
   { value: 'consultoras', label: 'Consultoras' },
   { value: 'implantacao', label: 'Implantação' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'tecnologia', label: 'Tecnologia' },
+  { value: 'expansao', label: 'Expansão' },
+  { value: 'pure_store', label: 'Pure Store' },
 ];
 
 const CreateFeedPostDialog = ({ onPostCreated }: CreateFeedPostDialogProps) => {
@@ -59,7 +63,7 @@ const CreateFeedPostDialog = ({ onPostCreated }: CreateFeedPostDialogProps) => {
       user_id: user.id,
       title,
       content,
-      sector: sector as 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao',
+      sector: sector as 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao' | 'marketing' | 'tecnologia' | 'expansao' | 'pure_store',
       post_type: 'feed',
     });
 
