@@ -25,6 +25,9 @@ const sectors = [
   { value: 'academy', label: 'Academy' },
   { value: 'estudios', label: 'Estúdios' },
   { value: 'franchising', label: 'Franchising' },
+  { value: 'tecnologia', label: 'Tecnologia' },
+  { value: 'expansao', label: 'Expansão' },
+  { value: 'pure_store', label: 'Pure Store' },
 ];
 
 const Perfil = () => {
