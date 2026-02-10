@@ -191,14 +191,13 @@ const mentionSuggestion = {
 
         if (!props.clientRect) return;
 
-        // Find the closest dialog/modal container or fallback to body
-        const editorEl = props.editor.options.element;
-        const htmlEl = editorEl instanceof HTMLElement ? editorEl : (editorEl as any)?.mount instanceof HTMLElement ? (editorEl as any).mount : null;
-        const dialogContainer = htmlEl?.closest?.('[role="dialog"]') || document.body;
-
         popup = tippy('body', {
           getReferenceClientRect: props.clientRect as () => DOMRect,
-          appendTo: () => dialogContainer as Element,
+          appendTo: () => {
+            // Find the closest dialog container from the editor's DOM, fallback to body
+            const editorDom = (props.editor as any).view?.dom as HTMLElement | undefined;
+            return editorDom?.closest?.('[role="dialog"]') || document.body;
+          },
           content: component.element,
           showOnCreate: true,
           interactive: true,
