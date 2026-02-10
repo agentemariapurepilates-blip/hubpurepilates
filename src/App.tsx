@@ -17,6 +17,7 @@ import PedidosDemanda from "./pages/PedidosDemanda";
 import Notificacoes from "./pages/Notificacoes";
 import ArtesProntas from "./pages/ArtesProntas";
 import Avisos from "./pages/Avisos";
+import MateriaisImplantacao from "./pages/MateriaisImplantacao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ function App() {
             <Route path="/pedidos-demanda" element={<PedidosDemanda />} />
             <Route path="/notificacoes" element={<Notificacoes />} />
             <Route path="/artes-prontas" element={<ArtesProntas />} />
+            <Route path="/materiais-implantacao" element={<MateriaisImplantacao />} />
             <Route path="/admin/usuarios" element={<AdminUsuarios />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

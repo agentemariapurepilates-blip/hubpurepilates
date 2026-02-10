@@ -375,6 +375,36 @@ export type Database = {
         }
         Relationships: []
       }
+      materiais_implantacao: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          image_url: string
+          link_url: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url: string
+          link_url: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url?: string
+          link_url?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       metrics: {
         Row: {
           created_at: string
