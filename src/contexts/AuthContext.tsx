@@ -13,6 +13,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isColaborador: boolean;
   userType: UserType | null;
+  userSector: string | null;
   isApproved: boolean;
   isPending: boolean;
   requestedUserType: UserType | null;
@@ -39,6 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profileLoading, setProfileLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userType, setUserType] = useState<UserType | null>(null);
+  const [userSector, setUserSector] = useState<string | null>(null);
   const [isApproved, setIsApproved] = useState(false);
   const [requestedUserType, setRequestedUserType] = useState<UserType | null>(null);
 
@@ -67,13 +69,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Check user type and approval status from profile
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('user_type, is_approved, requested_user_type')
+        .select('user_type, is_approved, requested_user_type, sector')
         .eq('user_id', userId)
         .maybeSingle();
 
       if (profileData) {
         setIsApproved(profileData.is_approved ?? false);
         setRequestedUserType(profileData.requested_user_type as UserType | null);
+        setUserSector(profileData.sector ?? null);
         
         if (profileData.user_type) {
           setUserType(profileData.user_type as UserType);
@@ -83,6 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setIsApproved(false);
         setUserType('colaborador');
+        setUserSector(null);
       }
     } catch {
       setIsAdmin(false);
@@ -114,6 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setIsAdmin(false);
           setUserType(null);
+          setUserSector(null);
           setIsApproved(false);
           setRequestedUserType(null);
           setProfileLoading(false);
@@ -207,6 +212,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
     setIsAdmin(false);
     setUserType(null);
+    setUserSector(null);
     setIsApproved(false);
     setRequestedUserType(null);
     toast.success('Logout realizado com sucesso');
@@ -220,7 +226,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       profileLoading,
       isAdmin, 
       isColaborador, 
-      userType, 
+      userType,
+      userSector, 
       isApproved,
       isPending,
       requestedUserType,

@@ -20,7 +20,8 @@ import {
   FileText,
   ClipboardList,
   Palette,
-  Megaphone
+  Megaphone,
+  Package
 } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState } from 'react';
@@ -62,6 +63,7 @@ const Sidebar = () => {
     { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
     { name: 'Artes Prontas', href: '/artes-prontas', icon: Palette },
+    { name: 'Materiais de Implantação', href: '/materiais-implantacao', icon: Package },
   ];
 
   // Colaboradores section - only for colaboradores and admins
