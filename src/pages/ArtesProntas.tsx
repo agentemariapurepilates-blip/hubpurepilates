@@ -457,13 +457,15 @@ const ArtesProntas = () => {
                 />
               </div>
               
-              <Button
-                className="w-full gap-2"
-                onClick={() => window.open(selectedArte?.canva_url, '_blank')}
+              <a
+                href={selectedArte?.canva_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
               >
                 <ExternalLink className="w-4 h-4" />
                 Acesse aqui o modelo do Canva
-              </Button>
+              </a>
             </div>
           </DialogContent>
         </Dialog>
