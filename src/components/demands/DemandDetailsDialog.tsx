@@ -40,6 +40,9 @@ import {
   Building2,
   Trash2,
   Edit,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
@@ -119,6 +122,8 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
   const [commentAttachments, setCommentAttachments] = useState<{ url: string; name: string }[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch comments
@@ -379,6 +384,33 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
     }
   };
 
+  const handleEditComment = async (commentId: string) => {
+    const textContent = editingCommentContent.replace(/<[^>]*>/g, '').trim();
+    if (!textContent) return;
+
+    try {
+      const { error } = await supabase
+        .from('demand_comments')
+        .update({ content: editingCommentContent })
+        .eq('id', commentId);
+
+      if (error) throw error;
+
+      setComments(prev => prev.map(c => 
+        c.id === commentId ? { ...c, content: editingCommentContent } : c
+      ));
+      setEditingCommentId(null);
+      setEditingCommentContent('');
+    } catch (error) {
+      console.error('Error editing comment:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao editar comentário",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleDeleteDemand = async () => {
     if (!demand) return;
     
@@ -580,6 +612,19 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                               locale: ptBR
                             })}
                           </span>
+                          {comment.user_id === user?.id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                              onClick={() => {
+                                setEditingCommentId(comment.id);
+                                setEditingCommentContent(comment.content);
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
                           {(comment.user_id === user?.id || isAdmin) && (
                             <Button
                               variant="ghost"
@@ -591,18 +636,40 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                             </Button>
                           )}
                         </div>
-                        <div 
-                          className="text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
-                          dangerouslySetInnerHTML={{ __html: linkifyHtml(comment.content) }}
-                          onClick={(e) => {
-                            const target = e.target as HTMLElement;
-                            if (target.tagName === 'A') {
-                              e.preventDefault();
-                              const href = target.getAttribute('href');
-                              if (href) window.open(href, '_blank', 'noopener,noreferrer');
-                            }
-                          }}
-                        />
+                        {editingCommentId === comment.id ? (
+                          <div className="mt-1 space-y-2">
+                            <DemandRichTextEditor
+                              content={editingCommentContent}
+                              onChange={setEditingCommentContent}
+                              placeholder="Editar comentário..."
+                              minHeight="60px"
+                              compact
+                            />
+                            <div className="flex gap-1">
+                              <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => handleEditComment(comment.id)}>
+                                <Check className="h-3 w-3" />
+                                Salvar
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => { setEditingCommentId(null); setEditingCommentContent(''); }}>
+                                <X className="h-3 w-3" />
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div 
+                            className="text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
+                            dangerouslySetInnerHTML={{ __html: linkifyHtml(comment.content) }}
+                            onClick={(e) => {
+                              const target = e.target as HTMLElement;
+                              if (target.tagName === 'A') {
+                                e.preventDefault();
+                                const href = target.getAttribute('href');
+                                if (href) window.open(href, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
+                          />
+                        )}
                         {/* Comment Attachments */}
                         {comment.attachments && comment.attachments.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
