@@ -5,7 +5,8 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, List, LayoutGrid, Search } from 'lucide-react';
+import { Plus, List, LayoutGrid, Search, User } from 'lucide-react';
+import { Toggle } from '@/components/ui/toggle';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import DemandListView from '@/components/demands/DemandListView';
@@ -52,6 +53,7 @@ const PedidosDemanda = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showOnlyMine, setShowOnlyMine] = useState(false);
 
   // Redirect non-colaboradores
   useEffect(() => {
@@ -146,6 +148,12 @@ const PedidosDemanda = () => {
   // Filter demands by department and search
   const filteredDemands = useMemo(() => {
     return demands.filter(d => {
+      // Filter by "my demands"
+      if (showOnlyMine && user) {
+        const isCreator = d.created_by === user.id;
+        const isAssignee = d.assignees?.some(a => a.user_id === user.id);
+        if (!isCreator && !isAssignee) return false;
+      }
       // Filter by department
       if (selectedDepartment !== 'all' && d.to_department !== selectedDepartment) {
         return false;
@@ -162,7 +170,7 @@ const PedidosDemanda = () => {
       }
       return true;
     });
-  }, [demands, selectedDepartment, searchTerm]);
+  }, [demands, selectedDepartment, searchTerm, showOnlyMine, user]);
 
   const handleDemandClick = (demand: Demand) => {
     setSelectedDemand(demand);
@@ -217,6 +225,17 @@ const PedidosDemanda = () => {
               <span className="sm:hidden">Nova</span>
             </Button>
           </div>
+
+          {/* My Demands Filter */}
+          <Toggle
+            pressed={showOnlyMine}
+            onPressedChange={setShowOnlyMine}
+            variant="outline"
+            className="gap-2 w-full justify-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+          >
+            <User className="h-4 w-4" />
+            Minhas Demandas
+          </Toggle>
 
           {/* Search */}
           <div className="relative">
