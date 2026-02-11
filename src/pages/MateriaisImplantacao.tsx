@@ -209,7 +209,7 @@ const MateriaisImplantacao = () => {
     }
   };
 
-  const FormFields = () => (
+  const formFieldsJsx = (
     <div className="space-y-4">
       <div>
         <Label htmlFor="title">Título</Label>
@@ -375,7 +375,7 @@ const MateriaisImplantacao = () => {
               <DialogTitle>Adicionar novo material</DialogTitle>
               <DialogDescription>Preencha as informações do novo material.</DialogDescription>
             </DialogHeader>
-            <FormFields />
+            {formFieldsJsx}
             <div className="flex gap-2 mt-4">
               <Button variant="outline" onClick={() => { setIsCreateDialogOpen(false); resetForm(); }} className="flex-1">Cancelar</Button>
               <Button onClick={handleCreate} disabled={saving} className="flex-1">
@@ -392,7 +392,7 @@ const MateriaisImplantacao = () => {
               <DialogTitle>Editar material</DialogTitle>
               <DialogDescription>Atualize as informações do material.</DialogDescription>
             </DialogHeader>
-            <FormFields />
+            {formFieldsJsx}
             <div className="flex gap-2 mt-4">
               <Button variant="outline" onClick={() => { setIsEditDialogOpen(false); setEditingMaterial(null); resetForm(); }} className="flex-1">Cancelar</Button>
               <Button onClick={handleUpdate} disabled={saving} className="flex-1">
