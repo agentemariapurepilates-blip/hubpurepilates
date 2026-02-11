@@ -360,10 +360,15 @@ const MateriaisImplantacao = () => {
                 <img src={selectedMaterial?.image_url} alt={selectedMaterial?.title} className="w-full h-full object-cover" />
               </div>
 
-              <Button className="w-full gap-2" onClick={() => window.open(selectedMaterial?.link_url, '_blank')}>
+              <a
+                href={selectedMaterial?.link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+              >
                 <ExternalLink className="w-4 h-4" />
                 Acesse aqui
-              </Button>
+              </a>
             </div>
           </DialogContent>
         </Dialog>

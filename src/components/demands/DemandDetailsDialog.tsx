@@ -562,18 +562,10 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
               {/* Description */}
               {demand.description && (
                 <div className="pt-2">
-                  <div 
-                    className="text-sm text-muted-foreground prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
-                    dangerouslySetInnerHTML={{ __html: linkifyHtml(demand.description) }}
-                    onClick={(e) => {
-                      const target = e.target as HTMLElement;
-                      if (target.tagName === 'A') {
-                        e.preventDefault();
-                        const href = target.getAttribute('href');
-                        if (href) window.open(href, '_blank', 'noopener,noreferrer');
-                      }
-                    }}
-                  />
+                          <div 
+                            className="text-sm text-muted-foreground prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
+                            dangerouslySetInnerHTML={{ __html: linkifyHtml(demand.description) }}
+                          />
                 </div>
               )}
             </div>
@@ -660,27 +652,19 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                           <div 
                             className="text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
                             dangerouslySetInnerHTML={{ __html: linkifyHtml(comment.content) }}
-                            onClick={(e) => {
-                              const target = e.target as HTMLElement;
-                              if (target.tagName === 'A') {
-                                e.preventDefault();
-                                const href = target.getAttribute('href');
-                                if (href) window.open(href, '_blank', 'noopener,noreferrer');
-                              }
-                            }}
                           />
                         )}
                         {/* Comment Attachments */}
                         {comment.attachments && comment.attachments.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
                             {comment.attachments.map((att, i) => (
-                              <img
-                                key={i}
-                                src={att.file_url}
-                                alt={att.file_name}
-                                className="max-h-32 rounded-lg cursor-pointer"
-                                onClick={() => window.open(att.file_url, '_blank')}
-                              />
+                              <a key={i} href={att.file_url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={att.file_url}
+                                  alt={att.file_name}
+                                  className="max-h-32 rounded-lg cursor-pointer"
+                                />
+                              </a>
                             ))}
                           </div>
                         )}
