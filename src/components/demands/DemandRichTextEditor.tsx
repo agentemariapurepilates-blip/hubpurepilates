@@ -148,12 +148,15 @@ const MentionList = forwardRef<{ onKeyDown: (props: { event: KeyboardEvent }) =>
 
 MentionList.displayName = 'MentionList';
 
-// Fetch colaboradores for mention suggestions
+// Fetch colaboradores for mention suggestions with TTL cache
 let cachedColaboradores: Colaborador[] = [];
+let cacheTimestamp = 0;
+const CACHE_TTL = 60_000; // 1 minute
 let fetchPromise: Promise<Colaborador[]> | null = null;
 
 const fetchColaboradores = async (): Promise<Colaborador[]> => {
-  if (cachedColaboradores.length > 0) return cachedColaboradores;
+  const now = Date.now();
+  if (cachedColaboradores.length > 0 && now - cacheTimestamp < CACHE_TTL) return cachedColaboradores;
   if (fetchPromise) return fetchPromise;
 
   fetchPromise = (async () => {
@@ -162,6 +165,7 @@ const fetchColaboradores = async (): Promise<Colaborador[]> => {
       .select('user_id, full_name')
       .eq('user_type', 'colaborador');
     cachedColaboradores = data || [];
+    cacheTimestamp = Date.now();
     fetchPromise = null;
     return cachedColaboradores;
   })();
