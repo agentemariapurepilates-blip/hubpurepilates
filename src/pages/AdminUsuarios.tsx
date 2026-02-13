@@ -157,11 +157,11 @@ const AdminUsuarios = () => {
   const fetchUsers = async () => {
     setLoading(true);
 
-    // Fetch all profiles
+    // Fetch all profiles ordered alphabetically by name
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('full_name', { ascending: true });
 
     if (profilesError) {
       console.error('Error fetching profiles:', profilesError);
