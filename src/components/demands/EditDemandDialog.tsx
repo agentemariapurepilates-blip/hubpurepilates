@@ -41,7 +41,7 @@ interface Colaborador {
   avatar_url: string | null;
 }
 
-const departments = [
+const sectors = [
   'Marketing',
   'Implantação',
   'Consultoras',
@@ -50,6 +50,7 @@ const departments = [
   'Financeiro/Jurídico',
   'Comercial',
   'Parceiros externos',
+  'RH',
 ];
 
 const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandDialogProps) => {
@@ -120,7 +121,7 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandD
     if (!demand || !title.trim() || !fromDepartment || !toDepartment) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha o briefing e os departamentos",
+        description: "Preencha o título e os setores",
         variant: "destructive"
       });
       return;
@@ -213,29 +214,29 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandD
             />
           </div>
 
-          {/* Departments */}
+          {/* Setores */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>De (Departamento) *</Label>
+              <Label>De (Setor) *</Label>
               <Select value={fromDepartment} onValueChange={setFromDepartment}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map(dept => (
+                  {sectors.map(dept => (
                     <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Para (Departamento) *</Label>
+              <Label>Para (Setor) *</Label>
               <Select value={toDepartment} onValueChange={setToDepartment}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map(dept => (
+                  {sectors.map(dept => (
                     <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                   ))}
                 </SelectContent>

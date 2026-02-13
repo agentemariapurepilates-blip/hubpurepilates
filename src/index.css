@@ -175,6 +175,26 @@
     background-color: hsl(280 60% 45%); 
     color: white; 
   }
+  .sector-marketing { 
+    background-color: hsl(35 90% 50%); 
+    color: white; 
+  }
+  .sector-tecnologia { 
+    background-color: hsl(190 70% 40%); 
+    color: white; 
+  }
+  .sector-expansao { 
+    background-color: hsl(140 50% 40%); 
+    color: white; 
+  }
+  .sector-pure_store { 
+    background-color: hsl(20 80% 50%); 
+    color: white; 
+  }
+  .sector-rh { 
+    background-color: hsl(330 60% 50%); 
+    color: white; 
+  }
 
   .gradient-hero {
     background: var(--gradient-hero);

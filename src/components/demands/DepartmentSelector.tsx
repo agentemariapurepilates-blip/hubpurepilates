@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
-const DEPARTMENTS = [
+const SECTORS = [
   { value: 'all', label: 'Todos' },
   { value: 'Marketing', label: 'Marketing' },
   { value: 'Consultoras', label: 'Consultoras' },
@@ -13,6 +13,7 @@ const DEPARTMENTS = [
   { value: 'Academy', label: 'Academy' },
   { value: 'Franchising', label: 'Franchising' },
   { value: 'Pure Store', label: 'Pure Store' },
+  { value: 'RH', label: 'RH' },
 ];
 
 interface DepartmentSelectorProps {
@@ -29,7 +30,7 @@ const DepartmentSelector = ({
   return (
     <ScrollArea className="w-full">
       <div className="flex gap-2 pb-2">
-        {DEPARTMENTS.map((dept) => {
+        {SECTORS.map((dept) => {
           const isActive = selectedDepartment === dept.value;
           const count = dept.value === 'all' 
             ? Object.values(demandCounts).reduce((a, b) => a + b, 0)
@@ -67,4 +68,4 @@ const DepartmentSelector = ({
 };
 
 export default DepartmentSelector;
-export { DEPARTMENTS };
+export { SECTORS };
