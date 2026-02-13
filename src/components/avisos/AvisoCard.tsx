@@ -24,11 +24,11 @@ const AvisoCard = ({ aviso, onClick, onEdit, onDelete, canEdit }: AvisoCardProps
       onClick={onClick}
     >
       {aviso.image_url && (
-        <div className="h-40 overflow-hidden">
+        <div className="w-full">
           <img 
             src={aviso.image_url} 
             alt={aviso.title}
-            className="w-full h-full object-cover"
+            className="w-full h-auto object-contain"
           />
         </div>
       )}
