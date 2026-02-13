@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,8 @@ const Avisos = () => {
   const [selectedAviso, setSelectedAviso] = useState<Aviso | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 3;
 
   const fetchAvisos = async () => {
     try {
@@ -119,11 +121,22 @@ const Avisos = () => {
     );
   });
 
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalPages = Math.ceil(filteredAvisos.length / ITEMS_PER_PAGE);
+  const paginatedAvisos = filteredAvisos.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const canCreate = isColaborador || isAdmin;
 
   return (
     <MainLayout>
-      <div className="max-w-7xl mx-auto px-2 sm:px-4">
+      <div className="max-w-3xl mx-auto px-2 sm:px-4">
         {/* Header */}
         <div className="flex flex-col gap-3 mb-6">
           <div className="flex items-center justify-between">
@@ -170,22 +183,43 @@ const Avisos = () => {
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredAvisos.map((aviso) => {
-              // Only creator (if colaborador) or admin can edit/delete
-              const canEditThis = isColaborador && (user?.id === aviso.created_by || isAdmin);
-              return (
-                <AvisoCard
-                  key={aviso.id}
-                  aviso={aviso}
-                  onClick={() => handleAvisoClick(aviso)}
-                  onEdit={() => handleEditClick(aviso)}
-                  onDelete={() => handleDelete(aviso.id)}
-                  canEdit={canEditThis}
-                />
-              );
-            })}
-          </div>
+          <>
+            <div className="space-y-4">
+              {paginatedAvisos.map((aviso) => {
+                const canEditThis = isColaborador && (user?.id === aviso.created_by || isAdmin);
+                return (
+                  <AvisoCard
+                    key={aviso.id}
+                    aviso={aviso}
+                    onClick={() => handleAvisoClick(aviso)}
+                    onEdit={() => handleEditClick(aviso)}
+                    onDelete={() => handleDelete(aviso.id)}
+                    canEdit={canEditThis}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-6">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setCurrentPage(page);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="min-w-[36px]"
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {/* Dialogs */}
