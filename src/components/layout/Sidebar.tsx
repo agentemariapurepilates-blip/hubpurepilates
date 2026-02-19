@@ -21,7 +21,8 @@ import {
   ClipboardList,
   Palette,
   Megaphone,
-  Package
+  Package,
+  Handshake
 } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState } from 'react';
@@ -60,6 +61,7 @@ const Sidebar = () => {
     { name: 'Comece aqui', href: '/', icon: Home },
     { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
     { name: 'Avisos', href: '/avisos', icon: Megaphone },
+    { name: 'Parcerias', href: '/parcerias', icon: Handshake },
     { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
     { name: 'Artes Prontas', href: '/artes-prontas', icon: Palette },
