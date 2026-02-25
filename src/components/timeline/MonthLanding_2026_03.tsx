@@ -54,17 +54,7 @@ const MonthLanding_2026_03 = () => {
       {/* ── CONTEÚDO DA TAB ATIVA ── */}
       <div className="space-y-16">
         {activeTab === 'inicio' && (
-          <>
-            <HeroSection />
-            <VemAiMarcoSection />
-            <AnimatedSection variant="fade-in">
-              <div className="text-center py-8">
-                <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-                  Preparados! Que venha o mês de março e o fechamento do primeiro trimestre de 2026! 🚀
-                </p>
-              </div>
-            </AnimatedSection>
-          </>
+          <HeroSection />
         )}
 
         {activeTab === 'brandformance' && (
