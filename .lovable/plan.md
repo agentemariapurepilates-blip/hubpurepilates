@@ -1,97 +1,60 @@
 
 
-# Transformacao da Timeline em Landing Pages Interativas
+# Landing Page Interativa — Timeline Março 2026
 
 ## Resumo
 
-A pagina "Timeline do Mes" sera transformada de um feed de posts para uma experiencia de landing pages animadas por mes. Cada mes tera uma landing page unica, codificada diretamente, com graficos animados, elementos que surgem ao rolar a pagina e a identidade visual da Pure Pilates. Os meses antigos que ja tem conteudo no formato feed continuarao aparecendo normalmente.
+Vou criar a landing page de marco 2026 com todo o conteudo do PDF que voce enviou, corrigir o erro de build atual e refatorar a pagina NovidadesDoMes para o novo formato.
 
 ---
 
-## O que muda
+## O que sera feito
 
-1. **Remocao do botao "Nova Publicacao"** -- ninguem mais cria posts pela interface
-2. **Remocao do filtro por setor** e da barra de busca
-3. **Filtro apenas por mes** -- botoes com os meses disponiveis (marco, fevereiro, janeiro, etc.)
-4. **Meses novos** (a partir de marco 2025) exibem uma landing page animada e interativa ao inves de cards de posts
-5. **Meses antigos** continuam mostrando o conteudo no formato feed/cards atual
+### 1. Criar a landing page de Marco 2026
+Arquivo: `src/components/timeline/MonthLanding_2026_03.tsx`
 
----
+Conteudo completo do PDF transformado em secoes animadas:
 
-## Como vai funcionar
+- **Hero** -- "Resultados do 1 Bimestre" com gradiente vermelho/preto Pure Pilates
+- **Brandformance** -- Cards com metricas animadas (contadores que sobem):
+  - Janeiro: 11.547 aulas (120%), 8.061 presencas (120%), 1.619 matriculas (87%)
+  - Fevereiro: 7.548 aulas (92%), 5.624 presencas (96%), 1.439 matriculas (100%)
+- **Grafico comparativo** Jan vs Fev (barras com Recharts animado)
+- **Acumulado** Jan+Fev: 19.095 aulas, 13.685 presencas, 3.058 matriculas
+- **Evolucao da Conversao** -- destaque +5,5 p.p. (20,1% para 25,6%)
+- **Share de Midia Janeiro** -- grafico pizza (Conversao Google 31,9%, YouTube 34,6%, Consideracao 33,5%)
+- **Campanha YouTube** -- cards com +3%, 7,1x pesquisa, +115% lift
+- **Buzz Monitor** -- dois graficos pizza (Janeiro e Fevereiro) com positivas/neutras/negativas
+- **Vem Ai Marcos** -- 6 cards: 50% OFF, Cupom PURE10, Midia +20%, TikTok, Reclame Aqui, Pure Match
+- **Desafio Franchising** -- card escuro com CTA para @purepilates.franchising
+- Tudo com animacoes scroll-reveal (fade-up, scale-up)
 
-- Ao abrir a Timeline, o mes mais recente (marco) ja vem selecionado
-- Os botoes de mes ficam em destaque no topo
-- Se o mes selecionado tiver uma landing page codificada, ela aparece com animacoes
-- Se nao tiver (meses antigos), mostra os posts no formato feed como ja funciona hoje
+### 2. Corrigir TimelineLandingPage.tsx
+- Trocar referencia de `MonthLanding_2025_03` para `MonthLanding_2026_03`
+- Registrar o mes `2026-03`
 
----
+### 3. Refatorar NovidadesDoMes.tsx
+- Remover: botao "Nova Publicacao", filtro por setor, barra de busca
+- Manter: filtro por mes (botoes no topo)
+- Marco 2026 sempre aparece nos filtros (mesmo sem posts no banco)
+- Se o mes tem landing page: mostra a landing page animada
+- Se nao tem (meses antigos): mostra o feed de cards como antes
+- Historico preservado -- meses com posts antigos continuam acessiveis
 
-## Estrutura tecnica
-
-### Arquitetura de Landing Pages
-
-Sera criada uma pasta `src/components/timeline/` com:
-
-- **`TimelineLandingPage.tsx`** -- componente wrapper que decide se mostra landing page ou feed antigo
-- **`AnimatedSection.tsx`** -- componente reutilizavel que anima elementos ao aparecerem na tela (fade-in, slide-up) usando Intersection Observer
-- **`AnimatedCounter.tsx`** -- componente para numeros/graficos que "sobem" animados
-- **`MonthLanding_2025_03.tsx`** -- landing page de marco 2025 (template inicial/exemplo)
-
-### Animacoes
-
-- Uso de **Intersection Observer API** para detectar quando elementos entram na tela
-- Graficos do **Recharts** (ja instalado) com animacoes nativas
-- Transicoes CSS com classes Tailwind + keyframes customizados
-- Efeito parallax leve em imagens de destaque
-- Contadores numericos animados para metricas/KPIs
-
-### Mudancas no `NovidadesDoMes.tsx`
-
-- Remover: botao CreatePostDialog, filtro de setor, barra de busca
-- Manter: filtro por mes (simplificado, incluindo o mes atual mesmo sem posts)
-- Adicionar: logica para verificar se um mes tem landing page codificada
-- Se sim: renderizar o componente da landing page
-- Se nao: renderizar o feed antigo com NewsCards
-
-### Template padrao da landing page
-
-Cada landing page tera secoes como:
-- **Hero** com titulo do mes e visual impactante
-- **Destaques** com cards animados
-- **Metricas/Graficos** com contadores e graficos Recharts animados
-- **Conteudo em blocos** que aparecem conforme scroll
-- Tudo na paleta Pure Pilates (vermelho #C41E3A, preto, branco)
-
-### Novos estilos em `index.css`
-
-- Classes de animacao para scroll-reveal (fade-up, fade-left, fade-right, scale-up)
-- Estilos para secoes de landing page (hero, destaque, metricas)
+### 4. Componentes ja criados (sem alteracao)
+- `AnimatedSection.tsx` -- ja existe e funciona
+- `AnimatedCounter.tsx` -- ja existe e funciona
 
 ---
 
 ## Arquivos que serao criados
-
 | Arquivo | Descricao |
 |---------|-----------|
-| `src/components/timeline/AnimatedSection.tsx` | Wrapper que anima children ao entrar na viewport |
-| `src/components/timeline/AnimatedCounter.tsx` | Contador numerico animado |
-| `src/components/timeline/TimelineLandingPage.tsx` | Registro de quais meses tem landing page e renderizacao |
-| `src/components/timeline/MonthLanding_2025_03.tsx` | Landing page de marco 2025 (template exemplo com conteudo placeholder para voce me passar o conteudo real depois) |
+| `src/components/timeline/MonthLanding_2026_03.tsx` | Landing page completa de marco com todo o conteudo do PDF |
 
 ## Arquivos que serao modificados
-
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/pages/NovidadesDoMes.tsx` | Remover busca, setor, botao criar. Adicionar mes atual nos filtros. Integrar componente de landing page |
-| `src/index.css` | Adicionar classes de animacao scroll-reveal |
-
----
-
-## Proximos passos apos aprovacao
-
-1. Implemento a estrutura com o template de marco como exemplo
-2. Voce me passa o conteudo real de marco (textos, numeros, graficos, imagens)
-3. Eu substituo o placeholder pelo conteudo real
-4. Para cada novo mes, voce me passa o conteudo e eu crio a landing page correspondente
+| `src/components/timeline/TimelineLandingPage.tsx` | Corrigir referencia do modulo (2025 para 2026) |
+| `src/pages/NovidadesDoMes.tsx` | Remover busca/setor/criar, integrar landing pages, manter historico |
 
