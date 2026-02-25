@@ -23,20 +23,19 @@ const PostEspecialTikTok = () => (
       <AnimatedSection variant="scale-up" className="mx-auto lg:mx-0 shrink-0">
         <div className="relative">
           {/* Phone frame */}
-          <div className="relative w-[280px] sm:w-[300px] rounded-[2.5rem] border-[6px] border-foreground/90 bg-foreground/90 shadow-2xl overflow-hidden">
+          <div className="relative w-[260px] sm:w-[280px] rounded-[2.5rem] border-[6px] border-foreground/90 bg-foreground/90 shadow-2xl overflow-hidden">
             {/* Notch */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-foreground/90 rounded-b-2xl z-20" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-foreground/90 rounded-b-xl z-20" />
             {/* Screen */}
-            <div className="rounded-[2rem] overflow-hidden">
+            <div className="rounded-[2rem] overflow-hidden bg-white">
               <img
                 src={tiktokProfile}
                 alt="Perfil @purepilatesbr no TikTok"
-                className="w-full object-cover object-top"
-                style={{ aspectRatio: '9/19.5' }}
+                className="w-full h-auto block"
               />
             </div>
             {/* Home indicator */}
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 rounded-full bg-white/40 z-20" />
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-24 h-1 rounded-full bg-white/40 z-20" />
           </div>
           {/* Shadow under phone */}
           <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-6 bg-foreground/10 rounded-full blur-xl" />
