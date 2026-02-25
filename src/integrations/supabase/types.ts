@@ -742,6 +742,33 @@ export type Database = {
         }
         Relationships: []
       }
+      timeline_visibility: {
+        Row: {
+          created_at: string
+          id: string
+          is_published: boolean
+          month_key: string
+          published_at: string | null
+          published_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          month_key: string
+          published_at?: string | null
+          published_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          month_key?: string
+          published_at?: string | null
+          published_by?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string

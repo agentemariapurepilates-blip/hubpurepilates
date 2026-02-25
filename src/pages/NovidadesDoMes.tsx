@@ -6,7 +6,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sparkles, MessageCircle } from 'lucide-react';
+import { Sparkles, MessageCircle, Eye, Send, Clock } from 'lucide-react';
 import NewsCard, { NewsPost } from '@/components/novidades/NewsCard';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -15,33 +15,70 @@ import {
   Pagination, PaginationContent, PaginationItem,
   PaginationLink, PaginationNext, PaginationPrevious,
 } from '@/components/ui/pagination';
-import { cn } from '@/lib/utils';
 import TimelineLandingPage, { hasLandingPage } from '@/components/timeline/TimelineLandingPage';
+import { toast } from 'sonner';
 
 const POSTS_PER_PAGE = 4;
-
-// Months that always appear even without DB posts (landing pages)
 const FIXED_MONTHS = ['2026-03'];
 
 const NovidadesDoMes = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading, isApproved } = useAuth();
+  const { user, loading: authLoading, isApproved, isColaborador, isAdmin } = useAuth();
   const [allPosts, setAllPosts] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
+  const [publishing, setPublishing] = useState(false);
 
-  // Generate month options from posts + fixed landing pages
+  // Fetch visibility status for all months
+  const fetchVisibility = useCallback(async () => {
+    const { data } = await supabase
+      .from('timeline_visibility')
+      .select('month_key, is_published');
+    if (data) {
+      const map: Record<string, boolean> = {};
+      data.forEach(row => { map[row.month_key] = row.is_published; });
+      setVisibilityMap(map);
+    }
+  }, []);
+
+  const handlePublishForAll = async () => {
+    if (!selectedMonth) return;
+    setPublishing(true);
+    try {
+      const existing = visibilityMap[selectedMonth] !== undefined;
+      if (existing) {
+        const { error } = await supabase
+          .from('timeline_visibility')
+          .update({ is_published: true, published_at: new Date().toISOString(), published_by: user?.id })
+          .eq('month_key', selectedMonth);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('timeline_visibility')
+          .insert({ month_key: selectedMonth, is_published: true, published_at: new Date().toISOString(), published_by: user?.id });
+        if (error) throw error;
+      }
+      setVisibilityMap(prev => ({ ...prev, [selectedMonth]: true }));
+      toast.success('Timeline publicada para todos!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao publicar timeline.');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  // Generate month options
   const availableMonths = useMemo(() => {
     const monthsSet = new Set<string>(FIXED_MONTHS);
-
     allPosts.forEach(post => {
       const monthKey = post.target_month
         ? format(parseISO(post.target_month), 'yyyy-MM')
         : format(new Date(post.created_at), 'yyyy-MM');
       monthsSet.add(monthKey);
     });
-
     return Array.from(monthsSet)
       .sort((a, b) => b.localeCompare(a))
       .map(value => {
@@ -51,14 +88,12 @@ const NovidadesDoMes = () => {
       });
   }, [allPosts]);
 
-  // Auto-select first month
   useEffect(() => {
     if (availableMonths.length > 0 && !selectedMonth) {
       setSelectedMonth(availableMonths[0].value);
     }
   }, [availableMonths, selectedMonth]);
 
-  // Filter posts for legacy feed view
   const filteredPosts = useMemo(() => {
     if (!selectedMonth) return [];
     return allPosts.filter(post => {
@@ -74,21 +109,16 @@ const NovidadesDoMes = () => {
     setLoading(true);
     try {
       const { data: postsData, error } = await supabase
-        .from('posts')
-        .select('*')
+        .from('posts').select('*')
         .eq('post_type', 'novidades')
         .order('pinned', { ascending: false })
         .order('created_at', { ascending: false });
-
       if (error) throw error;
       if (!postsData?.length) { setAllPosts([]); setLoading(false); return; }
 
       const userIds = [...new Set(postsData.map(p => p.user_id))];
       const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email, avatar_url')
-        .in('user_id', userIds);
-
+        .from('profiles').select('user_id, full_name, email, avatar_url').in('user_id', userIds);
       const profilesMap = new Map(
         (profilesData || []).map(p => [p.user_id, { full_name: p.full_name, email: p.email, avatar_url: p.avatar_url }])
       );
@@ -100,8 +130,7 @@ const NovidadesDoMes = () => {
         short_description: post.short_description, target_month: post.target_month,
         video_url: post.video_url, pinned: post.pinned || false,
         created_at: post.created_at, user_id: post.user_id,
-        profiles: profilesMap.get(post.user_id) || null,
-        comments: [],
+        profiles: profilesMap.get(post.user_id) || null, comments: [],
       })));
       setCurrentPage(1);
     } catch (err) {
@@ -111,17 +140,15 @@ const NovidadesDoMes = () => {
     }
   }, [user]);
 
-  // Auth guards
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
     if (!authLoading && user && !isApproved) navigate('/aguardando-aprovacao');
   }, [user, authLoading, isApproved, navigate]);
 
   useEffect(() => {
-    if (user && isApproved) fetchPosts();
-  }, [user, isApproved, fetchPosts]);
+    if (user && isApproved) { fetchPosts(); fetchVisibility(); }
+  }, [user, isApproved, fetchPosts, fetchVisibility]);
 
-  // Realtime
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -133,12 +160,23 @@ const NovidadesDoMes = () => {
 
   useEffect(() => { setCurrentPage(1); }, [selectedMonth]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
   const paginatedPosts = filteredPosts.slice((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE);
   const handlePageChange = (page: number) => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
-  const showLandingPage = selectedMonth && hasLandingPage(selectedMonth);
+  // Visibility logic
+  const monthHasLandingPage = selectedMonth ? hasLandingPage(selectedMonth) : false;
+  const isMonthPublished = selectedMonth ? visibilityMap[selectedMonth] === true : false;
+  const isFranqueado = !isColaborador;
+
+  // What to show:
+  // - Landing page exists + published → everyone sees it
+  // - Landing page exists + NOT published + colaborador/admin → sees landing page (preview)
+  // - Landing page exists + NOT published + franqueado → sees "em breve"
+  // - No landing page → legacy feed
+  const showLandingPage = monthHasLandingPage && (isMonthPublished || isColaborador);
+  const showComingSoon = monthHasLandingPage && !isMonthPublished && isFranqueado;
+  const showLegacyFeed = !monthHasLandingPage;
 
   if (authLoading) {
     return (
@@ -184,10 +222,51 @@ const NovidadesDoMes = () => {
           </ScrollArea>
         )}
 
+        {/* Admin publish bar */}
+        {isAdmin && monthHasLandingPage && !isMonthPublished && (
+          <div className="mb-6 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+            <Eye className="h-5 w-5 text-primary shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Modo pré-visualização</p>
+              <p className="text-xs text-muted-foreground">
+                Apenas colaboradores podem ver esta timeline. Franqueados verão &quot;em breve&quot;.
+              </p>
+            </div>
+            <Button
+              onClick={handlePublishForAll}
+              disabled={publishing}
+              className="gap-2"
+            >
+              <Send className="h-4 w-4" />
+              {publishing ? 'Publicando...' : 'Publicar para todos'}
+            </Button>
+          </div>
+        )}
+
         {/* Content */}
-        {showLandingPage ? (
+        {showLandingPage && (
           <TimelineLandingPage monthKey={selectedMonth!} />
-        ) : (
+        )}
+
+        {showComingSoon && (
+          <Card className="border-primary/10">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="rounded-full bg-primary/10 p-4 mb-4">
+                <Clock className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="text-xl font-heading font-semibold mb-2">Em breve</h3>
+              <p className="text-muted-foreground max-w-md">
+                A timeline de{' '}
+                <span className="capitalize font-medium text-foreground">
+                  {availableMonths.find(m => m.value === selectedMonth)?.label}
+                </span>{' '}
+                com as últimas novidades da Pure Pilates está sendo preparada. Fique ligado!
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {showLegacyFeed && (
           <div className="max-w-3xl mx-auto">
             {loading ? (
               <div className="space-y-6">
