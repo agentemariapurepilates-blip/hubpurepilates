@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 // Registry of months that have landing pages
 // Add new months here as they are created
 const LANDING_PAGES: Record<string, () => Promise<{ default: ComponentType }>> = {
-  '2025-03': () => import('./MonthLanding_2025_03'),
+  '2026-03': () => import('./MonthLanding_2026_03'),
 };
 
 export function hasLandingPage(monthKey: string): boolean {
