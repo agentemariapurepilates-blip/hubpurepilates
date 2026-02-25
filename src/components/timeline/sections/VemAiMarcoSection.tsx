@@ -1,7 +1,7 @@
 import AnimatedSection from '../AnimatedSection';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Percent, Tag, Megaphone, Smartphone, MessageSquare, Users, Sparkles,
+  Percent, Tag, Megaphone, Users, Sparkles,
 } from 'lucide-react';
 import { SectionTitle } from '../shared';
 
@@ -9,32 +9,22 @@ const items = [
   {
     icon: Percent,
     title: '50% OFF',
-    desc: 'Pacotes de 4 e 8 aulas para leads da base. Disparo para leads não convertidos até 31/01/2026. Os leads de fevereiro não estão incluídos na base como medida protetiva, evitando canibalização de conversões orgânicas recentes.',
+    desc: 'Pacotes de 4 e 8 aulas para leads da base.',
   },
   {
     icon: Tag,
     title: 'Cupom PURE10',
-    desc: '10% de desconto para novos planos. Aplicação conforme negociação individual entre franqueado e lead, sem comunicação em massa. O cupom é uma ferramenta de apoio ao fechamento, não uma promoção aberta.',
+    desc: '10% de desconto para novos planos.',
   },
   {
     icon: Megaphone,
     title: 'Mídia +20%',
-    desc: 'Plano de mídia nos moldes do 1º bimestre: campanhas de alta performance em final de funil (Google Ads com foco em agendamento) combinadas com awareness via YouTube para manter a marca presente no momento de descoberta.',
-  },
-  {
-    icon: Smartphone,
-    title: 'TikTok Oficial',
-    desc: 'Perfil único e centralizado @purepilatesbr. O calendário de redes sociais será atualizado com a nova configuração. Desafios, conteúdo nativo e crescimento de seguidores com conteúdo específico para a plataforma.',
-  },
-  {
-    icon: MessageSquare,
-    title: 'Reclame Aqui',
-    desc: 'Company Page com vídeos explicativos, FAQ e links diretos. Mais de 13 mil consultas nos últimos 12 meses. Nova sessão de treinamentos será incluída no Pure System para orientar equipes no atendimento via plataforma.',
+    desc: 'Campanhas de alta performance + awareness via YouTube.',
   },
   {
     icon: Users,
     title: 'Pure Match',
-    desc: 'Plataforma que conecta franqueados a instrutores disponíveis na região. O objetivo é otimizar oportunidades de contratação, fortalecer a rede e reduzir o tempo de busca por profissionais qualificados.',
+    desc: 'Conecta franqueados a instrutores da região.',
   },
 ];
 
