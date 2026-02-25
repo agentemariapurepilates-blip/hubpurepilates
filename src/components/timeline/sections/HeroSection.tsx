@@ -7,10 +7,13 @@ const HeroSection = () => (
       <div className="relative z-10">
         <p className="text-sm uppercase tracking-widest opacity-80 mb-2">Timeline · Março 2026</p>
         <h1 className="text-3xl sm:text-5xl font-heading font-bold leading-tight mb-4">
-          Resultados do<br />1º Bimestre
+          Timeline de Março
         </h1>
         <p className="max-w-2xl text-base sm:text-lg opacity-90 leading-relaxed">
           Caros franqueados, o primeiro bimestre de 2026 trouxe grandes entregas para a rede. Com isso, temos um resumo da saúde de marca e das campanhas de mídia paga. Confira um resumo do que realizamos e já pode começar a programar as redes sociais locais e as negociações de leads não convertidos, já que preparamos reforços para o mês de março.
+        </p>
+        <p className="mt-4 text-sm opacity-70">
+          Navegue pelo menu acima para ver todas as páginas desta timeline.
         </p>
       </div>
     </div>
