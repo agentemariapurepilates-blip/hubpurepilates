@@ -72,8 +72,6 @@ const MonthLanding_2026_03 = () => {
             <BrandformanceSection />
             <ComparativoChart />
             <ConversaoSection />
-            <ShareMidiaSection />
-            <BuzzMonitorSection />
           </>
         )}
 
