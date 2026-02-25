@@ -38,8 +38,8 @@ const BuzzMonitorSection = () => (
             <p className="text-xs text-muted-foreground mb-4">
               41,27% positivas · 55,65% neutras · 3,08% negativas
             </p>
-            <div style={{ width: '100%', minHeight: 192 }}>
-              <ResponsiveContainer width="100%" height={192}>
+            <div style={{ width: '100%', minHeight: 300 }}>
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie data={buzzJanData} cx="50%" cy="50%" outerRadius={70} dataKey="value" animationDuration={1200} label={({ value }) => `${value}%`}>
                     {buzzJanData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
@@ -73,8 +73,8 @@ const BuzzMonitorSection = () => (
             <p className="text-xs text-muted-foreground mb-4">
               36,5% positivas · 60,79% neutras · 2,71% negativas
             </p>
-            <div style={{ width: '100%', minHeight: 192 }}>
-              <ResponsiveContainer width="100%" height={192}>
+            <div style={{ width: '100%', minHeight: 300 }}>
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie data={buzzFevData} cx="50%" cy="50%" outerRadius={70} dataKey="value" animationDuration={1200} label={({ value }) => `${value}%`}>
                     {buzzFevData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}

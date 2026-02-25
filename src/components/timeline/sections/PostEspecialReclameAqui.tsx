@@ -8,7 +8,7 @@ const PostEspecialReclameAqui = () => (
     <AnimatedSection>
       <SectionTitle>
         <MessageSquare className="inline h-6 w-6 mr-2 text-primary align-middle" />
-        Post Especial: Reclame Aqui
+        Projeto Reclame Aqui
       </SectionTitle>
       <p className="text-muted-foreground mt-2 mb-6 max-w-3xl leading-relaxed">
         A Pure Pilates terá uma <strong>Company Page</strong> no Reclame Aqui — um espaço dedicado e profissional para a marca dentro da plataforma. Veja o que isso significa para a rede:

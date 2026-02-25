@@ -9,7 +9,7 @@ const PostEspecialTikTok = () => (
     <AnimatedSection>
       <SectionTitle>
         <Smartphone className="inline h-6 w-6 mr-2 text-primary align-middle" />
-        Post Especial: TikTok
+        TikTok
       </SectionTitle>
       <p className="text-muted-foreground mt-2 mb-6 max-w-3xl leading-relaxed">
         A Pure Pilates agora tem um perfil oficial e centralizado no TikTok: <strong>@purepilatesbr</strong>. Confira os dados atuais e o alinhamento para a rede:

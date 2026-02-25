@@ -31,8 +31,8 @@ const ShareMidiaSection = () => (
           <p className="text-muted-foreground mb-4 max-w-3xl leading-relaxed">
             Um movimento relevante no mercado publicitário impacta a aplicação de investimentos: <strong>desconto de pelo menos 15% de impostos para todos os anunciantes</strong>. Já temos reforços e otimizações em andamento para aproveitar esse cenário. Para novas unidades, políticas específicas de investimento estão sendo implementadas para garantir um ramp-up saudável.
           </p>
-          <div style={{ width: '100%', minHeight: 280 }}>
-            <ResponsiveContainer width="100%" height={280}>
+          <div style={{ width: '100%', minHeight: 400 }}>
+            <ResponsiveContainer width="100%" height={400}>
               <PieChart>
                 <Pie
                   data={shareMidiaData}

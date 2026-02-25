@@ -17,8 +17,8 @@ const ComparativoChart = () => (
     <Card>
       <CardContent className="pt-6">
         <SectionTitle className="mb-6">Comparativo Jan × Fev</SectionTitle>
-        <div style={{ width: '100%', minHeight: 288 }}>
-          <ResponsiveContainer width="100%" height={288}>
+        <div style={{ width: '100%', minHeight: 400 }}>
+          <ResponsiveContainer width="100%" height={400}>
             <BarChart data={janVsFevData} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
