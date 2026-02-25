@@ -1,83 +1,89 @@
 
 
-# Expandir conteudo completo da Timeline Marco 2026
+# Separar Timeline em Sub-Páginas com Menu Interno
 
-## Problema
+## Resumo
 
-O conteudo escrito da landing page esta resumido em praticamente todas as secoes. Textos longos do PDF foram condensados em 1-2 frases. Vou expandir para incluir todo o conteudo original.
+Em vez de uma página longa com tudo comprimido, a timeline de cada mês terá um **menu interno de navegação** (tabs/botões) que separa o conteúdo em páginas independentes. Assim o franqueado navega livremente pelo que mais interessa, e cada seção tem espaço para gráficos maiores e conteúdo completo.
 
-## Secoes que precisam ser expandidas
+## Estrutura visual
 
-### 1. Hero / Introducao
-**Atual**: 1 frase generica
-**PDF completo**: "Caros franqueados, O primeiro bimestre de 2026 trouxe grandes entregas para a rede. Com isso, temos um resumo da saude de marca e das campanhas de midia paga. Confira um resumo do que realizamos e ja pode comecar programar as redes sociais locais e as negociacoes de leads nao convertidos ja que preparamos reforcos para o mes de marco."
+```text
+┌─────────────────────────────────────────────────┐
+│  Timeline do Mês                                │
+│  [março 2026] [fevereiro 2026]  ← meses         │
+├─────────────────────────────────────────────────┤
+│  Página Inicial │ Brandformance │ Fique por     │
+│                 │               │ dentro!       │
+│  Projeto        │ TikTok        │ Desafio do    │
+│  Reclame Aqui   │               │ Franchising   │
+│                 ← menu interno (tabs/botões)    │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  [Conteúdo da sub-página selecionada]           │
+│  Gráficos maiores, mais espaço visual           │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
 
-### 2. Brandformance
-**Atual**: 2 frases sobre DT
-**PDF completo**: Paragrafo inteiro sobre performance via midia paga, novos parametros de metas, produtividade das agencias
+## Páginas do menu
 
-### 3. Janeiro - Texto explicativo
-**Atual**: Apenas os 3 cards com numeros
-**Falta**: Texto sobre "ano novo, vida nova", reforco de YouTube Ads, gap de 251 matriculas, comportamento de conversao com decisao de compra superior a 5 dias
+| Tab | Conteúdo |
+|-----|----------|
+| **Página Inicial** | HeroSection + VemAiMarcoSection + encerramento (visão geral) |
+| **Brandformance** | BrandformanceSection + ComparativoChart + ConversaoSection + ShareMidiaSection + BuzzMonitorSection (todos os dados e gráficos com mais espaço) |
+| **Fique por dentro!** | Seção informativa: cupons, promoções, novidades gerais do mês (50% OFF, PURE10, Mídia +20%, Pure Match) |
+| **Projeto Reclame Aqui** | PostEspecialReclameAqui (conteúdo completo, com mais espaço visual) |
+| **TikTok** | PostEspecialTikTok (conteúdo completo) |
+| **Desafio do Franchising** | DesafioFranchisingSection (expandido com mais espaço) |
 
-### 4. Fevereiro - Texto explicativo
-**Atual**: Apenas os 3 cards com numeros
-**Falta**: Texto sobre impacto do carnaval, verba de +24% para topo de funil, estrategia de final de funil para unidades criticas, margem recuperavel nos ultimos dias
+## Mudanças técnicas
 
-### 5. Acumulado - Texto explicativo
-**Atual**: Apenas numeros
-**Falta**: Analise sobre consistencia do topo e meio de funil, recuperacao de fevereiro frente a janeiro
+### 1. Refatorar `MonthLanding_2026_03.tsx`
 
-### 6. Evolucao da Conversao
-**Atual**: Resumido
-**Falta**: Texto sobre cupons promocionais, novos mecanismos e treinamentos, convocacao em breve. Tambem falta o paragrafo sobre saude de marca nas redes sociais
+Substituir a página única por um componente com estado de "tab ativa":
+- Usar `useState` para controlar qual sub-página está visível
+- Renderizar um menu horizontal de botões/tabs logo abaixo do seletor de meses
+- O menu será scrollável no mobile (usando `ScrollArea` horizontal)
+- Cada botão alterna o conteúdo exibido abaixo
+- Sem mudar de rota -- tudo via state local, mantendo a URL `/novidades`
 
-### 7. YouTube / Share de Midia
-**Atual**: Resumido
-**Falta**: Texto completo sobre "A melhor hora do dia", recorde de busca, pesquisas de impacto, elasticidade, composto de midia com (1) alta performance e (2) videos de diferenciais. Texto sobre desconto de 15% de impostos e politicas para novas unidades
+### 2. Criar componente `FiquePorDentroSection.tsx`
 
-### 8. Buzz Monitor Janeiro
-**Atual**: 2 frases
-**Falta**: Bullets detalhados sobre experiencia acolhedora, postura, forca, bem-estar, comunidade, desafios semanais. Conversas sobre precos, Gympass, audiencia investigativa
+Nova seção que agrupa os cards informativos do "Vem Aí Março" que não têm página dedicada:
+- 50% OFF (leads da base)
+- Cupom PURE10
+- Mídia +20%
+- Pure Match
 
-### 9. Buzz Monitor Fevereiro
-**Atual**: 2 frases
-**Falta**: Detalhes sobre valores, planos, condicoes de pagamento, localizacao, Gympass, TotalPass. Mencoes positivas sobre beneficios fisicos e emocionais. Texto sobre desafios semanais como engajamento, mencoes negativas sobre clareza e tempo de resposta. Cenario da comunidade ativa
+Esses 4 cards ficam nessa aba. Os outros 2 (TikTok e Reclame Aqui) já têm páginas próprias.
 
-### 10. Vem Ai Marco - Descricoes expandidas
-**Atual**: Cada card tem 1 frase
-**Falta**: Textos completos de cada item:
-- 50% OFF: detalhe sobre leads de fevereiro nao estarem na base como medida protetiva
-- Cupom PURE10: detalhe sobre aplicacao conforme negociacao
-- Midia: detalhe sobre categorias de final de funil e awareness
-- TikTok: mencionar calendario de redes sociais, nova configuracao
-- Reclame Aqui: mencionar nova sessao de treinamentos do Pure System
-- Pure Match: texto completo sobre conectar franqueados a instrutores
+### 3. Ajustar seções existentes
 
-### 11. POST ESPECIAL: Reclame Aqui (secao nova)
-**Completamente ausente**: Paginas 7-8 do PDF com secao dedicada explicando Company Page, por que importa (13 mil consultas), videos explicativos, FAQ, links diretos, o que agrega de verdade
+- **VemAiMarcoSection**: Remover os cards de TikTok e Reclame Aqui (eles ganham páginas próprias)
+- **Gráficos**: Com mais espaço por página, aumentar alturas dos `ResponsiveContainer` (de 280px para 400px+)
+- **PostEspecialReclameAqui**: Renomear título de "Post Especial: Reclame Aqui" para "Projeto Reclame Aqui"
+- **PostEspecialTikTok**: Renomear título de "Post Especial: TikTok" para "TikTok"
 
-### 12. POST ESPECIAL: TikTok (secao nova)
-**Completamente ausente**: Paginas 8-9 do PDF com perfil oficial @purepilatesbr, dados (2053 seguidores, 11.8K curtidas), alinhamento sobre perfil unico centralizado, nenhuma unidade deve criar TikTok proprio, conteudo especifico da plataforma
+### 4. Nenhuma mudança em `NovidadesDoMes.tsx`
 
-### 13. Desafio Franchising - Expandido
-**Atual**: Resumido
-**Falta**: Como vai funcionar (post oficial no comeco do mes, stories de lembrete semanal), calendario de publicacoes terca e quinta, depoimentos (procurar o William para gravar)
+A lógica de meses, visibilidade e publicação permanece igual. O `TimelineLandingPage` continua renderizando `MonthLanding_2026_03`, que internamente agora gerencia suas próprias sub-páginas.
 
-## Mudancas tecnicas
+## Arquivos modificados
 
-### Arquivo modificado
-`src/components/timeline/MonthLanding_2026_03.tsx`
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/timeline/MonthLanding_2026_03.tsx` | Refatorar para sistema de tabs com 6 sub-páginas |
+| `src/components/timeline/sections/VemAiMarcoSection.tsx` | Remover cards de TikTok e Reclame Aqui (ficam em páginas próprias) |
+| `src/components/timeline/sections/PostEspecialReclameAqui.tsx` | Renomear título para "Projeto Reclame Aqui" |
+| `src/components/timeline/sections/PostEspecialTikTok.tsx` | Renomear título para "TikTok" |
+| `src/components/timeline/sections/ComparativoChart.tsx` | Aumentar altura do gráfico |
+| `src/components/timeline/sections/ShareMidiaSection.tsx` | Aumentar altura do gráfico |
+| `src/components/timeline/sections/BuzzMonitorSection.tsx` | Aumentar altura dos gráficos |
 
-### O que muda
-- Adicionar paragrafos de texto abaixo de cada secao de metricas (Janeiro, Fevereiro, Acumulado)
-- Expandir todos os textos resumidos com o conteudo completo do PDF
-- Criar 2 secoes novas: "Post Especial: Reclame Aqui" e "Post Especial: TikTok" com cards dedicados e conteudo completo
-- Expandir secao do Desafio Franchising com subsecoes (como funciona, calendario, depoimentos)
-- Expandir descricoes dos cards "Vem Ai Marco"
+## Arquivo criado
 
-### Estrutura visual das novas secoes
-- Reclame Aqui: Card com icone, titulo, e subsecoes (Por que importa, O que vai ter, O que agrega)
-- TikTok: Card com dados do perfil (@purepilatesbr), aviso sobre perfil unico, conteudo planejado
-- Ambos com animacoes scroll-reveal consistentes com o restante da pagina
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/components/timeline/sections/FiquePorDentroSection.tsx` | Cards informativos: 50% OFF, PURE10, Mídia +20%, Pure Match |
 
