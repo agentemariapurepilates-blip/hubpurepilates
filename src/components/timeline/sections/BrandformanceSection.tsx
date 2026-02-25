@@ -5,6 +5,36 @@ import { SectionTitle, MetricCard } from '../shared';
 
 const BrandformanceSection = () => (
   <>
+    {/* ── VIDEO MOCKUP ── */}
+    <AnimatedSection variant="scale-up">
+      <div className="flex justify-center mb-12">
+        <div className="relative w-full max-w-4xl">
+          {/* Laptop body */}
+          <div className="relative rounded-t-xl border-[3px] border-b-0 border-foreground/80 bg-foreground/90 p-[6px] pt-[6px]">
+            {/* Camera dot */}
+            <div className="absolute top-[6px] left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-muted/30 z-10" />
+            {/* Screen bezel */}
+            <div className="mt-3 rounded-sm overflow-hidden bg-black">
+              <video
+                src="/videos/brandformance-intro.mp4"
+                controls
+                playsInline
+                className="w-full h-auto block"
+                poster=""
+              />
+            </div>
+          </div>
+          {/* Laptop base / keyboard */}
+          <div className="relative h-4 bg-gradient-to-b from-foreground/80 to-foreground/60 rounded-b-lg">
+            {/* Trackpad notch */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-foreground/40 rounded-b-md" />
+          </div>
+          {/* Shadow */}
+          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-[90%] h-5 bg-foreground/10 rounded-full blur-xl" />
+        </div>
+      </div>
+    </AnimatedSection>
+
     {/* ── BRANDFORMANCE INTRO ── */}
     <AnimatedSection>
       <SectionTitle>
