@@ -22,9 +22,11 @@ const sectors = [
   { value: 'consultoras', label: 'Consultoras' },
   { value: 'implantacao', label: 'Implantação' },
   { value: 'marketing', label: 'Marketing' },
+  { value: 'tecnologia', label: 'Tecnologia' },
   { value: 'academy', label: 'Academy' },
   { value: 'estudios', label: 'Estúdios' },
   { value: 'franchising', label: 'Franchising' },
+  { value: 'expansao', label: 'Expansão' },
   { value: 'pure_store', label: 'Pure Store' },
   { value: 'rh', label: 'RH' },
 ];
