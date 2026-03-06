@@ -1,89 +1,35 @@
 
 
-# Separar Timeline em Sub-Páginas com Menu Interno
+## Plano: Recriar Manual do Franqueado nativamente no Hub
 
-## Resumo
+O manual será integrado diretamente no hub, sem iframe, usando os mesmos componentes e dados do projeto original. O conteúdo ficará dentro do layout do hub (sidebar + top bar), totalmente integrado.
 
-Em vez de uma página longa com tudo comprimido, a timeline de cada mês terá um **menu interno de navegação** (tabs/botões) que separa o conteúdo em páginas independentes. Assim o franqueado navega livremente pelo que mais interessa, e cada seção tem espaço para gráficos maiores e conteúdo completo.
+---
 
-## Estrutura visual
+### O que será feito
 
-```text
-┌─────────────────────────────────────────────────┐
-│  Timeline do Mês                                │
-│  [março 2026] [fevereiro 2026]  ← meses         │
-├─────────────────────────────────────────────────┤
-│  Página Inicial │ Brandformance │ Fique por     │
-│                 │               │ dentro!       │
-│  Projeto        │ TikTok        │ Desafio do    │
-│  Reclame Aqui   │               │ Franchising   │
-│                 ← menu interno (tabs/botões)    │
-├─────────────────────────────────────────────────┤
-│                                                 │
-│  [Conteúdo da sub-página selecionada]           │
-│  Gráficos maiores, mais espaço visual           │
-│                                                 │
-└─────────────────────────────────────────────────┘
-```
+1. **Instalar dependências extras**: `react-markdown`, `remark-gfm`, `@tailwindcss/typography` (usados para renderizar o conteúdo markdown dos artigos)
 
-## Páginas do menu
+2. **Copiar assets (imagens)**: 21 imagens do manual (`public/images/manual/`) + logo `logo-pure.png` do projeto original para este projeto
 
-| Tab | Conteúdo |
-|-----|----------|
-| **Página Inicial** | HeroSection + VemAiMarcoSection + encerramento (visão geral) |
-| **Brandformance** | BrandformanceSection + ComparativoChart + ConversaoSection + ShareMidiaSection + BuzzMonitorSection (todos os dados e gráficos com mais espaço) |
-| **Fique por dentro!** | Seção informativa: cupons, promoções, novidades gerais do mês (50% OFF, PURE10, Mídia +20%, Pure Match) |
-| **Projeto Reclame Aqui** | PostEspecialReclameAqui (conteúdo completo, com mais espaço visual) |
-| **TikTok** | PostEspecialTikTok (conteúdo completo) |
-| **Desafio do Franchising** | DesafioFranchisingSection (expandido com mais espaço) |
+3. **Criar arquivo de dados**: `src/data/helpCenterData.ts` (1793 linhas) com todas as 12 categorias e ~25 artigos com conteúdo completo em markdown
 
-## Mudanças técnicas
+4. **Criar componentes do manual** (adaptados ao layout do hub, sem header/footer próprios):
+   - `src/components/manual/SearchBar.tsx` -- busca com autocomplete
+   - `src/components/manual/SectionCard.tsx` -- cards de categoria
+   - `src/components/manual/ArticleList.tsx` -- lista de artigos de uma categoria
+   - `src/components/manual/ArticleView.tsx` -- visualização de artigo com markdown renderizado
 
-### 1. Refatorar `MonthLanding_2026_03.tsx`
+5. **Reescrever `src/pages/ManualSistema.tsx`**: Substituir o iframe pelo conteúdo nativo, usando `MainLayout` + os novos componentes. A hero section será simplificada (sem header/footer duplicados) e integrada ao estilo do hub.
 
-Substituir a página única por um componente com estado de "tab ativa":
-- Usar `useState` para controlar qual sub-página está visível
-- Renderizar um menu horizontal de botões/tabs logo abaixo do seletor de meses
-- O menu será scrollável no mobile (usando `ScrollArea` horizontal)
-- Cada botão alterna o conteúdo exibido abaixo
-- Sem mudar de rota -- tudo via state local, mantendo a URL `/novidades`
+6. **Configurar Tailwind**: Adicionar plugin `@tailwindcss/typography` no `tailwind.config.ts`
 
-### 2. Criar componente `FiquePorDentroSection.tsx`
+---
 
-Nova seção que agrupa os cards informativos do "Vem Aí Março" que não têm página dedicada:
-- 50% OFF (leads da base)
-- Cupom PURE10
-- Mídia +20%
-- Pure Match
+### Detalhes técnicos
 
-Esses 4 cards ficam nessa aba. Os outros 2 (TikTok e Reclame Aqui) já têm páginas próprias.
-
-### 3. Ajustar seções existentes
-
-- **VemAiMarcoSection**: Remover os cards de TikTok e Reclame Aqui (eles ganham páginas próprias)
-- **Gráficos**: Com mais espaço por página, aumentar alturas dos `ResponsiveContainer` (de 280px para 400px+)
-- **PostEspecialReclameAqui**: Renomear título de "Post Especial: Reclame Aqui" para "Projeto Reclame Aqui"
-- **PostEspecialTikTok**: Renomear título de "Post Especial: TikTok" para "TikTok"
-
-### 4. Nenhuma mudança em `NovidadesDoMes.tsx`
-
-A lógica de meses, visibilidade e publicação permanece igual. O `TimelineLandingPage` continua renderizando `MonthLanding_2026_03`, que internamente agora gerencia suas próprias sub-páginas.
-
-## Arquivos modificados
-
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/timeline/MonthLanding_2026_03.tsx` | Refatorar para sistema de tabs com 6 sub-páginas |
-| `src/components/timeline/sections/VemAiMarcoSection.tsx` | Remover cards de TikTok e Reclame Aqui (ficam em páginas próprias) |
-| `src/components/timeline/sections/PostEspecialReclameAqui.tsx` | Renomear título para "Projeto Reclame Aqui" |
-| `src/components/timeline/sections/PostEspecialTikTok.tsx` | Renomear título para "TikTok" |
-| `src/components/timeline/sections/ComparativoChart.tsx` | Aumentar altura do gráfico |
-| `src/components/timeline/sections/ShareMidiaSection.tsx` | Aumentar altura do gráfico |
-| `src/components/timeline/sections/BuzzMonitorSection.tsx` | Aumentar altura dos gráficos |
-
-## Arquivo criado
-
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/components/timeline/sections/FiquePorDentroSection.tsx` | Cards informativos: 50% OFF, PURE10, Mídia +20%, Pure Match |
+- Os componentes serão copiados do projeto original com adaptações: remoção do header (Pure Pilates logo bar) e footer, já que o hub tem sua própria sidebar/navbar
+- O `ArticleView` usa `react-markdown` + `remark-gfm` para renderizar conteúdo rico (tabelas, listas, código, blockquotes)
+- As imagens referenciadas nos artigos usam paths como `/images/manual/agenda.jpg` que serão copiadas para `public/images/manual/`
+- A busca funciona client-side com scoring por título, tags, summary e conteúdo
 
