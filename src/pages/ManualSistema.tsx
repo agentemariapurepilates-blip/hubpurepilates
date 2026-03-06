@@ -1,13 +1,17 @@
+import MainLayout from '@/components/layout/MainLayout';
+
 const ManualSistema = () => {
   return (
-    <div className="fixed inset-0 lg:left-64 pt-14">
-      <iframe
-        src="https://manualfranqueado.lovable.app/"
-        className="w-full h-full border-0"
-        title="Manual do Sistema Pure Pilates"
-        allow="fullscreen"
-      />
-    </div>
+    <MainLayout>
+      <div className="-m-4 sm:-m-6 lg:-m-8" style={{ height: 'calc(100vh - 7rem)' }}>
+        <iframe
+          src="https://manualfranqueado.lovable.app/"
+          className="w-full h-full border-0 rounded-lg"
+          title="Manual do Sistema Pure Pilates"
+          allow="fullscreen"
+        />
+      </div>
+    </MainLayout>
   );
 };
 
