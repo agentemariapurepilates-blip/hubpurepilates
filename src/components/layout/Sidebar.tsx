@@ -22,7 +22,8 @@ import {
   Palette,
   Megaphone,
   Package,
-  Handshake
+  Handshake,
+  BookOpen
 } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState } from 'react';
@@ -66,6 +67,7 @@ const Sidebar = () => {
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
     { name: 'Artes Prontas', href: '/artes-prontas', icon: Palette },
     { name: 'Materiais de Implantação', href: '/materiais-implantacao', icon: Package },
+    { name: 'Manual do Sistema', href: '/manual-sistema', icon: BookOpen },
   ];
 
   // Colaboradores section - only for colaboradores and admins
