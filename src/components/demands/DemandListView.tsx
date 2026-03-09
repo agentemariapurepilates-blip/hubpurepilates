@@ -130,13 +130,17 @@ const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
                               </Badge>
                             </div>
 
-                            {/* Departments & Deadline */}
+                            {/* Departments & Dates */}
                             <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted-foreground">
                               <span className="truncate">
                                 {demand.from_department} → {demand.to_department}
                               </span>
+                              <span className="flex items-center gap-1" title="Data de abertura">
+                                <CalendarPlus className="h-3 w-3" />
+                                {format(new Date(demand.created_at), 'dd/MM', { locale: ptBR })}
+                              </span>
                               {demand.deadline && (
-                                <span className="flex items-center gap-1">
+                                <span className="flex items-center gap-1" title="Prazo">
                                   <Calendar className="h-3 w-3" />
                                   {format(new Date(demand.deadline), 'dd/MM', { locale: ptBR })}
                                 </span>

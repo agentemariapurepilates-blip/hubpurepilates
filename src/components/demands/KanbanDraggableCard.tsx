@@ -78,6 +78,20 @@ const KanbanDraggableCard = ({ demand, onDemandClick }: KanbanDraggableCardProps
         {demand.from_department} → {demand.to_department}
       </p>
 
+      {/* Dates */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <CalendarPlus className="h-3 w-3" />
+          {format(new Date(demand.created_at), 'dd/MM', { locale: ptBR })}
+        </span>
+        {demand.deadline && (
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {format(new Date(demand.deadline), 'dd/MM', { locale: ptBR })}
+          </span>
+        )}
+      </div>
+
       {/* Footer */}
       <div className="flex items-center justify-between">
         {/* Assignees */}
@@ -96,14 +110,6 @@ const KanbanDraggableCard = ({ demand, onDemandClick }: KanbanDraggableCardProps
             </div>
           )}
         </div>
-
-        {/* Deadline */}
-        {demand.deadline && (
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3" />
-            {format(new Date(demand.deadline), 'dd/MM', { locale: ptBR })}
-          </span>
-        )}
       </div>
     </Card>
   );
