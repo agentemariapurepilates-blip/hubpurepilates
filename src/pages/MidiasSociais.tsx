@@ -258,8 +258,9 @@ const MidiasSociais = () => {
                         return (
                           <div
                             key={c.id}
+                            onClick={(e) => handleContentClick(e, c)}
                             className={cn(
-                              "text-[10px] sm:text-xs p-1 sm:p-1.5 rounded font-medium flex items-center gap-0.5 sm:gap-1",
+                              "text-[10px] sm:text-xs p-1 sm:p-1.5 rounded font-medium flex items-center gap-0.5 sm:gap-1 cursor-pointer hover:opacity-80 transition-opacity",
                               colorClass
                             )}
                             title={c.title}
