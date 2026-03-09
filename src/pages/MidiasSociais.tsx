@@ -151,17 +151,18 @@ const MidiasSociais = () => {
     });
   };
 
+  const handleContentClick = (e: React.MouseEvent, item: SocialMediaContent) => {
+    e.stopPropagation();
+    setSelectedContent(item);
+    setIsDetailsDialogOpen(true);
+  };
+
   const handleDayClick = (date: Date) => {
     const dayContent = getContentForDay(date);
-    if (dayContent.length > 0) {
-      setSelectedContent(dayContent[0]);
-      setIsDetailsDialogOpen(true);
-    } else if (isColaborador || isAdmin) {
-      // Only collaborators or admins can create content
+    if (dayContent.length === 0 && (isColaborador || isAdmin)) {
       setSelectedDate(date);
       setIsCreateDialogOpen(true);
     }
-    // Franqueados cannot create, so clicking on empty day does nothing
   };
 
   const handleEditClick = () => {
