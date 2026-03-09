@@ -251,7 +251,7 @@ const MidiasSociais = () => {
                   </div>
                   {hasContent && (
                     <div className="space-y-0.5 sm:space-y-1">
-                      {dayContent.slice(0, 2).map(c => {
+                      {dayContent.map(c => {
                         const tag = c.tag || c.content_type;
                         const colorClass = tag && TAG_COLORS[tag] ? TAG_COLORS[tag] : 'bg-primary text-primary-foreground';
                         const TagIcon = tag && TAG_ICONS[tag] ? TAG_ICONS[tag] : Video;
@@ -270,11 +270,6 @@ const MidiasSociais = () => {
                           </div>
                         );
                       })}
-                      {dayContent.length > 2 && (
-                        <div className="text-[10px] sm:text-xs text-muted-foreground">
-                          +{dayContent.length - 2}
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
