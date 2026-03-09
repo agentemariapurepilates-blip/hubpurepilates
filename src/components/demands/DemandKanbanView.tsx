@@ -121,6 +121,18 @@ const DemandKanbanView = ({ demands, onDemandClick, onStatusChange }: DemandKanb
             <p className="text-xs text-muted-foreground truncate mb-2">
               {activeDemand.from_department} → {activeDemand.to_department}
             </p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <CalendarPlus className="h-3 w-3" />
+                {format(new Date(activeDemand.created_at), 'dd/MM', { locale: ptBR })}
+              </span>
+              {activeDemand.deadline && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(activeDemand.deadline), 'dd/MM', { locale: ptBR })}
+                </span>
+              )}
+            </div>
             <div className="flex items-center justify-between">
               <div className="flex -space-x-2">
                 {activeDemand.assignees?.slice(0, 3).map((assignee) => (
@@ -132,12 +144,6 @@ const DemandKanbanView = ({ demands, onDemandClick, onStatusChange }: DemandKanb
                   </Avatar>
                 ))}
               </div>
-              {activeDemand.deadline && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Calendar className="h-3 w-3" />
-                  {format(new Date(activeDemand.deadline), 'dd/MM', { locale: ptBR })}
-                </span>
-              )}
             </div>
           </Card>
         ) : null}
