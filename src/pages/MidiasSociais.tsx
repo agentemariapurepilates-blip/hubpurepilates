@@ -151,17 +151,18 @@ const MidiasSociais = () => {
     });
   };
 
+  const handleContentClick = (e: React.MouseEvent, item: SocialMediaContent) => {
+    e.stopPropagation();
+    setSelectedContent(item);
+    setIsDetailsDialogOpen(true);
+  };
+
   const handleDayClick = (date: Date) => {
     const dayContent = getContentForDay(date);
-    if (dayContent.length > 0) {
-      setSelectedContent(dayContent[0]);
-      setIsDetailsDialogOpen(true);
-    } else if (isColaborador || isAdmin) {
-      // Only collaborators or admins can create content
+    if (dayContent.length === 0 && (isColaborador || isAdmin)) {
       setSelectedDate(date);
       setIsCreateDialogOpen(true);
     }
-    // Franqueados cannot create, so clicking on empty day does nothing
   };
 
   const handleEditClick = () => {
@@ -250,15 +251,16 @@ const MidiasSociais = () => {
                   </div>
                   {hasContent && (
                     <div className="space-y-0.5 sm:space-y-1">
-                      {dayContent.slice(0, 2).map(c => {
+                      {dayContent.map(c => {
                         const tag = c.tag || c.content_type;
                         const colorClass = tag && TAG_COLORS[tag] ? TAG_COLORS[tag] : 'bg-primary text-primary-foreground';
                         const TagIcon = tag && TAG_ICONS[tag] ? TAG_ICONS[tag] : Video;
                         return (
                           <div
                             key={c.id}
+                            onClick={(e) => handleContentClick(e, c)}
                             className={cn(
-                              "text-[10px] sm:text-xs p-1 sm:p-1.5 rounded font-medium flex items-center gap-0.5 sm:gap-1",
+                              "text-[10px] sm:text-xs p-1 sm:p-1.5 rounded font-medium flex items-center gap-0.5 sm:gap-1 cursor-pointer hover:opacity-80 transition-opacity",
                               colorClass
                             )}
                             title={c.title}
@@ -268,11 +270,6 @@ const MidiasSociais = () => {
                           </div>
                         );
                       })}
-                      {dayContent.length > 2 && (
-                        <div className="text-[10px] sm:text-xs text-muted-foreground">
-                          +{dayContent.length - 2}
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
