@@ -485,6 +485,15 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                 )}
               </div>
 
+              {/* Created at */}
+              <div className="flex items-center gap-3">
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Aberta em:</span>
+                <span className="text-sm">
+                  {format(new Date(demand.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </span>
+              </div>
+
               {/* Deadline */}
               <div className="flex items-center gap-3">
                 <CalendarIcon className="h-4 w-4 text-muted-foreground" />
