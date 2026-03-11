@@ -15,7 +15,6 @@ interface AvisoCardProps {
 }
 
 const AvisoCard = ({ aviso, onClick, onEdit, onDelete, canEdit }: AvisoCardProps) => {
-  // Strip HTML tags for preview
   const textContent = aviso.content?.replace(/<[^>]*>/g, '') || '';
   
   return (
@@ -23,7 +22,18 @@ const AvisoCard = ({ aviso, onClick, onEdit, onDelete, canEdit }: AvisoCardProps
       className="cursor-pointer hover:shadow-md transition-all hover:scale-[1.01] overflow-hidden"
       onClick={onClick}
     >
-      {aviso.image_url && (
+      {aviso.video_url ? (
+        <div className="w-full">
+          <video 
+            src={aviso.video_url} 
+            className="w-full max-h-64 object-contain bg-black"
+            muted
+            playsInline
+            onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
+            onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }}
+          />
+        </div>
+      ) : aviso.image_url ? (
         <div className="w-full">
           <img 
             src={aviso.image_url} 
@@ -31,7 +41,7 @@ const AvisoCard = ({ aviso, onClick, onEdit, onDelete, canEdit }: AvisoCardProps
             className="w-full h-auto object-contain"
           />
         </div>
-      )}
+      ) : null}
       
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">

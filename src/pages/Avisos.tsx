@@ -16,6 +16,7 @@ export interface Aviso {
   title: string;
   content: string | null;
   image_url: string | null;
+  video_url: string | null;
   partner_name: string | null;
   is_active: boolean;
   created_by: string;
