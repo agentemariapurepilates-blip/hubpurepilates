@@ -1,0 +1,1 @@
+ALTER TABLE public.avisos ADD COLUMN video_url text;
