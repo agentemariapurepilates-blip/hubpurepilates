@@ -159,28 +159,28 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
               </div>
             ) : mediaType === 'video' ? (
               <div className="space-y-2">
-                <div className="relative rounded-lg overflow-hidden aspect-video bg-black">
-                  {getGoogleDriveEmbedUrl(videoUrl) ? (
+                {videoUrl && getGoogleDriveEmbedUrl(videoUrl) && (
+                  <div className="relative rounded-lg overflow-hidden aspect-video bg-black">
                     <iframe
                       src={getGoogleDriveEmbedUrl(videoUrl)!}
                       className="w-full h-full"
                       allow="autoplay; encrypted-media"
                       allowFullScreen
                     />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                      Cole um link válido do Google Drive
-                    </div>
-                  )}
-                  <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 z-10" onClick={removeMedia}>
+                  </div>
+                )}
+                <div className="flex gap-2 items-center">
+                  <Input
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="Cole o link do Google Drive aqui"
+                    className="flex-1"
+                    autoFocus
+                  />
+                  <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={removeMedia}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                <Input
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="Cole o link do Google Drive aqui"
-                />
               </div>
             ) : (
               <div className="flex gap-2">
