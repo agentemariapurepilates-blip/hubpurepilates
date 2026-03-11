@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, ImagePlus, X } from 'lucide-react';
+import { Loader2, ImagePlus, X, Video } from 'lucide-react';
 import { Aviso } from '@/pages/Avisos';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 
@@ -20,9 +20,11 @@ interface EditAvisoDialogProps {
 const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDialogProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [coverVideo, setCoverVideo] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     title: '',
     content: ''
@@ -35,6 +37,7 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
         content: aviso.content || ''
       });
       setCoverImage(aviso.image_url || null);
+      setCoverVideo(aviso.video_url || null);
     }
   }, [aviso]);
 
@@ -47,7 +50,7 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
       return;
     }
 
-    setUploadingImage(true);
+    setUploadingMedia(true);
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `avisos/${user.id}/${Date.now()}.${fileExt}`;
@@ -63,18 +66,56 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
         .getPublicUrl(fileName);
 
       setCoverImage(publicUrl);
+      setCoverVideo(null);
       toast({ title: "Sucesso", description: "Imagem de capa atualizada!" });
     } catch (error) {
       console.error('Error uploading image:', error);
       toast({ title: "Erro", description: "Erro ao fazer upload da imagem", variant: "destructive" });
     } finally {
-      setUploadingImage(false);
+      setUploadingMedia(false);
     }
   };
 
-  const removeCoverImage = () => {
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast({ title: "Erro", description: "O vídeo deve ter no máximo 50MB", variant: "destructive" });
+      return;
+    }
+
+    setUploadingMedia(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `avisos/${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('post-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('post-images')
+        .getPublicUrl(fileName);
+
+      setCoverVideo(publicUrl);
+      setCoverImage(null);
+      toast({ title: "Sucesso", description: "Vídeo de capa atualizado!" });
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      toast({ title: "Erro", description: "Erro ao fazer upload do vídeo", variant: "destructive" });
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
+  const removeMedia = () => {
     setCoverImage(null);
+    setCoverVideo(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+    if (videoInputRef.current) videoInputRef.current.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,7 +129,8 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
         .update({
           title: formData.title,
           content: formData.content || null,
-          image_url: coverImage
+          image_url: coverImage,
+          video_url: coverVideo
         })
         .eq('id', aviso.id);
 
@@ -103,6 +145,8 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
       setLoading(false);
     }
   };
+
+  const hasMedia = coverImage || coverVideo;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,35 +167,54 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
             />
           </div>
 
-          {/* Cover Image Upload */}
+          {/* Cover Media Upload */}
           <div className="space-y-2">
-            <Label>Imagem de Capa</Label>
-            {coverImage ? (
+            <Label>Capa (Imagem ou Vídeo)</Label>
+            {hasMedia ? (
               <div className="relative rounded-lg overflow-hidden">
-                <img src={coverImage} alt="Capa" className="w-full h-48 object-cover" />
+                {coverVideo ? (
+                  <video src={coverVideo} controls className="w-full max-h-64 object-contain bg-black rounded-lg" />
+                ) : (
+                  <img src={coverImage!} alt="Capa" className="w-full h-48 object-cover" />
+                )}
                 <Button
                   type="button"
                   variant="destructive"
                   size="icon"
                   className="absolute top-2 right-2 h-8 w-8"
-                  onClick={removeCoverImage}
+                  onClick={removeMedia}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
-              >
-                {uploadingImage ? (
-                  <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
-                ) : (
-                  <>
-                    <ImagePlus className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">Clique para adicionar uma imagem de capa</p>
-                  </>
-                )}
+              <div className="flex gap-2">
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-1 border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+                >
+                  {uploadingMedia ? (
+                    <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <ImagePlus className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">Imagem</p>
+                    </>
+                  )}
+                </div>
+                <div
+                  onClick={() => videoInputRef.current?.click()}
+                  className="flex-1 border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+                >
+                  {uploadingMedia ? (
+                    <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <Video className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">Vídeo</p>
+                    </>
+                  )}
+                </div>
               </div>
             )}
             <input
@@ -159,6 +222,13 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
               type="file"
               accept="image/*"
               onChange={handleImageUpload}
+              className="hidden"
+            />
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/*"
+              onChange={handleVideoUpload}
               className="hidden"
             />
           </div>

@@ -22,7 +22,15 @@ const AvisoDetailsDialog = ({ aviso, open, onOpenChange }: AvisoDetailsDialogPro
         </DialogHeader>
 
         <div className="space-y-4">
-          {aviso.image_url && (
+          {aviso.video_url ? (
+            <div className="rounded-lg overflow-hidden">
+              <video 
+                src={aviso.video_url} 
+                controls 
+                className="w-full max-h-96 object-contain bg-black rounded-lg"
+              />
+            </div>
+          ) : aviso.image_url ? (
             <div className="rounded-lg overflow-hidden">
               <img 
                 src={aviso.image_url} 
@@ -30,7 +38,7 @@ const AvisoDetailsDialog = ({ aviso, open, onOpenChange }: AvisoDetailsDialogPro
                 className="w-full h-auto max-h-72 object-cover"
               />
             </div>
-          )}
+          ) : null}
 
           <Badge variant="outline" className="gap-1">
             <Calendar className="h-3 w-3" />
