@@ -158,7 +158,7 @@ const CreateAvisoDialog = ({ open, onOpenChange, onSuccess }: CreateAvisoDialogP
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-            ) : mediaType === 'video' && videoUrl ? (
+            ) : mediaType === 'video' ? (
               <div className="space-y-2">
                 <div className="relative rounded-lg overflow-hidden aspect-video bg-black">
                   {getGoogleDriveEmbedUrl(videoUrl) ? (
