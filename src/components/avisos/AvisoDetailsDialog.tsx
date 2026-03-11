@@ -23,11 +23,12 @@ const AvisoDetailsDialog = ({ aviso, open, onOpenChange }: AvisoDetailsDialogPro
 
         <div className="space-y-4">
           {aviso.video_url ? (
-            <div className="rounded-lg overflow-hidden">
-              <video 
-                src={aviso.video_url} 
-                controls 
-                className="w-full max-h-96 object-contain bg-black rounded-lg"
+            <div className="rounded-lg overflow-hidden aspect-video bg-black">
+              <iframe
+                src={aviso.video_url}
+                className="w-full h-full"
+                allow="autoplay; encrypted-media"
+                allowFullScreen
               />
             </div>
           ) : aviso.image_url ? (
