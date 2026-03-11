@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { Aviso } from '@/pages/Avisos';
@@ -23,15 +23,9 @@ const AvisoCard = ({ aviso, onClick, onEdit, onDelete, canEdit }: AvisoCardProps
       onClick={onClick}
     >
       {aviso.video_url ? (
-        <div className="w-full">
-          <video 
-            src={aviso.video_url} 
-            className="w-full max-h-64 object-contain bg-black"
-            muted
-            playsInline
-            onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
-            onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }}
-          />
+        <div className="w-full relative aspect-video bg-black flex items-center justify-center">
+          <Play className="h-12 w-12 text-white/80" />
+          <span className="absolute bottom-2 left-2 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">Vídeo</span>
         </div>
       ) : aviso.image_url ? (
         <div className="w-full">
