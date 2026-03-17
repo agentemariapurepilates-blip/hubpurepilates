@@ -148,9 +148,10 @@ const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
                             <div className="flex flex-wrap items-center gap-2 mt-2">
                               {(() => {
                                 const deadlineStatus = getDeadlineStatus(demand.deadline, demand.status);
-                                return deadlineStatus ? (
+                                const DeadlineStatusIcon = deadlineStatus?.icon;
+                                return deadlineStatus && DeadlineStatusIcon ? (
                                   <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${deadlineStatus.color}`}>
-                                    <deadlineStatus.icon className="h-3 w-3" />
+                                    <DeadlineStatusIcon className="h-3 w-3" />
                                     {deadlineStatus.label}
                                   </span>
                                 ) : null;
