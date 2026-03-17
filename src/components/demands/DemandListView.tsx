@@ -16,6 +16,7 @@ interface DemandListViewProps {
 
 const statusConfig = {
   pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', headerColor: 'bg-yellow-50 border-yellow-200' },
+  in_approval: { label: 'Em Aprovação', color: 'bg-purple-100 text-purple-800 border-purple-200', headerColor: 'bg-purple-50 border-purple-200' },
   in_progress: { label: 'Em Andamento', color: 'bg-blue-100 text-blue-800 border-blue-200', headerColor: 'bg-blue-50 border-blue-200' },
   completed: { label: 'Concluído', color: 'bg-green-100 text-green-800 border-green-200', headerColor: 'bg-green-50 border-green-200' },
   cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-800 border-red-200', headerColor: 'bg-red-50 border-red-200' },
@@ -27,11 +28,12 @@ const priorityConfig = {
   high: { label: 'Alta', color: 'bg-red-100 text-red-700' },
 };
 
-const statusOrder: Demand['status'][] = ['pending', 'in_progress', 'completed', 'cancelled'];
+const statusOrder: Demand['status'][] = ['pending', 'in_approval', 'in_progress', 'completed', 'cancelled'];
 
 const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     pending: true,
+    in_approval: true,
     in_progress: true,
     completed: true,
     cancelled: true,
