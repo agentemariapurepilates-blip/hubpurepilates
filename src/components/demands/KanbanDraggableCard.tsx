@@ -51,6 +51,8 @@ const KanbanDraggableCard = ({ demand, onDemandClick }: KanbanDraggableCardProps
     }
   };
 
+  const deadlineStatus = getDeadlineStatus(demand.deadline, demand.status);
+
   return (
     <Card
       ref={setNodeRef}
@@ -62,6 +64,16 @@ const KanbanDraggableCard = ({ demand, onDemandClick }: KanbanDraggableCardProps
       }`}
       onClick={handleClick}
     >
+      {/* Deadline Status Badge */}
+      {deadlineStatus && (
+        <div className="flex items-center gap-1 mb-2">
+          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${deadlineStatus.color}`}>
+            <deadlineStatus.icon className="h-3 w-3" />
+            {deadlineStatus.label}
+          </span>
+        </div>
+      )}
+
       {/* Title */}
       <h4 className="font-medium text-sm line-clamp-2 mb-2">
         {demand.title}
