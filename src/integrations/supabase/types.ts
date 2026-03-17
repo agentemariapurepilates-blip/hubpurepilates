@@ -807,7 +807,12 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       demand_priority: "low" | "medium" | "high"
-      demand_status: "pending" | "in_progress" | "completed" | "cancelled"
+      demand_status:
+        | "pending"
+        | "in_approval"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
       event_tag: "pacotes" | "pure_pass" | "pure_club"
       profile_type: "colaborador" | "professor" | "franqueado"
       sector_type:
@@ -952,7 +957,13 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       demand_priority: ["low", "medium", "high"],
-      demand_status: ["pending", "in_progress", "completed", "cancelled"],
+      demand_status: [
+        "pending",
+        "in_approval",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
       event_tag: ["pacotes", "pure_pass", "pure_club"],
       profile_type: ["colaborador", "professor", "franqueado"],
       sector_type: [

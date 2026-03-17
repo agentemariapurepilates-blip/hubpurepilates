@@ -1,0 +1,1 @@
+ALTER TYPE public.demand_status ADD VALUE IF NOT EXISTS 'in_approval' AFTER 'pending';
