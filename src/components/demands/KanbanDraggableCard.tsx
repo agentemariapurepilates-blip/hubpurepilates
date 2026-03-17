@@ -129,7 +129,7 @@ const KanbanDraggableCard = ({ demand, onDemandClick }: KanbanDraggableCardProps
         {demand.deadline && (
           <span className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
-            {format(new Date(demand.deadline), 'dd/MM', { locale: ptBR })}
+            {format(parseDateOnly(demand.deadline), 'dd/MM', { locale: ptBR })}
           </span>
         )}
       </div>

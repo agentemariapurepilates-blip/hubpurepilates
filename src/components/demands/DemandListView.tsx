@@ -183,7 +183,7 @@ const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
                               {demand.deadline && (
                                 <span className="flex items-center gap-1" title="Prazo">
                                   <Calendar className="h-3 w-3" />
-                                  {format(new Date(demand.deadline), 'dd/MM', { locale: ptBR })}
+                                  {format(parseDateOnly(demand.deadline), 'dd/MM', { locale: ptBR })}
                                 </span>
                               )}
                             </div>
