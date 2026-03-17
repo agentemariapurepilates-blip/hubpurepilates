@@ -33,6 +33,7 @@ const statusOrder: Demand['status'][] = ['pending', 'in_approval', 'in_progress'
 const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     pending: true,
+    in_approval: true,
     in_progress: true,
     completed: true,
     cancelled: true,
