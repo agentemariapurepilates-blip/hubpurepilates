@@ -28,18 +28,25 @@ const priorityConfig = {
   high: { label: 'Alta', color: 'bg-red-100 text-red-700' },
 };
 
-const getLocalDateKey = (date = new Date()) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+const parseDateOnly = (dateStr: string) => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const getBrazilDateKey = (date = new Date()) => {
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
 };
 
 const getDeadlineStatus = (deadline: string | null, status: string) => {
   if (!deadline || status === 'completed' || status === 'cancelled') return null;
 
-  const todayKey = getLocalDateKey();
-  const attentionLimitKey = getLocalDateKey(addDays(new Date(), 2));
+  const todayKey = getBrazilDateKey();
+  const attentionLimitKey = getBrazilDateKey(addDays(new Date(), 2));
 
   if (deadline < todayKey) {
     return { label: 'Atrasada', color: 'bg-red-500 text-white', icon: AlertTriangle };
@@ -176,7 +183,7 @@ const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
                               {demand.deadline && (
                                 <span className="flex items-center gap-1" title="Prazo">
                                   <Calendar className="h-3 w-3" />
-                                  {format(new Date(demand.deadline), 'dd/MM', { locale: ptBR })}
+                                  {format(parseDateOnly(demand.deadline), 'dd/MM', { locale: ptBR })}
                                 </span>
                               )}
                             </div>
