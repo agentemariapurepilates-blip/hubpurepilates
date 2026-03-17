@@ -18,8 +18,8 @@ interface DemandKanbanViewProps {
 
 const columns = [
   { id: 'pending', label: 'Pendente', color: 'bg-yellow-500' },
-  { id: 'in_approval', label: 'Em Aprovação', color: 'bg-purple-500' },
   { id: 'in_progress', label: 'Em Andamento', color: 'bg-blue-500' },
+  { id: 'in_approval', label: 'Em Aprovação', color: 'bg-purple-500' },
   { id: 'completed', label: 'Concluído', color: 'bg-green-500' },
   { id: 'cancelled', label: 'Cancelado', color: 'bg-red-500' },
 ] as const;

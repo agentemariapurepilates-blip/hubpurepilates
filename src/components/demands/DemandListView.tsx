@@ -28,7 +28,7 @@ const priorityConfig = {
   high: { label: 'Alta', color: 'bg-red-100 text-red-700' },
 };
 
-const statusOrder: Demand['status'][] = ['pending', 'in_approval', 'in_progress', 'completed', 'cancelled'];
+const statusOrder: Demand['status'][] = ['pending', 'in_progress', 'in_approval', 'completed', 'cancelled'];
 
 const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({

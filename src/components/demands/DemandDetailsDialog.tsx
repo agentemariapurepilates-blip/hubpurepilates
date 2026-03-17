@@ -474,8 +474,8 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="in_approval">Em Aprovação</SelectItem>
                       <SelectItem value="in_progress">Em Andamento</SelectItem>
+                      <SelectItem value="in_approval">Em Aprovação</SelectItem>
                       <SelectItem value="completed">Concluído</SelectItem>
                       <SelectItem value="cancelled">Cancelado</SelectItem>
                     </SelectContent>
