@@ -139,6 +139,15 @@ const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
 
                             {/* Meta Info */}
                             <div className="flex flex-wrap items-center gap-2 mt-2">
+                              {(() => {
+                                const deadlineStatus = getDeadlineStatus(demand.deadline, demand.status);
+                                return deadlineStatus ? (
+                                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${deadlineStatus.color}`}>
+                                    <deadlineStatus.icon className="h-3 w-3" />
+                                    {deadlineStatus.label}
+                                  </span>
+                                ) : null;
+                              })()}
                               <Badge 
                                 variant="secondary" 
                                 className={`text-xs ${priorityConfig[demand.priority].color}`}
