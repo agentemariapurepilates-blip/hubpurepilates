@@ -172,6 +172,16 @@ const PedidosDemanda = () => {
     });
   }, [demands, selectedDepartment, searchTerm, showOnlyMine, user]);
 
+  // Keep selectedDemand in sync with latest data
+  useEffect(() => {
+    if (selectedDemand) {
+      const updated = demands.find(d => d.id === selectedDemand.id);
+      if (updated && updated !== selectedDemand) {
+        setSelectedDemand(updated);
+      }
+    }
+  }, [demands]);
+
   const handleDemandClick = (demand: Demand) => {
     setSelectedDemand(demand);
     setDetailsOpen(true);
