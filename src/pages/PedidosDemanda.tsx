@@ -72,7 +72,7 @@ const PedidosDemanda = () => {
       const { data: demandsData, error: demandsError } = await supabase
         .from('demands')
         .select('*')
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (demandsError) throw demandsError;
 
