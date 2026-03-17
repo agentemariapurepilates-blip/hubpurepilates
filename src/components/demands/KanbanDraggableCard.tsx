@@ -59,6 +59,7 @@ const KanbanDraggableCard = ({ demand, onDemandClick }: KanbanDraggableCardProps
   };
 
   const deadlineStatus = getDeadlineStatus(demand.deadline, demand.status);
+  const DeadlineStatusIcon = deadlineStatus?.icon;
 
   return (
     <Card
