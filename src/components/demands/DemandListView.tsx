@@ -28,6 +28,21 @@ const priorityConfig = {
   high: { label: 'Alta', color: 'bg-red-100 text-red-700' },
 };
 
+const getDeadlineStatus = (deadline: string | null, status: string) => {
+  if (!deadline || status === 'completed' || status === 'cancelled') return null;
+  const deadlineDate = new Date(deadline + 'T23:59:59');
+  const now = new Date();
+  const daysLeft = differenceInDays(deadlineDate, now);
+
+  if (isPast(deadlineDate)) {
+    return { label: 'Atrasada', color: 'bg-red-500 text-white', icon: AlertTriangle };
+  }
+  if (daysLeft <= 2) {
+    return { label: 'Atenção', color: 'bg-yellow-500 text-white', icon: Clock };
+  }
+  return { label: 'No prazo', color: 'bg-green-500 text-white', icon: CheckCircle2 };
+};
+
 const statusOrder: Demand['status'][] = ['pending', 'in_progress', 'in_approval', 'completed', 'cancelled'];
 
 const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
