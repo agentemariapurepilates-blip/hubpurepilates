@@ -16,19 +16,20 @@ const priorityConfig = {
 
 const parseLocalDate = (dateStr: string) => {
   const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  return startOfDay(new Date(year, month - 1, day));
 };
 
 const getDeadlineStatus = (deadline: string | null, status: string) => {
   if (!deadline || status === 'completed' || status === 'cancelled') return null;
+
   const deadlineDate = parseLocalDate(deadline);
   const today = startOfDay(new Date());
-  const daysLeft = differenceInDays(deadlineDate, today);
+  const attentionLimit = addDays(today, 2);
 
-  if (daysLeft < 0) {
+  if (deadlineDate < today) {
     return { label: 'Atrasada', color: 'bg-red-500 text-white', icon: AlertTriangle };
   }
-  if (daysLeft <= 2) {
+  if (deadlineDate <= attentionLimit) {
     return { label: 'Atenção', color: 'bg-yellow-500 text-white', icon: Clock };
   }
   return { label: 'No prazo', color: 'bg-green-500 text-white', icon: CheckCircle2 };
