@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, CalendarPlus, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
-import { format, differenceInDays, startOfDay } from 'date-fns';
+import { format, addDays, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { Demand } from '@/pages/PedidosDemanda';
 
