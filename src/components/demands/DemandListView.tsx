@@ -1,8 +1,8 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, CalendarPlus, ChevronRight, Users, ChevronDown } from 'lucide-react';
-import { format } from 'date-fns';
+import { Calendar, CalendarPlus, ChevronRight, Users, ChevronDown, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { format, isPast, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { Demand } from '@/pages/PedidosDemanda';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -26,6 +26,21 @@ const priorityConfig = {
   low: { label: 'Baixa', color: 'bg-gray-100 text-gray-700' },
   medium: { label: 'Média', color: 'bg-orange-100 text-orange-700' },
   high: { label: 'Alta', color: 'bg-red-100 text-red-700' },
+};
+
+const getDeadlineStatus = (deadline: string | null, status: string) => {
+  if (!deadline || status === 'completed' || status === 'cancelled') return null;
+  const deadlineDate = new Date(deadline + 'T23:59:59');
+  const now = new Date();
+  const daysLeft = differenceInDays(deadlineDate, now);
+
+  if (isPast(deadlineDate)) {
+    return { label: 'Atrasada', color: 'bg-red-500 text-white', icon: AlertTriangle };
+  }
+  if (daysLeft <= 2) {
+    return { label: 'Atenção', color: 'bg-yellow-500 text-white', icon: Clock };
+  }
+  return { label: 'No prazo', color: 'bg-green-500 text-white', icon: CheckCircle2 };
 };
 
 const statusOrder: Demand['status'][] = ['pending', 'in_progress', 'in_approval', 'completed', 'cancelled'];
@@ -124,6 +139,15 @@ const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
 
                             {/* Meta Info */}
                             <div className="flex flex-wrap items-center gap-2 mt-2">
+                              {(() => {
+                                const deadlineStatus = getDeadlineStatus(demand.deadline, demand.status);
+                                return deadlineStatus ? (
+                                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${deadlineStatus.color}`}>
+                                    <deadlineStatus.icon className="h-3 w-3" />
+                                    {deadlineStatus.label}
+                                  </span>
+                                ) : null;
+                              })()}
                               <Badge 
                                 variant="secondary" 
                                 className={`text-xs ${priorityConfig[demand.priority].color}`}
