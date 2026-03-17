@@ -14,13 +14,18 @@ const priorityConfig = {
   high: { label: 'Alta', color: 'bg-red-100 text-red-700' },
 };
 
+const parseLocalDate = (dateStr: string) => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 const getDeadlineStatus = (deadline: string | null, status: string) => {
   if (!deadline || status === 'completed' || status === 'cancelled') return null;
-  const deadlineDate = new Date(deadline + 'T23:59:59');
-  const now = new Date();
-  const daysLeft = differenceInDays(deadlineDate, now);
+  const deadlineDate = parseLocalDate(deadline);
+  const today = startOfDay(new Date());
+  const daysLeft = differenceInDays(deadlineDate, today);
 
-  if (isPast(deadlineDate)) {
+  if (daysLeft < 0) {
     return { label: 'Atrasada', color: 'bg-red-500 text-white', icon: AlertTriangle };
   }
   if (daysLeft <= 2) {
