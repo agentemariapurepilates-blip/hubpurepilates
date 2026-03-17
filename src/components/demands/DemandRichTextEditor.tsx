@@ -288,6 +288,17 @@ const DemandRichTextEditor = ({
     },
   });
 
+  // Sync editor content when prop changes externally (e.g. after submit clears it)
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      // Only reset if content was cleared (empty string or empty paragraph)
+      const strippedContent = content.replace(/<[^>]*>/g, '').trim();
+      if (!strippedContent && editor.getHTML() !== '<p></p>') {
+        editor.commands.clearContent();
+      }
+    }
+  }, [content, editor]);
+
   const setLink = useCallback(() => {
     const previousUrl = editor?.getAttributes('link').href;
     const url = window.prompt('URL do link:', previousUrl);
