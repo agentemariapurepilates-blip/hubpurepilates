@@ -44,7 +44,7 @@ const getBrazilDateKey = (date = new Date()) => {
 };
 
 const getDeadlineStatus = (deadline: string | null, status: string) => {
-  if (!deadline || status === 'completed' || status === 'cancelled' || status === 'in_approval') return null;
+  if (!deadline || status === 'completed' || status === 'cancelled' || status === 'in_approval' || status === 'missing_info') return null;
 
   const todayKey = getBrazilDateKey();
   const attentionLimitKey = getBrazilDateKey(addDays(new Date(), 2));
