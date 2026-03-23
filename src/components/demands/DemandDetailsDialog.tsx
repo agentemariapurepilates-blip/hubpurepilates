@@ -417,7 +417,34 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
     }
   };
 
-  const handleDeleteDemand = async () => {
+  const handleToggleAssignee = async (colaborador: Colaborador) => {
+    if (!demand) return;
+    setAssigneeLoading(true);
+    try {
+      const isAssigned = demand.assignees?.some(a => a.user_id === colaborador.user_id);
+      if (isAssigned) {
+        const { error } = await supabase
+          .from('demand_assignees')
+          .delete()
+          .eq('demand_id', demand.id)
+          .eq('user_id', colaborador.user_id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('demand_assignees')
+          .insert({ demand_id: demand.id, user_id: colaborador.user_id });
+        if (error) throw error;
+      }
+      onUpdate();
+      toast({ title: isAssigned ? "Responsável removido" : "Responsável adicionado" });
+    } catch (error) {
+      console.error('Error toggling assignee:', error);
+      toast({ title: "Erro", description: "Erro ao atualizar responsável", variant: "destructive" });
+    } finally {
+      setAssigneeLoading(false);
+    }
+  };
+
     if (!demand) return;
     
     setDeleting(true);
