@@ -77,6 +77,7 @@ interface Comment {
 interface Colaborador {
   user_id: string;
   full_name: string | null;
+  avatar_url: string | null;
 }
 
 const statusConfig = {
