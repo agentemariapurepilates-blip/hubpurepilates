@@ -43,6 +43,7 @@ import {
   Pencil,
   Check,
   X,
+  UserPlus,
 } from 'lucide-react';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
