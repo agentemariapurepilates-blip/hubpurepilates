@@ -128,6 +128,8 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
   const [deleting, setDeleting] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [showAssigneePopover, setShowAssigneePopover] = useState(false);
+  const [assigneeLoading, setAssigneeLoading] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch comments
