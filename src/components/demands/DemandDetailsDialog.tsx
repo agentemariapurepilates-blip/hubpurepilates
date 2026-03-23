@@ -571,12 +571,12 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
               </div>
 
               {/* Assignees */}
-              {demand.assignees && demand.assignees.length > 0 && (
-                <div className="flex items-center gap-3">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex flex-wrap gap-1">
-                    {demand.assignees.map((assignee) => (
-                      <Badge key={assignee.user_id} variant="secondary" className="gap-1">
+              <div className="flex items-start gap-3">
+                <Users className="h-4 w-4 text-muted-foreground mt-1" />
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {demand.assignees?.map((assignee) => (
+                      <Badge key={assignee.user_id} variant="secondary" className="gap-1 pr-1">
                         <Avatar className="h-4 w-4">
                           <AvatarImage src={assignee.profile?.avatar_url || undefined} />
                           <AvatarFallback className="text-[8px]">
@@ -584,11 +584,55 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                           </AvatarFallback>
                         </Avatar>
                         {assignee.profile?.full_name || 'Usuário'}
+                        {(isColaborador || isAdmin) && (
+                          <button
+                            onClick={() => handleToggleAssignee({ user_id: assignee.user_id, full_name: assignee.profile?.full_name || null, avatar_url: assignee.profile?.avatar_url || null })}
+                            disabled={assigneeLoading}
+                            className="ml-0.5 hover:bg-muted rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                       </Badge>
                     ))}
+                    {(!demand.assignees || demand.assignees.length === 0) && (
+                      <span className="text-sm text-muted-foreground">Nenhum responsável</span>
+                    )}
                   </div>
+                  {(isColaborador || isAdmin) && (
+                    <Popover open={showAssigneePopover} onOpenChange={setShowAssigneePopover}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                          <UserPlus className="h-3 w-3" />
+                          Adicionar responsável
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="start">
+                        <div className="max-h-48 overflow-y-auto space-y-0.5">
+                          {colaboradores.map((colab) => {
+                            const isAssigned = demand.assignees?.some(a => a.user_id === colab.user_id);
+                            return (
+                              <button
+                                key={colab.user_id}
+                                onClick={() => handleToggleAssignee(colab)}
+                                disabled={assigneeLoading}
+                                className={`flex items-center gap-2 w-full p-2 rounded text-sm hover:bg-muted transition-colors ${isAssigned ? 'bg-primary/10' : ''}`}
+                              >
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={colab.avatar_url || undefined} />
+                                  <AvatarFallback className="text-[8px]">{colab.full_name?.[0] || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <span className="flex-1 text-left truncate">{colab.full_name || 'Usuário'}</span>
+                                {isAssigned && <Check className="h-4 w-4 text-primary" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Creator */}
               <div className="flex items-center gap-3">
