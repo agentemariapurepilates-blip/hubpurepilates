@@ -43,6 +43,7 @@ import {
   Pencil,
   Check,
   X,
+  UserPlus,
 } from 'lucide-react';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
@@ -76,6 +77,7 @@ interface Comment {
 interface Colaborador {
   user_id: string;
   full_name: string | null;
+  avatar_url: string | null;
 }
 
 const statusConfig = {
@@ -126,6 +128,8 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
   const [deleting, setDeleting] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [showAssigneePopover, setShowAssigneePopover] = useState(false);
+  const [assigneeLoading, setAssigneeLoading] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch comments
@@ -175,7 +179,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
     const fetchColaboradores = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
+        .select('user_id, full_name, avatar_url')
         .eq('user_type', 'colaborador');
       
       if (data) setColaboradores(data);
@@ -413,6 +417,34 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
     }
   };
 
+  const handleToggleAssignee = async (colaborador: Colaborador) => {
+    if (!demand) return;
+    setAssigneeLoading(true);
+    try {
+      const isAssigned = demand.assignees?.some(a => a.user_id === colaborador.user_id);
+      if (isAssigned) {
+        const { error } = await supabase
+          .from('demand_assignees')
+          .delete()
+          .eq('demand_id', demand.id)
+          .eq('user_id', colaborador.user_id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('demand_assignees')
+          .insert({ demand_id: demand.id, user_id: colaborador.user_id });
+        if (error) throw error;
+      }
+      onUpdate();
+      toast({ title: isAssigned ? "Responsável removido" : "Responsável adicionado" });
+    } catch (error) {
+      console.error('Error toggling assignee:', error);
+      toast({ title: "Erro", description: "Erro ao atualizar responsável", variant: "destructive" });
+    } finally {
+      setAssigneeLoading(false);
+    }
+  };
+
   const handleDeleteDemand = async () => {
     if (!demand) return;
     
@@ -540,12 +572,12 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
               </div>
 
               {/* Assignees */}
-              {demand.assignees && demand.assignees.length > 0 && (
-                <div className="flex items-center gap-3">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex flex-wrap gap-1">
-                    {demand.assignees.map((assignee) => (
-                      <Badge key={assignee.user_id} variant="secondary" className="gap-1">
+              <div className="flex items-start gap-3">
+                <Users className="h-4 w-4 text-muted-foreground mt-1" />
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {demand.assignees?.map((assignee) => (
+                      <Badge key={assignee.user_id} variant="secondary" className="gap-1 pr-1">
                         <Avatar className="h-4 w-4">
                           <AvatarImage src={assignee.profile?.avatar_url || undefined} />
                           <AvatarFallback className="text-[8px]">
@@ -553,11 +585,55 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                           </AvatarFallback>
                         </Avatar>
                         {assignee.profile?.full_name || 'Usuário'}
+                        {(isColaborador || isAdmin) && (
+                          <button
+                            onClick={() => handleToggleAssignee({ user_id: assignee.user_id, full_name: assignee.profile?.full_name || null, avatar_url: assignee.profile?.avatar_url || null })}
+                            disabled={assigneeLoading}
+                            className="ml-0.5 hover:bg-muted rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                       </Badge>
                     ))}
+                    {(!demand.assignees || demand.assignees.length === 0) && (
+                      <span className="text-sm text-muted-foreground">Nenhum responsável</span>
+                    )}
                   </div>
+                  {(isColaborador || isAdmin) && (
+                    <Popover open={showAssigneePopover} onOpenChange={setShowAssigneePopover}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                          <UserPlus className="h-3 w-3" />
+                          Adicionar responsável
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="start">
+                        <div className="max-h-48 overflow-y-auto space-y-0.5">
+                          {colaboradores.map((colab) => {
+                            const isAssigned = demand.assignees?.some(a => a.user_id === colab.user_id);
+                            return (
+                              <button
+                                key={colab.user_id}
+                                onClick={() => handleToggleAssignee(colab)}
+                                disabled={assigneeLoading}
+                                className={`flex items-center gap-2 w-full p-2 rounded text-sm hover:bg-muted transition-colors ${isAssigned ? 'bg-primary/10' : ''}`}
+                              >
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={colab.avatar_url || undefined} />
+                                  <AvatarFallback className="text-[8px]">{colab.full_name?.[0] || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <span className="flex-1 text-left truncate">{colab.full_name || 'Usuário'}</span>
+                                {isAssigned && <Check className="h-4 w-4 text-primary" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Creator */}
               <div className="flex items-center gap-3">
