@@ -177,7 +177,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
     const fetchColaboradores = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
+        .select('user_id, full_name, avatar_url')
         .eq('user_type', 'colaborador');
       
       if (data) setColaboradores(data);
