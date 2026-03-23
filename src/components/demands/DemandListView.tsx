@@ -58,7 +58,7 @@ const getDeadlineStatus = (deadline: string | null, status: string) => {
   return { label: 'No prazo', color: 'bg-green-500 text-white', icon: CheckCircle2 };
 };
 
-const statusOrder: Demand['status'][] = ['pending', 'in_progress', 'in_approval', 'completed', 'cancelled'];
+const statusOrder: Demand['status'][] = ['pending', 'in_progress', 'missing_info', 'in_approval', 'completed', 'cancelled'];
 
 const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
