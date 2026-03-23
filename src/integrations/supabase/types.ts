@@ -811,6 +811,7 @@ export type Database = {
         | "pending"
         | "in_approval"
         | "in_progress"
+        | "missing_info"
         | "completed"
         | "cancelled"
       event_tag: "pacotes" | "pure_pass" | "pure_club"
@@ -961,6 +962,7 @@ export const Constants = {
         "pending",
         "in_approval",
         "in_progress",
+        "missing_info",
         "completed",
         "cancelled",
       ],
