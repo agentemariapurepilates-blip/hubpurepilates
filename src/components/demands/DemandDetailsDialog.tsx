@@ -445,6 +445,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
     }
   };
 
+  const handleDeleteDemand = async () => {
     if (!demand) return;
     
     setDeleting(true);
