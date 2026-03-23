@@ -80,8 +80,9 @@ interface Colaborador {
 
 const statusConfig = {
   pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
-  in_approval: { label: 'Em Aprovação', color: 'bg-purple-100 text-purple-800' },
   in_progress: { label: 'Em Andamento', color: 'bg-blue-100 text-blue-800' },
+  missing_info: { label: 'Faltam Informações', color: 'bg-amber-100 text-amber-800' },
+  in_approval: { label: 'Em Aprovação', color: 'bg-purple-100 text-purple-800' },
   completed: { label: 'Concluído', color: 'bg-green-100 text-green-800' },
   cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-800' },
 };
@@ -475,6 +476,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                     <SelectContent>
                       <SelectItem value="pending">Pendente</SelectItem>
                       <SelectItem value="in_progress">Em Andamento</SelectItem>
+                      <SelectItem value="missing_info">Faltam Informações</SelectItem>
                       <SelectItem value="in_approval">Em Aprovação</SelectItem>
                       <SelectItem value="completed">Concluído</SelectItem>
                       <SelectItem value="cancelled">Cancelado</SelectItem>

@@ -16,8 +16,9 @@ interface DemandListViewProps {
 
 const statusConfig = {
   pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', headerColor: 'bg-yellow-50 border-yellow-200' },
-  in_approval: { label: 'Em Aprovação', color: 'bg-purple-100 text-purple-800 border-purple-200', headerColor: 'bg-purple-50 border-purple-200' },
   in_progress: { label: 'Em Andamento', color: 'bg-blue-100 text-blue-800 border-blue-200', headerColor: 'bg-blue-50 border-blue-200' },
+  missing_info: { label: 'Faltam Informações', color: 'bg-amber-100 text-amber-800 border-amber-200', headerColor: 'bg-amber-50 border-amber-200' },
+  in_approval: { label: 'Em Aprovação', color: 'bg-purple-100 text-purple-800 border-purple-200', headerColor: 'bg-purple-50 border-purple-200' },
   completed: { label: 'Concluído', color: 'bg-green-100 text-green-800 border-green-200', headerColor: 'bg-green-50 border-green-200' },
   cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-800 border-red-200', headerColor: 'bg-red-50 border-red-200' },
 };
@@ -43,7 +44,7 @@ const getBrazilDateKey = (date = new Date()) => {
 };
 
 const getDeadlineStatus = (deadline: string | null, status: string) => {
-  if (!deadline || status === 'completed' || status === 'cancelled' || status === 'in_approval') return null;
+  if (!deadline || status === 'completed' || status === 'cancelled' || status === 'in_approval' || status === 'missing_info') return null;
 
   const todayKey = getBrazilDateKey();
   const attentionLimitKey = getBrazilDateKey(addDays(new Date(), 2));
@@ -57,13 +58,14 @@ const getDeadlineStatus = (deadline: string | null, status: string) => {
   return { label: 'No prazo', color: 'bg-green-500 text-white', icon: CheckCircle2 };
 };
 
-const statusOrder: Demand['status'][] = ['pending', 'in_progress', 'in_approval', 'completed', 'cancelled'];
+const statusOrder: Demand['status'][] = ['pending', 'in_progress', 'missing_info', 'in_approval', 'completed', 'cancelled'];
 
 const DemandListView = ({ demands, onDemandClick }: DemandListViewProps) => {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     pending: true,
-    in_approval: true,
     in_progress: true,
+    missing_info: true,
+    in_approval: true,
     completed: true,
     cancelled: true,
   });
