@@ -22,7 +22,7 @@ export interface Demand {
   description: string | null;
   from_department: string;
   to_department: string;
-  status: 'pending' | 'in_approval' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'in_progress' | 'missing_info' | 'in_approval' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high';
   deadline: string | null;
   created_by: string;
