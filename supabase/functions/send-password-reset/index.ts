@@ -1,11 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -72,7 +70,7 @@ Deno.serve(async (req) => {
     })
 
     // Get the origin from the request for the redirect URL
-    const origin = req.headers.get('origin') || 'https://hubpurepilates.lovable.app'
+    const origin = req.headers.get('origin') || 'https://hub.purepilates.com.br'
 
     // Send password reset email using Supabase's built-in functionality
     const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {

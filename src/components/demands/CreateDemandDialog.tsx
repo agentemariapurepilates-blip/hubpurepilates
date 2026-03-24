@@ -25,6 +25,7 @@ import { CalendarIcon, X, Image, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadFileToStorage } from '@/lib/upload';
 import { toast } from '@/hooks/use-toast';
 
 interface CreateDemandDialogProps {
@@ -33,27 +34,8 @@ interface CreateDemandDialogProps {
   onSuccess: () => void;
 }
 
-interface Colaborador {
-  user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-}
-
-const sectors = [
-  'Marketing',
-  'Implantação',
-  'Consultoras',
-  'Tecnologia',
-  'Pure Store',
-  'Academy',
-  'Estúdios',
-  'Franchising',
-  'Expansão',
-  'Financeiro/Jurídico',
-  'Comercial',
-  'Parceiros externos',
-  'RH',
-];
+import { Colaborador } from '@/hooks/useColaboradores';
+import { demandSectors as sectors } from '@/data/sectors';
 
 const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialogProps) => {
   const { user } = useAuth();
@@ -118,20 +100,7 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
   const uploadImage = async (file: File) => {
     setUploadingImage(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `demands/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('demand-attachments')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('demand-attachments')
-        .getPublicUrl(filePath);
-
+      const { publicUrl } = await uploadFileToStorage(file, 'demand-attachments', 'demands');
       setAttachments(prev => [...prev, { url: publicUrl, name: file.name }]);
       toast({
         title: "Imagem anexada",

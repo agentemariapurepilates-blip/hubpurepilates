@@ -20,7 +20,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 
-type SectorType = 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao' | 'marketing' | 'tecnologia' | 'expansao' | 'pure_store';
+import { feedSectors as sectors, FeedSectorValue as SectorType } from '@/data/sectors';
 
 interface Post {
   id: string;
@@ -35,18 +35,6 @@ interface EditFeedPostDialogProps {
   onOpenChange: (open: boolean) => void;
   onPostUpdated: () => void;
 }
-
-const sectors = [
-  { value: 'estudios', label: 'Estúdios' },
-  { value: 'franchising', label: 'Franchising' },
-  { value: 'academy', label: 'Academy' },
-  { value: 'consultoras', label: 'Consultoras' },
-  { value: 'implantacao', label: 'Implantação' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'tecnologia', label: 'Tecnologia' },
-  { value: 'expansao', label: 'Expansão' },
-  { value: 'pure_store', label: 'Pure Store' },
-];
 
 const EditFeedPostDialog = ({ post, open, onOpenChange, onPostUpdated }: EditFeedPostDialogProps) => {
   const [loading, setLoading] = useState(false);

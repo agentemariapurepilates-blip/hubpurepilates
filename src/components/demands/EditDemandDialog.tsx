@@ -35,27 +35,8 @@ interface EditDemandDialogProps {
   onSuccess: () => void;
 }
 
-interface Colaborador {
-  user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-}
-
-const sectors = [
-  'Marketing',
-  'Implantação',
-  'Consultoras',
-  'Tecnologia',
-  'Pure Store',
-  'Academy',
-  'Estúdios',
-  'Franchising',
-  'Expansão',
-  'Financeiro/Jurídico',
-  'Comercial',
-  'Parceiros externos',
-  'RH',
-];
+import { Colaborador } from '@/hooks/useColaboradores';
+import { demandSectors as sectors } from '@/data/sectors';
 
 const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandDialogProps) => {
   const { user } = useAuth();

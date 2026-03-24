@@ -20,7 +20,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
 import { Separator } from '@/components/ui/separator';
 import {
   Select,
@@ -31,25 +30,26 @@ import {
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { 
-  CalendarIcon, 
-  Send, 
+import {
+  CalendarIcon,
+  Send,
   Loader2,
   Clock,
-  Users,
   Building2,
   Trash2,
   Edit,
-  Pencil,
-  Check,
-  X,
-  UserPlus,
 } from 'lucide-react';
-import { format, formatDistanceToNowStrict } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadFileToStorage } from '@/lib/upload';
 import { toast } from '@/hooks/use-toast';
 import { Demand } from '@/pages/PedidosDemanda';
+import { useColaboradores } from '@/hooks/useColaboradores';
+import { CommentItem, Comment } from './detail/CommentItem';
+import { AssigneeSection } from './detail/AssigneeSection';
+import { statusConfig } from './detail/statusConfig';
+import { linkifyHtml } from './detail/linkifyHtml';
 
 interface DemandDetailsDialogProps {
   demand: Demand | null;
@@ -59,80 +59,19 @@ interface DemandDetailsDialogProps {
   onEditClick: () => void;
 }
 
-interface Comment {
-  id: string;
-  content: string;
-  user_id: string;
-  created_at: string;
-  profile?: {
-    full_name: string | null;
-    avatar_url: string | null;
-  };
-  attachments?: {
-    file_url: string;
-    file_name: string;
-  }[];
-}
-
-interface Colaborador {
-  user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-}
-
-const statusConfig = {
-  pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
-  in_progress: { label: 'Em Andamento', color: 'bg-blue-100 text-blue-800' },
-  missing_info: { label: 'Faltam Informações', color: 'bg-amber-100 text-amber-800' },
-  in_approval: { label: 'Em Aprovação', color: 'bg-purple-100 text-purple-800' },
-  completed: { label: 'Concluído', color: 'bg-green-100 text-green-800' },
-  cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-800' },
-};
-
-// Convert plain text URLs in HTML content to clickable links
-const linkifyHtml = (html: string): string => {
-  // Create a temporary element to parse HTML
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  
-  const walkNode = (node: Node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent || '';
-      // Match URLs not already inside an anchor tag
-      const urlRegex = /(https?:\/\/[^\s<]+)/g;
-      if (urlRegex.test(text)) {
-        const span = document.createElement('span');
-        span.innerHTML = text.replace(urlRegex, '<a href="$1" class="text-primary underline cursor-pointer" target="_blank" rel="noopener noreferrer">$1</a>');
-        node.parentNode?.replaceChild(span, node);
-      }
-    } else if (node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName !== 'A') {
-      // Don't process children of existing <a> tags
-      Array.from(node.childNodes).forEach(walkNode);
-    }
-  };
-  
-  Array.from(div.childNodes).forEach(walkNode);
-  return div.innerHTML;
-};
-
 const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick }: DemandDetailsDialogProps) => {
   const { user, isAdmin, isColaborador } = useAuth();
+  const { colaboradores } = useColaboradores();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
-  const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [commentAttachments, setCommentAttachments] = useState<{ url: string; name: string }[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editingCommentContent, setEditingCommentContent] = useState('');
-  const [showAssigneePopover, setShowAssigneePopover] = useState(false);
-  const [assigneeLoading, setAssigneeLoading] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch comments
   const fetchComments = useCallback(async () => {
     if (!demand) return;
 
@@ -146,14 +85,12 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
 
       if (error) throw error;
 
-      // Fetch profiles
       const userIds = [...new Set(commentsData?.map(c => c.user_id) || [])];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, full_name, avatar_url')
         .in('user_id', userIds);
 
-      // Fetch attachments
       const commentIds = commentsData?.map(c => c.id) || [];
       const { data: attachmentsData } = await supabase
         .from('demand_attachments')
@@ -174,29 +111,15 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
     }
   }, [demand]);
 
-  // Fetch colaboradores for mentions
-  useEffect(() => {
-    const fetchColaboradores = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, avatar_url')
-        .eq('user_type', 'colaborador');
-      
-      if (data) setColaboradores(data);
-    };
-    fetchColaboradores();
-  }, []);
-
   useEffect(() => {
     if (open && demand) {
       fetchComments();
 
-      // Realtime subscription
       const channel = supabase
         .channel(`demand-comments-${demand.id}`)
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
           table: 'demand_comments',
           filter: `demand_id=eq.${demand.id}`
         }, () => {
@@ -210,12 +133,10 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
     }
   }, [open, demand, fetchComments]);
 
-  // Scroll to bottom when new comments arrive
   useEffect(() => {
     commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [comments]);
 
-  // Handle paste for images
   const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -225,66 +146,37 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
         e.preventDefault();
         const file = item.getAsFile();
         if (file) {
-          await uploadImage(file);
+          setUploadingImage(true);
+          try {
+            const { publicUrl } = await uploadFileToStorage(file, 'demand-attachments', 'comments');
+            setCommentAttachments(prev => [...prev, { url: publicUrl, name: file.name }]);
+          } catch (error) {
+            console.error('Error uploading image:', error);
+            toast({ title: "Erro", description: "Erro ao fazer upload da imagem", variant: "destructive" });
+          } finally {
+            setUploadingImage(false);
+          }
         }
         break;
       }
     }
   }, []);
 
-  const uploadImage = async (file: File) => {
-    setUploadingImage(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `comments/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('demand-attachments')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('demand-attachments')
-        .getPublicUrl(filePath);
-
-      setCommentAttachments(prev => [...prev, { url: publicUrl, name: file.name }]);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao fazer upload da imagem",
-        variant: "destructive"
-      });
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-
   const handleSendComment = async () => {
-    // Check if there's actual content (strip HTML tags to check)
     const textContent = newComment.replace(/<[^>]*>/g, '').trim();
     if (!textContent && commentAttachments.length === 0) return;
     if (!demand || !user) return;
 
     setSendingComment(true);
     try {
-      // Create comment with HTML content
       const { data: comment, error } = await supabase
         .from('demand_comments')
-        .insert({
-          demand_id: demand.id,
-          user_id: user.id,
-          content: newComment
-        })
+        .insert({ demand_id: demand.id, user_id: user.id, content: newComment })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Add attachments
       if (commentAttachments.length > 0) {
         const attachmentsData = commentAttachments.map(a => ({
           comment_id: comment.id,
@@ -293,11 +185,9 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
           file_name: a.name,
           uploaded_by: user.id,
         }));
-
         await supabase.from('demand_attachments').insert(attachmentsData);
       }
 
-      // Check for mentions in HTML (data-mention-id attributes) and create notifications
       const mentionIdRegex = /data-mention-id="([^"]+)"/g;
       let match;
       const mentionedIds = new Set<string>();
@@ -321,11 +211,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
       setCommentAttachments([]);
     } catch (error) {
       console.error('Error sending comment:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao enviar comentário",
-        variant: "destructive"
-      });
+      toast({ title: "Erro", description: "Erro ao enviar comentário", variant: "destructive" });
     } finally {
       setSendingComment(false);
     }
@@ -333,20 +219,10 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
 
   const handleStatusChange = async (newStatus: Demand['status']) => {
     if (!demand) return;
-
     try {
-      const { error } = await supabase
-        .from('demands')
-        .update({ status: newStatus })
-        .eq('id', demand.id);
-
+      const { error } = await supabase.from('demands').update({ status: newStatus }).eq('id', demand.id);
       if (error) throw error;
-
-      toast({
-        title: "Status atualizado",
-        description: "O status foi atualizado com sucesso."
-      });
-
+      toast({ title: "Status atualizado", description: "O status foi atualizado com sucesso." });
       onUpdate();
     } catch (error) {
       console.error('Error updating status:', error);
@@ -355,128 +231,57 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
 
   const handleDeadlineChange = async (newDeadline: Date | undefined) => {
     if (!demand) return;
-
     try {
       const { error } = await supabase
         .from('demands')
         .update({ deadline: newDeadline ? format(newDeadline, 'yyyy-MM-dd') : null })
         .eq('id', demand.id);
-
       if (error) throw error;
-
-      toast({
-        title: "Prazo atualizado",
-        description: "O prazo foi atualizado com sucesso."
-      });
-
+      toast({ title: "Prazo atualizado", description: "O prazo foi atualizado com sucesso." });
       onUpdate();
     } catch (error) {
       console.error('Error updating deadline:', error);
     }
   };
 
+  const handleEditComment = async (commentId: string, content: string) => {
+    try {
+      const { error } = await supabase.from('demand_comments').update({ content }).eq('id', commentId);
+      if (error) throw error;
+      setComments(prev => prev.map(c => c.id === commentId ? { ...c, content } : c));
+    } catch (error) {
+      console.error('Error editing comment:', error);
+      toast({ title: "Erro", description: "Erro ao editar comentário", variant: "destructive" });
+    }
+  };
+
   const handleDeleteComment = async (commentId: string) => {
     try {
-      const { error } = await supabase
-        .from('demand_comments')
-        .delete()
-        .eq('id', commentId);
-
+      const { error } = await supabase.from('demand_comments').delete().eq('id', commentId);
       if (error) throw error;
-
       setComments(prev => prev.filter(c => c.id !== commentId));
     } catch (error) {
       console.error('Error deleting comment:', error);
     }
   };
 
-  const handleEditComment = async (commentId: string) => {
-    const textContent = editingCommentContent.replace(/<[^>]*>/g, '').trim();
-    if (!textContent) return;
-
-    try {
-      const { error } = await supabase
-        .from('demand_comments')
-        .update({ content: editingCommentContent })
-        .eq('id', commentId);
-
-      if (error) throw error;
-
-      setComments(prev => prev.map(c => 
-        c.id === commentId ? { ...c, content: editingCommentContent } : c
-      ));
-      setEditingCommentId(null);
-      setEditingCommentContent('');
-    } catch (error) {
-      console.error('Error editing comment:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao editar comentário",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleToggleAssignee = async (colaborador: Colaborador) => {
-    if (!demand) return;
-    setAssigneeLoading(true);
-    try {
-      const isAssigned = demand.assignees?.some(a => a.user_id === colaborador.user_id);
-      if (isAssigned) {
-        const { error } = await supabase
-          .from('demand_assignees')
-          .delete()
-          .eq('demand_id', demand.id)
-          .eq('user_id', colaborador.user_id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('demand_assignees')
-          .insert({ demand_id: demand.id, user_id: colaborador.user_id });
-        if (error) throw error;
-      }
-      onUpdate();
-      toast({ title: isAssigned ? "Responsável removido" : "Responsável adicionado" });
-    } catch (error) {
-      console.error('Error toggling assignee:', error);
-      toast({ title: "Erro", description: "Erro ao atualizar responsável", variant: "destructive" });
-    } finally {
-      setAssigneeLoading(false);
-    }
-  };
-
   const handleDeleteDemand = async () => {
     if (!demand) return;
-    
     setDeleting(true);
     try {
-      const { error } = await supabase
-        .from('demands')
-        .delete()
-        .eq('id', demand.id);
-
+      const { error } = await supabase.from('demands').delete().eq('id', demand.id);
       if (error) throw error;
-
-      toast({
-        title: "Demanda excluída",
-        description: "A demanda foi excluída com sucesso."
-      });
-
+      toast({ title: "Demanda excluída", description: "A demanda foi excluída com sucesso." });
       setShowDeleteConfirm(false);
       onOpenChange(false);
       onUpdate();
     } catch (error) {
       console.error('Error deleting demand:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir demanda",
-        variant: "destructive"
-      });
+      toast({ title: "Erro", description: "Erro ao excluir demanda", variant: "destructive" });
     } finally {
       setDeleting(false);
     }
   };
-
 
   if (!demand) return null;
 
@@ -492,7 +297,6 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-4">
-            {/* Meta Info */}
             <div className="space-y-4 py-4">
               {/* Status */}
               <div className="flex items-center gap-3">
@@ -538,7 +342,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="sm" className="h-8">
-                        {demand.deadline 
+                        {demand.deadline
                           ? format(new Date(demand.deadline), 'dd/MM/yyyy', { locale: ptBR })
                           : 'Definir prazo'
                         }
@@ -555,7 +359,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                   </Popover>
                 ) : (
                   <span className="text-sm">
-                    {demand.deadline 
+                    {demand.deadline
                       ? format(new Date(demand.deadline), 'dd/MM/yyyy', { locale: ptBR })
                       : 'Não definido'
                     }
@@ -572,68 +376,12 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
               </div>
 
               {/* Assignees */}
-              <div className="flex items-start gap-3">
-                <Users className="h-4 w-4 text-muted-foreground mt-1" />
-                <div className="flex-1">
-                  <div className="flex flex-wrap gap-1 mb-1">
-                    {demand.assignees?.map((assignee) => (
-                      <Badge key={assignee.user_id} variant="secondary" className="gap-1 pr-1">
-                        <Avatar className="h-4 w-4">
-                          <AvatarImage src={assignee.profile?.avatar_url || undefined} />
-                          <AvatarFallback className="text-[8px]">
-                            {assignee.profile?.full_name?.[0] || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        {assignee.profile?.full_name || 'Usuário'}
-                        {(isColaborador || isAdmin) && (
-                          <button
-                            onClick={() => handleToggleAssignee({ user_id: assignee.user_id, full_name: assignee.profile?.full_name || null, avatar_url: assignee.profile?.avatar_url || null })}
-                            disabled={assigneeLoading}
-                            className="ml-0.5 hover:bg-muted rounded-full p-0.5"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </Badge>
-                    ))}
-                    {(!demand.assignees || demand.assignees.length === 0) && (
-                      <span className="text-sm text-muted-foreground">Nenhum responsável</span>
-                    )}
-                  </div>
-                  {(isColaborador || isAdmin) && (
-                    <Popover open={showAssigneePopover} onOpenChange={setShowAssigneePopover}>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
-                          <UserPlus className="h-3 w-3" />
-                          Adicionar responsável
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-2" align="start">
-                        <div className="max-h-48 overflow-y-auto space-y-0.5">
-                          {colaboradores.map((colab) => {
-                            const isAssigned = demand.assignees?.some(a => a.user_id === colab.user_id);
-                            return (
-                              <button
-                                key={colab.user_id}
-                                onClick={() => handleToggleAssignee(colab)}
-                                disabled={assigneeLoading}
-                                className={`flex items-center gap-2 w-full p-2 rounded text-sm hover:bg-muted transition-colors ${isAssigned ? 'bg-primary/10' : ''}`}
-                              >
-                                <Avatar className="h-5 w-5">
-                                  <AvatarImage src={colab.avatar_url || undefined} />
-                                  <AvatarFallback className="text-[8px]">{colab.full_name?.[0] || 'U'}</AvatarFallback>
-                                </Avatar>
-                                <span className="flex-1 text-left truncate">{colab.full_name || 'Usuário'}</span>
-                                {isAssigned && <Check className="h-4 w-4 text-primary" />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </div>
-              </div>
+              <AssigneeSection
+                demand={demand}
+                colaboradores={colaboradores}
+                canManage={isColaborador || isAdmin}
+                onUpdate={onUpdate}
+              />
 
               {/* Creator */}
               <div className="flex items-center gap-3">
@@ -651,10 +399,10 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
               {/* Description */}
               {demand.description && (
                 <div className="pt-2">
-                          <div 
-                            className="text-sm text-muted-foreground prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
-                            dangerouslySetInnerHTML={{ __html: linkifyHtml(demand.description) }}
-                          />
+                  <div
+                    className="text-sm text-muted-foreground prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
+                    dangerouslySetInnerHTML={{ __html: linkifyHtml(demand.description) }}
+                  />
                 </div>
               )}
             </div>
@@ -664,7 +412,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
             {/* Comments Section */}
             <div className="py-4">
               <h3 className="font-semibold mb-4">Comentários</h3>
-              
+
               {loading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -676,89 +424,14 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
               ) : (
                 <div className="space-y-4">
                   {comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-3 group">
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarImage src={comment.profile?.avatar_url || undefined} />
-                        <AvatarFallback className="text-xs">
-                          {comment.profile?.full_name?.[0] || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">
-                            {comment.profile?.full_name || 'Usuário'}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            há {formatDistanceToNowStrict(new Date(comment.created_at), {
-                              locale: ptBR
-                            })}
-                          </span>
-                          {comment.user_id === user?.id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                              onClick={() => {
-                                setEditingCommentId(comment.id);
-                                setEditingCommentContent(comment.content);
-                              }}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                          )}
-                          {(comment.user_id === user?.id || isAdmin) && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                              onClick={() => handleDeleteComment(comment.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                        {editingCommentId === comment.id ? (
-                          <div className="mt-1 space-y-2">
-                            <DemandRichTextEditor
-                              content={editingCommentContent}
-                              onChange={setEditingCommentContent}
-                              placeholder="Editar comentário..."
-                              minHeight="60px"
-                              compact
-                            />
-                            <div className="flex gap-1">
-                              <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => handleEditComment(comment.id)}>
-                                <Check className="h-3 w-3" />
-                                Salvar
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => { setEditingCommentId(null); setEditingCommentContent(''); }}>
-                                <X className="h-3 w-3" />
-                                Cancelar
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div 
-                            className="text-sm whitespace-pre-wrap break-words prose prose-sm max-w-none [&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer"
-                            dangerouslySetInnerHTML={{ __html: linkifyHtml(comment.content) }}
-                          />
-                        )}
-                        {/* Comment Attachments */}
-                        {comment.attachments && comment.attachments.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {comment.attachments.map((att, i) => (
-                              <a key={i} href={att.file_url} target="_blank" rel="noopener noreferrer">
-                                <img
-                                  src={att.file_url}
-                                  alt={att.file_name}
-                                  className="max-h-32 rounded-lg cursor-pointer"
-                                />
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    <CommentItem
+                      key={comment.id}
+                      comment={comment}
+                      currentUserId={user?.id}
+                      isAdmin={isAdmin}
+                      onEdit={handleEditComment}
+                      onDelete={handleDeleteComment}
+                    />
                   ))}
                   <div ref={commentsEndRef} />
                 </div>
@@ -768,7 +441,6 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
 
           {/* Comment Input */}
           <div className="p-4 border-t bg-background space-y-2">
-            {/* Attachments Preview */}
             {commentAttachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2">
                 {commentAttachments.map((att, i) => (
@@ -795,7 +467,7 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
             />
 
             <div className="flex justify-end">
-              <Button 
+              <Button
                 size="sm"
                 className="gap-2"
                 onClick={handleSendComment}

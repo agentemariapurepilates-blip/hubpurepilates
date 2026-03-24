@@ -18,18 +18,7 @@ import { toast } from 'sonner';
 import MainLayout from '@/components/layout/MainLayout';
 import { ChangePasswordSection } from '@/components/profile/ChangePasswordSection';
 
-const sectors = [
-  { value: 'consultoras', label: 'Consultoras' },
-  { value: 'implantacao', label: 'Implantação' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'tecnologia', label: 'Tecnologia' },
-  { value: 'academy', label: 'Academy' },
-  { value: 'estudios', label: 'Estúdios' },
-  { value: 'franchising', label: 'Franchising' },
-  { value: 'expansao', label: 'Expansão' },
-  { value: 'pure_store', label: 'Pure Store' },
-  { value: 'rh', label: 'RH' },
-];
+import { profileSectors as sectors } from '@/data/sectors';
 
 const Perfil = () => {
   const { user } = useAuth();

@@ -26,17 +26,7 @@ interface CreateFeedPostDialogProps {
   onPostCreated: () => void;
 }
 
-const sectors = [
-  { value: 'estudios', label: 'Estúdios' },
-  { value: 'franchising', label: 'Franchising' },
-  { value: 'academy', label: 'Academy' },
-  { value: 'consultoras', label: 'Consultoras' },
-  { value: 'implantacao', label: 'Implantação' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'tecnologia', label: 'Tecnologia' },
-  { value: 'expansao', label: 'Expansão' },
-  { value: 'pure_store', label: 'Pure Store' },
-];
+import { feedSectors as sectors } from '@/data/sectors';
 
 const CreateFeedPostDialog = ({ onPostCreated }: CreateFeedPostDialogProps) => {
   const { user } = useAuth();

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { ExternalLink, Palette, Sparkles, Plus, Pencil, Trash2, Loader2, Upload, Search } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadFileToStorage } from '@/lib/upload';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -81,20 +82,8 @@ const ArtesProntas = () => {
   };
 
   const uploadImage = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from('artes-prontas')
-      .upload(fileName, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data: urlData } = supabase.storage
-      .from('artes-prontas')
-      .getPublicUrl(fileName);
-
-    return urlData.publicUrl;
+    const { publicUrl } = await uploadFileToStorage(file, 'artes-prontas');
+    return publicUrl;
   };
 
   const resetForm = () => {

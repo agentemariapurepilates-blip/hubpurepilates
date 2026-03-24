@@ -32,13 +32,7 @@ interface EditNewsDialogProps {
   onPostUpdated: () => void;
 }
 
-const sectors = [
-  { value: 'estudios', label: 'Estúdios' },
-  { value: 'franchising', label: 'Franchising' },
-  { value: 'academy', label: 'Academy' },
-  { value: 'consultoras', label: 'Consultoras' },
-  { value: 'implantacao', label: 'Implantação' },
-];
+import { novidadesSectors as sectors } from '@/data/sectors';
 
 const EditNewsDialog = forwardRef<HTMLDivElement, EditNewsDialogProps>(({ post, open, onOpenChange, onPostUpdated }, ref) => {
   const [loading, setLoading] = useState(false);

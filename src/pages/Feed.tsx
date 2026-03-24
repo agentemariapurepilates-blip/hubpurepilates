@@ -24,7 +24,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 
-type SectorType = 'estudios' | 'franchising' | 'academy' | 'consultoras' | 'implantacao' | 'marketing' | 'tecnologia' | 'expansao' | 'pure_store';
+import { feedSectors as sectors, FeedSectorValue as SectorType } from '@/data/sectors';
 
 interface Comment {
   id: string;
@@ -54,18 +54,6 @@ interface Post {
   } | null;
   comments: Comment[];
 }
-
-const sectors = [
-  { value: 'estudios', label: 'Estúdios' },
-  { value: 'franchising', label: 'Franchising' },
-  { value: 'academy', label: 'Academy' },
-  { value: 'consultoras', label: 'Consultoras' },
-  { value: 'implantacao', label: 'Implantação' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'tecnologia', label: 'Tecnologia' },
-  { value: 'expansao', label: 'Expansão' },
-  { value: 'pure_store', label: 'Pure Store' },
-];
 
 const POSTS_PER_PAGE = 4;
 

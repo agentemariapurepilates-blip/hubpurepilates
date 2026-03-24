@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
@@ -35,20 +36,20 @@ function App() {
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
-            <Route path="/" element={<Index />} />
-            <Route path="/feed" element={<Feed />} />
-            <Route path="/novidades" element={<NovidadesDoMes />} />
-            <Route path="/avisos" element={<Avisos />} />
-            <Route path="/calendario-marketing" element={<CalendarioMarketing />} />
-            <Route path="/midias-sociais" element={<MidiasSociais />} />
-            <Route path="/perfil" element={<Perfil />} />
-            <Route path="/pedidos-demanda" element={<PedidosDemanda />} />
-            <Route path="/notificacoes" element={<Notificacoes />} />
-            <Route path="/artes-prontas" element={<ArtesProntas />} />
-            <Route path="/materiais-implantacao" element={<MateriaisImplantacao />} />
-            <Route path="/parcerias" element={<Parcerias />} />
-            <Route path="/manual-sistema" element={<ManualSistema />} />
-            <Route path="/admin/usuarios" element={<AdminUsuarios />} />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
+            <Route path="/novidades" element={<ProtectedRoute><NovidadesDoMes /></ProtectedRoute>} />
+            <Route path="/avisos" element={<ProtectedRoute><Avisos /></ProtectedRoute>} />
+            <Route path="/calendario-marketing" element={<ProtectedRoute><CalendarioMarketing /></ProtectedRoute>} />
+            <Route path="/midias-sociais" element={<ProtectedRoute><MidiasSociais /></ProtectedRoute>} />
+            <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+            <Route path="/pedidos-demanda" element={<ProtectedRoute><PedidosDemanda /></ProtectedRoute>} />
+            <Route path="/notificacoes" element={<ProtectedRoute><Notificacoes /></ProtectedRoute>} />
+            <Route path="/artes-prontas" element={<ProtectedRoute><ArtesProntas /></ProtectedRoute>} />
+            <Route path="/materiais-implantacao" element={<ProtectedRoute><MateriaisImplantacao /></ProtectedRoute>} />
+            <Route path="/parcerias" element={<ProtectedRoute><Parcerias /></ProtectedRoute>} />
+            <Route path="/manual-sistema" element={<ProtectedRoute><ManualSistema /></ProtectedRoute>} />
+            <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

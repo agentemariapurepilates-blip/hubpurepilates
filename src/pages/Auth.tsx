@@ -38,14 +38,19 @@ const Auth = () => {
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
-  const [forgotPasswordName, setForgotPasswordName] = useState('');
   const [submittingReset, setSubmittingReset] = useState(false);
-  const [resetRequestSent, setResetRequestSent] = useState(false);
-  
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+
+  // Password recovery state (when user clicks the email link)
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  
+
   // Signup form state
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
@@ -53,16 +58,92 @@ const Auth = () => {
   const [fullName, setFullName] = useState('');
   const [selectedUserType, setSelectedUserType] = useState<UserType>('colaborador');
 
-  // Redirect if already logged in and approved
+  // Listen for PASSWORD_RECOVERY event from Supabase
   useEffect(() => {
-    if (!authLoading && user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryMode(true);
+      }
+    });
+
+    // Also check URL for recovery type
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('type') === 'recovery') {
+      setIsRecoveryMode(true);
+    }
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Redirect if already logged in and approved (but not in recovery mode)
+  useEffect(() => {
+    if (!authLoading && user && !isRecoveryMode) {
       if (isApproved) {
         navigate('/');
       } else {
         navigate('/aguardando-aprovacao');
       }
     }
-  }, [user, isApproved, authLoading, navigate]);
+  }, [user, isApproved, authLoading, navigate, isRecoveryMode]);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (newPassword.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setError('As senhas não coincidem');
+      return;
+    }
+
+    setUpdatingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+
+      toast.success('Senha atualizada com sucesso!');
+      setIsRecoveryMode(false);
+      setNewPassword('');
+      setConfirmNewPassword('');
+      navigate('/');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao atualizar senha';
+      setError(message);
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotPasswordEmail) {
+      toast.error('Digite seu e-mail');
+      return;
+    }
+    if (!forgotPasswordEmail.toLowerCase().endsWith('@purepilates.com.br')) {
+      toast.error('Use seu e-mail @purepilates.com.br');
+      return;
+    }
+
+    setSubmittingReset(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        forgotPasswordEmail.toLowerCase(),
+        { redirectTo: `${window.location.origin}/auth?type=recovery` }
+      );
+      if (error) throw error;
+      setResetEmailSent(true);
+      toast.success('Email de recuperação enviado!');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao enviar email';
+      toast.error(message);
+    } finally {
+      setSubmittingReset(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,6 +203,76 @@ const Auth = () => {
       setSignupSuccess(true);
     }
   };
+
+  // Recovery mode - user clicked the email link
+  if (isRecoveryMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center gradient-hero p-4">
+        <div className="w-full max-w-md animate-fade-in">
+          <div className="text-center mb-8">
+            <img src={logo} alt="Pure Pilates" className="h-20 mx-auto mb-4" />
+          </div>
+
+          <Card className="card-pure">
+            <CardHeader className="text-center">
+              <CardTitle className="text-xl">Redefinir Senha</CardTitle>
+              <CardDescription>
+                Digite sua nova senha abaixo
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">Nova Senha</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    disabled={updatingPassword}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-new-password">Confirmar Nova Senha</Label>
+                  <Input
+                    id="confirm-new-password"
+                    type="password"
+                    placeholder="Confirme sua nova senha"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    required
+                    disabled={updatingPassword}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full btn-pure"
+                  disabled={updatingPassword}
+                >
+                  {updatingPassword ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Atualizando...
+                    </>
+                  ) : (
+                    'Salvar Nova Senha'
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   if (signupSuccess) {
     return (
@@ -375,37 +526,39 @@ const Auth = () => {
           setShowForgotPassword(open);
           if (!open) {
             setForgotPasswordEmail('');
-            setForgotPasswordName('');
-            setResetRequestSent(false);
+            setResetEmailSent(false);
           }
         }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                {resetRequestSent ? (
+                {resetEmailSent ? (
                   <CheckCircle className="h-5 w-5 text-green-600" />
                 ) : (
                   <HelpCircle className="h-5 w-5" />
                 )}
-                {resetRequestSent ? 'Solicitação Enviada!' : 'Esqueceu sua senha?'}
+                {resetEmailSent ? 'Email Enviado!' : 'Esqueceu sua senha?'}
               </DialogTitle>
               <DialogDescription>
-                {resetRequestSent 
-                  ? 'O administrador foi notificado'
-                  : 'Solicite uma senha temporária ao administrador'
+                {resetEmailSent
+                  ? 'Verifique sua caixa de entrada'
+                  : 'Digite seu e-mail para receber um link de recuperação'
                 }
               </DialogDescription>
             </DialogHeader>
-            
-            {resetRequestSent ? (
+
+            {resetEmailSent ? (
               <div className="space-y-4 py-4">
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                   <p className="text-green-800 dark:text-green-200 text-sm font-medium">
-                    ✅ Sua solicitação foi registrada!
+                    Email de recuperação enviado!
                   </p>
                   <p className="text-green-700 dark:text-green-300 text-sm mt-2">
-                    Aguarde o administrador definir uma senha temporária para você. 
-                    Quando isso acontecer, você poderá fazer login e alterar sua senha no perfil.
+                    Enviamos um link para <strong>{forgotPasswordEmail}</strong>.
+                    Clique no link do email para definir uma nova senha.
+                  </p>
+                  <p className="text-green-700 dark:text-green-300 text-xs mt-2">
+                    Não recebeu? Verifique a pasta de spam ou lixo eletrônico.
                   </p>
                 </div>
                 <Button onClick={() => setShowForgotPassword(false)} className="w-full">
@@ -414,16 +567,6 @@ const Auth = () => {
               </div>
             ) : (
               <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="forgot-name">Seu nome</Label>
-                  <Input
-                    id="forgot-name"
-                    type="text"
-                    value={forgotPasswordName}
-                    onChange={(e) => setForgotPasswordName(e.target.value)}
-                    placeholder="Digite seu nome completo"
-                  />
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="forgot-email">Seu e-mail</Label>
                   <Input
@@ -435,44 +578,15 @@ const Auth = () => {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => setShowForgotPassword(false)}
                     className="flex-1"
                   >
                     Cancelar
                   </Button>
-                  <Button 
-                    onClick={async () => {
-                      if (!forgotPasswordEmail || !forgotPasswordName) {
-                        toast.error('Preencha todos os campos');
-                        return;
-                      }
-                      if (!forgotPasswordEmail.toLowerCase().endsWith('@purepilates.com.br')) {
-                        toast.error('Use seu e-mail @purepilates.com.br');
-                        return;
-                      }
-                      
-                      setSubmittingReset(true);
-                      try {
-                        const { error } = await supabase
-                          .from('password_reset_requests')
-                          .insert({
-                            email: forgotPasswordEmail.toLowerCase(),
-                            full_name: forgotPasswordName,
-                            status: 'pending'
-                          });
-                        
-                        if (error) throw error;
-                        setResetRequestSent(true);
-                        toast.success('Solicitação enviada!');
-                      } catch (err: any) {
-                        toast.error('Erro ao enviar solicitação');
-                        console.error(err);
-                      } finally {
-                        setSubmittingReset(false);
-                      }
-                    }}
+                  <Button
+                    onClick={handleForgotPassword}
                     disabled={submittingReset}
                     className="flex-1"
                   >
@@ -482,7 +596,7 @@ const Auth = () => {
                         Enviando...
                       </>
                     ) : (
-                      'Solicitar Senha'
+                      'Enviar Link'
                     )}
                   </Button>
                 </div>
