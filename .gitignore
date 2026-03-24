@@ -4,8 +4,6 @@
 .env.local
 .env.production
 
-# Deploy credentials (NUNCA subir pro GitHub)
-.env.deploy
 
 # Logs
 logs

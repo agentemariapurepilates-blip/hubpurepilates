@@ -6,35 +6,18 @@
 #   ./deploy.sh              -> build + deploy
 #   ./deploy.sh --upload-only -> apenas upload (sem rebuild)
 #
-# Requer: sshpass (instalar com: brew install sshpass)
-# Se sshpass não estiver disponível, usa rsync com prompt de senha
+# Na primeira vez, instale o sshpass:
+#   brew install hudochenkov/sshpass/sshpass
 # =============================================================================
 
 set -e
 
+DEPLOY_HOST="54.200.117.84"
+DEPLOY_USER="ftp_sistemas"
+DEPLOY_PASS="Xk9#mPv#2wLq!8Tz"
+DEPLOY_REMOTE_PATH="/hub.purepilates.com.br/wwwroot"
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/.env.deploy"
-
-# Carregar credenciais do .env.deploy
-if [ ! -f "$ENV_FILE" ]; then
-  echo ""
-  echo "ERRO: Arquivo .env.deploy não encontrado!"
-  echo ""
-  echo "Crie o arquivo .env.deploy na raiz do projeto com:"
-  echo "  DEPLOY_HOST=seu.servidor.ip"
-  echo "  DEPLOY_USER=seu_usuario"
-  echo "  DEPLOY_PASS=sua_senha"
-  echo "  DEPLOY_REMOTE_PATH=/caminho/remoto"
-  echo ""
-  exit 1
-fi
-
-source "$ENV_FILE"
-
-if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ] || [ -z "$DEPLOY_PASS" ] || [ -z "$DEPLOY_REMOTE_PATH" ]; then
-  echo "ERRO: Variáveis faltando no .env.deploy"
-  exit 1
-fi
 
 UPLOAD_ONLY=false
 if [ "$1" = "--upload-only" ]; then
@@ -53,6 +36,11 @@ fi
 
 cd "$SCRIPT_DIR"
 
+if [ ! -d "$SCRIPT_DIR/dist" ]; then
+  echo "ERRO: Pasta dist/ não encontrada. Rode sem --upload-only primeiro."
+  exit 1
+fi
+
 # — Deploy Frontend ———————————————————————————————————————————
 echo ""
 echo "[2/2] Enviando frontend para o servidor..."
@@ -64,8 +52,11 @@ if command -v sshpass &> /dev/null; then
     "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_REMOTE_PATH}/"
 else
   echo ""
-  echo "sshpass não encontrado. Você precisará digitar a senha manualmente."
-  echo "Senha: (verifique o .env.deploy)"
+  echo "sshpass não encontrado."
+  echo "Instale com: brew install hudochenkov/sshpass/sshpass"
+  echo ""
+  echo "Ou digite a senha manualmente quando solicitado:"
+  echo "Senha: $DEPLOY_PASS"
   echo ""
   rsync -avz --delete \
     -e "ssh -o StrictHostKeyChecking=no" \

@@ -6,7 +6,6 @@
 #   .\deploy.ps1 -UploadOnly  -> apenas upload (sem rebuild)
 #
 # Requer: WinSCP instalado
-# Requer: .env.deploy na raiz do projeto com as credenciais
 # =============================================================================
 
 param(
@@ -15,32 +14,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$root = $PSScriptRoot
-$envFile = "$root\.env.deploy"
-
-# Carregar credenciais
-if (-not (Test-Path $envFile)) {
-    Write-Host "ERRO: Arquivo .env.deploy não encontrado!" -ForegroundColor Red
-    Write-Host "Crie o arquivo .env.deploy na raiz do projeto com:"
-    Write-Host "  DEPLOY_HOST=seu.servidor.ip"
-    Write-Host "  DEPLOY_USER=seu_usuario"
-    Write-Host "  DEPLOY_PASS=sua_senha"
-    Write-Host "  DEPLOY_REMOTE_PATH=/caminho/remoto"
-    exit 1
-}
-
-$envVars = @{}
-Get-Content $envFile | ForEach-Object {
-    if ($_ -match "^\s*([^#][^=]+)=(.+)$") {
-        $envVars[$matches[1].Trim()] = $matches[2].Trim()
-    }
-}
-
 $winscp       = "$env:LOCALAPPDATA\Programs\WinSCP\WinSCP.com"
-$host2        = $envVars["DEPLOY_HOST"]
-$user         = $envVars["DEPLOY_USER"]
-$pass         = $envVars["DEPLOY_PASS"]
-$remoteFront  = $envVars["DEPLOY_REMOTE_PATH"]
+$host2        = "54.200.117.84"
+$user         = "ftp_sistemas"
+$pass         = "Xk9#mPv#2wLq!8Tz"
+$remoteFront  = "/hub.purepilates.com.br/wwwroot"
+$root         = $PSScriptRoot
 $frontDist    = "$root\dist"
 $webConfigSrc = "$root\publish\root-web.config"
 
