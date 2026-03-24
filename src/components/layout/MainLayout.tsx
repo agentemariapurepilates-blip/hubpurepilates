@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from './Sidebar';
 import { Loader2, Bell } from 'lucide-react';
@@ -12,17 +12,12 @@ interface MainLayoutProps {
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   const { user, loading, isColaborador, isAdmin } = useAuth();
-  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Show notifications for colaboradores and admins
   const showNotifications = isColaborador || isAdmin;
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-  }, [user, loading, navigate]);
+  // ProtectedRoute já cuida do redirect para /auth
 
   // Fetch unread notifications count
   useEffect(() => {
@@ -34,13 +29,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('is_read', false);
-      
+
       setUnreadCount(count || 0);
     };
 
     fetchUnreadCount();
 
-    // Subscribe to realtime updates
+    let debounceTimer: ReturnType<typeof setTimeout>;
     const channel = supabase
       .channel('notifications-count')
       .on(
@@ -52,15 +47,17 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchUnreadCount();
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => fetchUnreadCount(), 1000);
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
-  }, [user, showNotifications]);
+  }, [user?.id, showNotifications]);
 
   if (loading) {
     return (

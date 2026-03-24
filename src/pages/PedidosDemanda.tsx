@@ -123,15 +123,18 @@ const PedidosDemanda = () => {
   useEffect(() => {
     fetchDemands();
 
-    // Setup realtime subscription
+    // Setup realtime subscription with debounce to avoid cascading refetches
+    let debounceTimer: ReturnType<typeof setTimeout>;
     const channel = supabase
       .channel('demands-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'demands' }, () => {
-        fetchDemands();
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchDemands(), 1000);
       })
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -300,11 +303,10 @@ const PedidosDemanda = () => {
         )}
 
         {/* Create Dialog */}
-        <CreateDemandDialog 
-          open={isCreateOpen} 
+        <CreateDemandDialog
+          open={isCreateOpen}
           onOpenChange={setIsCreateOpen}
           onSuccess={() => {
-            fetchDemands();
             setIsCreateOpen(false);
           }}
         />

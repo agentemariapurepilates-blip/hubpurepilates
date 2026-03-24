@@ -109,29 +109,32 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
     } finally {
       setLoading(false);
     }
-  }, [demand]);
+  }, [demand?.id]);
 
   useEffect(() => {
-    if (open && demand) {
-      fetchComments();
+    if (!open || !demand) return;
 
-      const channel = supabase
-        .channel(`demand-comments-${demand.id}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'demand_comments',
-          filter: `demand_id=eq.${demand.id}`
-        }, () => {
-          fetchComments();
-        })
-        .subscribe();
+    fetchComments();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [open, demand, fetchComments]);
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    const channel = supabase
+      .channel(`demand-comments-${demand.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'demand_comments',
+        filter: `demand_id=eq.${demand.id}`
+      }, () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchComments(), 500);
+      })
+      .subscribe();
+
+    return () => {
+      clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [open, demand?.id]);
 
   useEffect(() => {
     commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });

@@ -30,6 +30,45 @@ const NovidadesDoMes = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
   const [publishing, setPublishing] = useState(false);
+  const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
+
+  // Fetch view counts for all months
+  const fetchViewCounts = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('timeline_views')
+        .select('month_key');
+      if (data) {
+        const counts: Record<string, number> = {};
+        data.forEach(row => {
+          counts[row.month_key] = (counts[row.month_key] || 0) + 1;
+        });
+        setViewCounts(counts);
+      }
+    } catch {
+      // Table may not exist yet, ignore
+    }
+  }, []);
+
+  // Register a view when user selects a month with landing page
+  const registerView = useCallback(async (monthKey: string) => {
+    if (!user) return;
+    try {
+      await supabase
+        .from('timeline_views')
+        .upsert(
+          { month_key: monthKey, user_id: user.id },
+          { onConflict: 'month_key,user_id' }
+        );
+      // Update local count
+      setViewCounts(prev => {
+        const current = prev[monthKey] || 0;
+        return { ...prev, [monthKey]: current + 1 };
+      });
+    } catch {
+      // Ignore errors (table may not exist yet)
+    }
+  }, [user]);
 
   // Fetch visibility status for all months
   const fetchVisibility = useCallback(async () => {
@@ -146,8 +185,8 @@ const NovidadesDoMes = () => {
   }, [user, authLoading, isApproved, navigate]);
 
   useEffect(() => {
-    if (user && isApproved) { fetchPosts(); fetchVisibility(); }
-  }, [user, isApproved, fetchPosts, fetchVisibility]);
+    if (user && isApproved) { fetchPosts(); fetchVisibility(); fetchViewCounts(); }
+  }, [user, isApproved, fetchPosts, fetchVisibility, fetchViewCounts]);
 
   useEffect(() => {
     if (!user) return;
@@ -159,6 +198,13 @@ const NovidadesDoMes = () => {
   }, [user, fetchPosts]);
 
   useEffect(() => { setCurrentPage(1); }, [selectedMonth]);
+
+  // Register view when user sees a timeline landing page
+  useEffect(() => {
+    if (selectedMonth && hasLandingPage(selectedMonth) && user) {
+      registerView(selectedMonth);
+    }
+  }, [selectedMonth, user, registerView]);
 
   const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
   const paginatedPosts = filteredPosts.slice((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE);
@@ -211,10 +257,16 @@ const NovidadesDoMes = () => {
                   key={month.value}
                   variant={selectedMonth === month.value ? 'default' : 'outline'}
                   size="sm"
-                  className="whitespace-nowrap capitalize"
+                  className="whitespace-nowrap capitalize gap-2"
                   onClick={() => setSelectedMonth(month.value)}
                 >
                   {month.label}
+                  {hasLandingPage(month.value) && (viewCounts[month.value] || 0) > 0 && (
+                    <span className="inline-flex items-center gap-1 text-xs opacity-70">
+                      <Eye className="h-3 w-3" />
+                      {viewCounts[month.value]}
+                    </span>
+                  )}
                 </Button>
               ))}
             </div>
