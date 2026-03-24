@@ -41,6 +41,12 @@ if [ ! -d "$SCRIPT_DIR/dist" ]; then
   exit 1
 fi
 
+# Copiar web.config para IIS (SPA routing)
+if [ -f "$SCRIPT_DIR/publish/root-web.config" ]; then
+  cp "$SCRIPT_DIR/publish/root-web.config" "$SCRIPT_DIR/dist/web.config"
+  echo "      web.config copiado."
+fi
+
 # — Deploy Frontend ———————————————————————————————————————————
 echo ""
 echo "[2/2] Enviando frontend para o servidor..."
