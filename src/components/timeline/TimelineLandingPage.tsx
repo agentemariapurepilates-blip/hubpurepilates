@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 // Registry of months that have landing pages
 const LANDING_PAGES: Record<string, () => Promise<{ default: ComponentType }>> = {
   '2026-03': () => import('./MonthLanding_2026_03'),
+  '2026-04': () => import('./MonthLanding_2026_04'),
 };
 
 // Pre-resolved lazy components so they are stable across renders
