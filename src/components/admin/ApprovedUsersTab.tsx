@@ -36,6 +36,9 @@ interface UserProfile {
   email: string;
   full_name: string | null;
   user_type: UserType | null;
+  requested_user_type: UserType | null;
+  is_approved: boolean;
+  created_at: string;
   isAdmin: boolean;
 }
 
