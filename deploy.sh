@@ -45,22 +45,30 @@ fi
 echo ""
 echo "[2/2] Enviando frontend para o servidor..."
 
+# Converter path para Windows format
+WIN_REMOTE_PATH=$(echo "$DEPLOY_REMOTE_PATH" | sed 's|^/||' | sed 's|/|\\|g')
+
 if command -v sshpass &> /dev/null; then
-  sshpass -p "$DEPLOY_PASS" rsync -avz --delete \
-    -e "ssh -o StrictHostKeyChecking=no" \
-    "$SCRIPT_DIR/dist/" \
+  # Limpar diretório remoto (servidor Windows)
+  sshpass -p "$DEPLOY_PASS" ssh -o StrictHostKeyChecking=no \
+    "${DEPLOY_USER}@${DEPLOY_HOST}" "powershell -Command \"Get-ChildItem -Path '${WIN_REMOTE_PATH}' -Recurse | Remove-Item -Recurse -Force\"" 2>/dev/null || true
+
+  # Enviar arquivos via scp
+  sshpass -p "$DEPLOY_PASS" scp -o StrictHostKeyChecking=no -r \
+    "$SCRIPT_DIR/dist/"* \
     "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_REMOTE_PATH}/"
 else
   echo ""
   echo "sshpass não encontrado."
   echo "Instale com: brew install hudochenkov/sshpass/sshpass"
   echo ""
-  echo "Ou digite a senha manualmente quando solicitado:"
-  echo "Senha: $DEPLOY_PASS"
+  echo "Senha para digitar manualmente: $DEPLOY_PASS"
   echo ""
-  rsync -avz --delete \
-    -e "ssh -o StrictHostKeyChecking=no" \
-    "$SCRIPT_DIR/dist/" \
+  ssh -o StrictHostKeyChecking=no \
+    "${DEPLOY_USER}@${DEPLOY_HOST}" "powershell -Command \"Get-ChildItem -Path '${WIN_REMOTE_PATH}' -Recurse | Remove-Item -Recurse -Force\"" 2>/dev/null || true
+
+  scp -o StrictHostKeyChecking=no -r \
+    "$SCRIPT_DIR/dist/"* \
     "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_REMOTE_PATH}/"
 fi
 
