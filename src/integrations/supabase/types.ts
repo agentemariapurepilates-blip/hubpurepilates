@@ -745,6 +745,27 @@ export type Database = {
         }
         Relationships: []
       }
+      timeline_views: {
+        Row: {
+          created_at: string
+          id: string
+          month_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       timeline_visibility: {
         Row: {
           created_at: string
