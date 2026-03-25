@@ -119,16 +119,19 @@ const MidiasSociais = () => {
     fetchContent();
   }, []);
 
-  // Realtime subscription
+  // Realtime subscription with debounce
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout>;
     const channel = supabase
       .channel('social-media-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'social_media_content' }, () =>
-        fetchContent()
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'social_media_content' }, () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchContent(), 1500);
+      })
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, []);

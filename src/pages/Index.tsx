@@ -1,5 +1,3 @@
-import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,21 +6,11 @@ import { Sparkles, CalendarDays, Video, User, Palette, Megaphone, MessageCircle,
 import logoHero from '@/assets/logo-hero.svg';
 import pilatesHero from '@/assets/pilates-hero.svg';
 const Index = () => {
-  const navigate = useNavigate();
   const {
     user,
     loading,
-    isApproved,
     isColaborador
   } = useAuth();
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-    if (!loading && user && !isApproved) {
-      navigate('/aguardando-aprovacao');
-    }
-  }, [user, loading, isApproved, navigate]);
 
   // Quick links para colaboradores (acesso total)
   const colaboradorLinks = [{

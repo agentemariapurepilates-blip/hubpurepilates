@@ -200,28 +200,23 @@ const Feed = () => {
     setCurrentPage(1);
   }, [searchQuery, selectedSectors]);
 
-  // Realtime subscription for automatic updates
+  // Realtime subscription with debounce
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    const debouncedFetch = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => fetchPosts(), 1500);
+    };
+
     const channel = supabase
       .channel('feed-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'posts' },
-        () => fetchPosts()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'comments' },
-        () => fetchPosts()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'post_likes' },
-        () => fetchPosts()
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, debouncedFetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, debouncedFetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, debouncedFetch)
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [fetchPosts]);

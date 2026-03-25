@@ -87,15 +87,20 @@ const CalendarioMarketing = () => {
   }, [fetchEvents]);
 
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout>;
     const channel = supabase
       .channel('marketing-events-realtime')
-      .on('postgres_changes', 
+      .on('postgres_changes',
         { event: '*', schema: 'public', table: 'marketing_events' },
-        () => fetchEvents()
+        () => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => fetchEvents(), 1500);
+        }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [fetchEvents]);

@@ -83,7 +83,7 @@ const PaginaInicial = () => (
             </p>
 
             <p className="max-w-lg text-sm sm:text-base text-muted-foreground leading-relaxed">
-              Mas, ao olharmos além do volume, os dados — especialmente os gráficos — revelam algo ainda mais importante: <strong>estamos vivendo uma mudança no comportamento do consumidor e no momento do funil.</strong>
+              Mas, ao olharmos além do volume, os dados revelam algo ainda mais importante: <strong>estamos vivendo uma mudança no comportamento do consumidor e no momento do funil.</strong>
             </p>
 
             <div className="inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-primary font-medium">
@@ -117,9 +117,6 @@ const PaginaInicial = () => (
             <AlertTriangle className="h-5 w-5 text-primary" />
             "Não falta interesse. Falta decisão. Esse é o ponto de virada".
           </p>
-          <p className="text-muted-foreground leading-relaxed">
-            O gráfico não mostra uma queda de relevância — pelo contrário — ele mostra que <strong>o topo do funil continua saudável</strong>, mas o avanço até a matrícula exige mais estímulo, mais clareza e mais direcionamento.
-          </p>
         </CardContent>
       </Card>
     </AnimatedSection>
@@ -139,7 +136,7 @@ const PaginaInicial = () => (
         Mas agora ele <strong>compara, analisa e pondera mais antes de decidir</strong>.
       </p>
       <p className="text-muted-foreground mt-2 max-w-3xl leading-relaxed">
-        Essa leitura fica ainda mais evidente no gráfico de redes sociais, onde há um crescimento significativo das interações neutras. Isso significa mais perguntas, mais dúvidas e mais busca por informações práticas como preço, horários e condições.
+        Essa leitura é evidente pela atual saúde da marca, onde há um crescimento significativo das interações neutras. Isso significa mais perguntas, mais dúvidas e mais busca por informações práticas como preço, horários e condições.
       </p>
       <p className="text-muted-foreground mt-3 max-w-3xl leading-relaxed italic">
         "O consumidor não está mais sendo convencido — ele está avaliando".
@@ -309,6 +306,13 @@ const BrandformanceAbril = () => (
       <AnimatedSection>
         <h3 className="text-xl font-heading font-semibold">Março · Parcial até 23/03</h3>
       </AnimatedSection>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <MetricCard icon={Target} value={7932} label="Aulas Experimentais" sub="Até 23/03" delay={0} />
+        <MetricCard icon={Users} value={5920} label="Presenças" delay={100} />
+        <MetricCard icon={AlertTriangle} value={-5} suffix=" p.p." label="Queda na Conversão" sub="Matrícula vs. agendamento" delay={200} />
+      </div>
+
       <AnimatedSection>
         <p className="text-muted-foreground max-w-3xl leading-relaxed">
           Já na parcial de Março atingimos mais de <strong>7932 aulas experimentais</strong> até o dia 23 com uma conversão em vendas <strong>-5p.p</strong> na rede considerando matrícula vs. agendamento. Com isso, temos condições para aplicar na rede estratégicas de captação antes do período de baixa demanda - além da Copa do Mundo e datas sazonais do varejo que como histórico já dividem a atenção do consumidor.
@@ -416,6 +420,15 @@ const BrandformanceAbril = () => (
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Imagem da promoção */}
+          <div className="mt-6 flex justify-center">
+            <img
+              src="/images/promo-abril.jpeg"
+              alt="Pure Pilates - 50% OFF no primeiro mês - Use o cupom 50PUREPASS"
+              className="rounded-xl max-w-md w-full shadow-lg"
+            />
           </div>
         </CardContent>
       </Card>

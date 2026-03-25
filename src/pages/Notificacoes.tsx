@@ -89,15 +89,17 @@ const Notificacoes = () => {
   useEffect(() => {
     fetchNotifications();
 
-    // Realtime subscription
+    let debounceTimer: ReturnType<typeof setTimeout>;
     const channel = supabase
       .channel('notifications-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'demand_notifications' }, () => {
-        fetchNotifications();
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchNotifications(), 1500);
       })
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [user]);

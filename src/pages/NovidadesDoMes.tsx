@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/layout/MainLayout';
@@ -22,7 +21,6 @@ const POSTS_PER_PAGE = 4;
 const FIXED_MONTHS = ['2026-04', '2026-03'];
 
 const NovidadesDoMes = () => {
-  const navigate = useNavigate();
   const { user, loading: authLoading, isApproved, isColaborador, isAdmin } = useAuth();
   const [allPosts, setAllPosts] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,10 +177,7 @@ const NovidadesDoMes = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (!authLoading && !user) navigate('/auth');
-    if (!authLoading && user && !isApproved) navigate('/aguardando-aprovacao');
-  }, [user, authLoading, isApproved, navigate]);
+  // ProtectedRoute já cuida dos redirects de auth
 
   useEffect(() => {
     if (user && isApproved) { fetchPosts(); fetchVisibility(); fetchViewCounts(); }
@@ -190,11 +185,15 @@ const NovidadesDoMes = () => {
 
   useEffect(() => {
     if (!user) return;
+    let debounceTimer: ReturnType<typeof setTimeout>;
     const channel = supabase
       .channel('novidades-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => fetchPosts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchPosts(), 1500);
+      })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { clearTimeout(debounceTimer); supabase.removeChannel(channel); };
   }, [user, fetchPosts]);
 
   useEffect(() => { setCurrentPage(1); }, [selectedMonth]);

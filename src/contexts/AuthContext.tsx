@@ -53,8 +53,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Usuário está logado mas aguardando aprovação
   const isPending = !!user && !isApproved && isFullyLoaded;
 
+  const hasLoadedProfile = React.useRef(false);
+
   const checkUserRoleAndType = async (userId: string) => {
-    setProfileLoading(true);
+    // Only show loading spinner on first load, not on subsequent rechecks
+    if (!hasLoadedProfile.current) {
+      setProfileLoading(true);
+    }
     try {
       // Check admin role
       const { data: roleData } = await supabase
@@ -94,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsApproved(false);
     } finally {
       setProfileLoading(false);
+      hasLoadedProfile.current = true;
     }
   };
 
