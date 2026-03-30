@@ -27,6 +27,7 @@ const NovidadesDoMes = () => {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
+  const [visibilityLoading, setVisibilityLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
 
@@ -70,13 +71,17 @@ const NovidadesDoMes = () => {
 
   // Fetch visibility status for all months
   const fetchVisibility = useCallback(async () => {
-    const { data } = await supabase
-      .from('timeline_visibility')
-      .select('month_key, is_published');
-    if (data) {
-      const map: Record<string, boolean> = {};
-      data.forEach(row => { map[row.month_key] = row.is_published; });
-      setVisibilityMap(map);
+    try {
+      const { data } = await supabase
+        .from('timeline_visibility')
+        .select('month_key, is_published');
+      if (data) {
+        const map: Record<string, boolean> = {};
+        data.forEach(row => { map[row.month_key] = row.is_published; });
+        setVisibilityMap(map);
+      }
+    } finally {
+      setVisibilityLoading(false);
     }
   }, []);
 
@@ -215,13 +220,14 @@ const NovidadesDoMes = () => {
   const isFranqueado = !isColaborador;
 
   // What to show:
+  // - Still loading visibility → show loading (avoids false "em breve" flash for franqueados)
   // - Landing page exists + published → everyone sees it
   // - Landing page exists + NOT published + colaborador/admin → sees landing page (preview)
   // - Landing page exists + NOT published + franqueado → sees "em breve"
   // - No landing page → legacy feed
   const showLandingPage = monthHasLandingPage && (isMonthPublished || isColaborador);
-  const showComingSoon = monthHasLandingPage && !isMonthPublished && isFranqueado;
-  const showLegacyFeed = !monthHasLandingPage;
+  const showComingSoon = monthHasLandingPage && !isMonthPublished && isFranqueado && !visibilityLoading;
+  const showLegacyFeed = !monthHasLandingPage && !visibilityLoading;
 
   if (authLoading) {
     return (
@@ -274,7 +280,7 @@ const NovidadesDoMes = () => {
         )}
 
         {/* Admin publish bar */}
-        {isAdmin && monthHasLandingPage && !isMonthPublished && (
+        {isAdmin && monthHasLandingPage && !isMonthPublished && !visibilityLoading && (
           <div className="mb-6 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
             <Eye className="h-5 w-5 text-primary shrink-0" />
             <div className="flex-1">
@@ -295,6 +301,14 @@ const NovidadesDoMes = () => {
         )}
 
         {/* Content */}
+        {monthHasLandingPage && visibilityLoading && !isColaborador && (
+          <div className="space-y-6">
+            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-xl" />
+          </div>
+        )}
+
         {showLandingPage && (
           <TimelineLandingPage monthKey={selectedMonth!} />
         )}
