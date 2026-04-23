@@ -8,26 +8,16 @@ import { useEffect } from 'react';
 
 const AguardandoAprovacao = () => {
   const navigate = useNavigate();
-  const { user, signOut, isApproved, loading, profileLoading } = useAuth();
+  const { user, signOut, loading } = useAuth();
 
   useEffect(() => {
-    // Se ainda está carregando a sessão auth, aguardar
     if (loading) return;
-    
-    // Se não tem usuário (logout ou não logado), ir para auth
     if (!user) {
       navigate('/auth', { replace: true });
       return;
     }
-    
-    // Se ainda está carregando o perfil, aguardar
-    if (profileLoading) return;
-    
-    // Se está aprovado, ir para home
-    if (isApproved) {
-      navigate('/', { replace: true });
-    }
-  }, [user, isApproved, loading, profileLoading, navigate]);
+    navigate('/', { replace: true });
+  }, [user, loading, navigate]);
 
   const handleSignOut = async () => {
     await signOut();

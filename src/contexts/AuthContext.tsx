@@ -178,18 +178,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error };
     }
 
-    // Update the profile with the requested user type (is_approved defaults to false)
     if (data.user) {
       await supabase
         .from('profiles')
-        .update({ 
-          requested_user_type: requestedType,
-          is_approved: false
-        })
+        .update({ requested_user_type: requestedType })
         .eq('user_id', data.user.id);
     }
 
-    toast.success('Cadastro realizado! Aguarde aprovação do administrador.');
+    toast.success('Cadastro realizado! Confirme seu e-mail para entrar.');
     return { error: null };
   };
 

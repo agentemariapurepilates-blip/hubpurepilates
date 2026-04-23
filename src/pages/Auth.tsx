@@ -21,8 +21,15 @@ import logo from '@/assets/logo-pure-pilates.png';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
+const ALLOWED_NON_PUREPILATES_EMAILS = ['agentemaria.purepilates@gmail.com'];
+
+const isAllowedEmail = (email: string) => {
+  const lower = email.toLowerCase();
+  return lower.endsWith('@purepilates.com.br') || ALLOWED_NON_PUREPILATES_EMAILS.includes(lower);
+};
+
 const emailSchema = z.string().email('Email inválido').refine(
-  (email) => email.toLowerCase().endsWith('@purepilates.com.br'),
+  isAllowedEmail,
   'Somente emails @purepilates.com.br são permitidos'
 );
 
@@ -105,6 +112,7 @@ const Auth = () => {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 
+      localStorage.setItem('passwordResetCompleted', '1');
       toast.success('Senha atualizada com sucesso!');
       setIsRecoveryMode(false);
       setNewPassword('');
@@ -123,7 +131,7 @@ const Auth = () => {
       toast.error('Digite seu e-mail');
       return;
     }
-    if (!forgotPasswordEmail.toLowerCase().endsWith('@purepilates.com.br')) {
+    if (!isAllowedEmail(forgotPasswordEmail)) {
       toast.error('Use seu e-mail @purepilates.com.br');
       return;
     }
@@ -162,9 +170,14 @@ const Auth = () => {
     setLoading(true);
     const { error } = await signIn(loginEmail, loginPassword);
     setLoading(false);
-    
+
     if (error) {
-      setError(error.message);
+      const msg = error.message?.toLowerCase() ?? '';
+      if (msg.includes('invalid login credentials') || msg.includes('invalid_credentials')) {
+        setError('Senha incorreta. Atualizamos o sistema recentemente — se você ainda não redefiniu sua senha, clique em "Esqueci minha senha" abaixo.');
+      } else {
+        setError(error.message);
+      }
     }
     // Navigation is handled by useEffect based on approval status
   };
@@ -347,6 +360,15 @@ const Auth = () => {
             </CardHeader>
 
             <CardContent className="pt-6">
+              {!localStorage.getItem('passwordResetCompleted') && (
+                <Alert className="mb-4 border-primary/30 bg-primary/5">
+                  <AlertCircle className="h-4 w-4 text-primary" />
+                  <AlertDescription>
+                    <strong>Atualizamos o sistema.</strong> Se essa é sua primeira vez aqui depois de <strong>23/04/2026</strong>, clique em <strong>"Esqueci minha senha"</strong> abaixo pra criar uma nova senha.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {error && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertCircle className="h-4 w-4" />

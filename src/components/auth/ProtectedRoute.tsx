@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireAdmin, requireColaborador }: ProtectedRouteProps) {
-  const { user, loading, profileLoading, isApproved, isPending, isAdmin, isColaborador } = useAuth();
+  const { user, loading, profileLoading, isAdmin, isColaborador } = useAuth();
 
   if (loading || profileLoading) {
     return null;
@@ -16,10 +16,6 @@ export function ProtectedRoute({ children, requireAdmin, requireColaborador }: P
 
   if (!user) {
     return <Navigate to="/auth" replace />;
-  }
-
-  if (isPending || !isApproved) {
-    return <Navigate to="/aguardando-aprovacao" replace />;
   }
 
   if (requireAdmin && !isAdmin) {
