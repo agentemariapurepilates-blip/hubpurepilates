@@ -39,7 +39,7 @@ type UserType = 'colaborador' | 'franqueado';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, user, isApproved, loading: authLoading } = useAuth();
+  const { signIn, signUp, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signupSuccess, setSignupSuccess] = useState(false);
@@ -82,16 +82,12 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Redirect if already logged in and approved (but not in recovery mode)
+  // Redirect if already logged in (but not in recovery mode)
   useEffect(() => {
     if (!authLoading && user && !isRecoveryMode) {
-      if (isApproved) {
-        navigate('/');
-      } else {
-        navigate('/aguardando-aprovacao');
-      }
+      navigate('/');
     }
-  }, [user, isApproved, authLoading, navigate, isRecoveryMode]);
+  }, [user, authLoading, navigate, isRecoveryMode]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
