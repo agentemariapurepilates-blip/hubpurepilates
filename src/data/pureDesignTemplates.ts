@@ -27,7 +27,7 @@ const sejaInstrutorHTML = `<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
-<div style="position:relative; width:1080px; height:1440px; background:#e8e8e8; background-image:url('/images/pure-design/seja-instrutor-bg.png'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif;">
+<div style="position:relative; width:1080px; height:1440px; background:#e8e8e8; background-image:url('/images/pure-design/seja-instrutor-bg-v2.png'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif;">
 <div style="position:absolute; right:80px; top:180px; width:420px; text-align:right;">
 <h1 style="font-size:82px; font-weight:800; color:#1a1a1a; letter-spacing:6px; margin:0; line-height:1;">{{titulo1}}</h1>
 <h1 style="font-size:68px; font-weight:800; color:#c41230; letter-spacing:6px; margin:0; line-height:1;">{{titulo2}}</h1>
@@ -48,7 +48,7 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     id: 'seja-instrutor',
     name: 'Seja Instrutor',
     category: 'Recrutamento',
-    thumbnail: '/images/pure-design/seja-instrutor-bg.png',
+    thumbnail: '/images/pure-design/seja-instrutor-bg-v2.png',
     width: 1080,
     height: 1440,
     html: sejaInstrutorHTML,
