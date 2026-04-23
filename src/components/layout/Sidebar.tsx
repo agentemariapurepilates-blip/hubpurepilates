@@ -20,6 +20,7 @@ import {
   FileText,
   ClipboardList,
   Palette,
+  Paintbrush,
   Megaphone,
   Package,
   Handshake,
@@ -74,6 +75,7 @@ const Sidebar = () => {
   const colaboradoresNavigation = [
     { name: 'Feed da Sede', href: '/feed', icon: Newspaper },
     { name: 'Solicitação de demandas', href: '/pedidos-demanda', icon: ClipboardList },
+    { name: 'Pure Design', href: '/pure-design', icon: Paintbrush },
   ];
 
   // Minha Área section
