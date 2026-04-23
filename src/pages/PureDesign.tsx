@@ -25,24 +25,40 @@ const PureDesign = () => {
             Nenhum modelo disponível ainda.
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {pureDesignTemplates.map((template) => (
-              <Link key={template.id} to={`/pure-design/${template.id}`}>
-                <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
-                  <div
-                    className="aspect-[3/4] bg-muted bg-cover bg-center"
-                    style={{ backgroundImage: `url(${template.thumbnail})` }}
-                  />
-                  <div className="p-4">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      {template.category}
-                    </p>
-                    <h3 className="font-semibold text-foreground mt-1 group-hover:text-primary transition-colors">
-                      {template.name}
-                    </h3>
-                  </div>
-                </Card>
-              </Link>
+          <div className="space-y-8">
+            {Array.from(
+              pureDesignTemplates.reduce((map, template) => {
+                const list = map.get(template.category) ?? [];
+                list.push(template);
+                map.set(template.category, list);
+                return map;
+              }, new Map<string, typeof pureDesignTemplates>()),
+            ).map(([category, templates]) => (
+              <section key={category} className="space-y-3">
+                <h2 className="text-lg font-semibold text-foreground border-b pb-2">
+                  {category}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {templates.map((template) => (
+                    <Link key={template.id} to={`/pure-design/${template.id}`}>
+                      <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
+                        <div
+                          className="aspect-[3/4] bg-muted bg-cover bg-center"
+                          style={{ backgroundImage: `url(${template.thumbnail})` }}
+                        />
+                        <div className="p-4">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            {template.category}
+                          </p>
+                          <h3 className="font-semibold text-foreground mt-1 group-hover:text-primary transition-colors">
+                            {template.name}
+                          </h3>
+                        </div>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}
