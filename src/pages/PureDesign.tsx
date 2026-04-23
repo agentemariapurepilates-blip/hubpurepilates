@@ -1,10 +1,25 @@
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/card';
-import { Paintbrush } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Paintbrush, Search } from 'lucide-react';
 import { pureDesignTemplates } from '@/data/pureDesignTemplates';
 
+const normalize = (s: string) =>
+  s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+
 const PureDesign = () => {
+  const [search, setSearch] = useState('');
+
+  const filteredTemplates = useMemo(() => {
+    const q = normalize(search);
+    if (!q) return pureDesignTemplates;
+    return pureDesignTemplates.filter((t) =>
+      normalize(`${t.name} ${t.category}`).includes(q),
+    );
+  }, [search]);
+
   return (
     <MainLayout>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -20,14 +35,31 @@ const PureDesign = () => {
           </div>
         </div>
 
+        <div className="relative max-w-xl flex items-stretch rounded-lg overflow-hidden shadow-sm ring-1 ring-border focus-within:ring-2 focus-within:ring-primary transition-shadow">
+          <div className="w-1.5 bg-primary shrink-0" />
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary pointer-events-none" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Pesquisar arte pelo título..."
+              className="pl-11 h-12 text-base border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-card"
+            />
+          </div>
+        </div>
+
         {pureDesignTemplates.length === 0 ? (
           <Card className="p-10 text-center text-muted-foreground">
             Nenhum modelo disponível ainda.
           </Card>
+        ) : filteredTemplates.length === 0 ? (
+          <Card className="p-10 text-center text-muted-foreground">
+            Nenhuma arte encontrada para "{search}".
+          </Card>
         ) : (
           <div className="space-y-8">
             {Array.from(
-              pureDesignTemplates.reduce((map, template) => {
+              filteredTemplates.reduce((map, template) => {
                 const list = map.get(template.category) ?? [];
                 list.push(template);
                 map.set(template.category, list);

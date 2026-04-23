@@ -199,6 +199,28 @@ const PureDesignEditor = () => {
                       onChange={(e) => handleFieldChange(field.id, e.target.value)}
                       className="resize-y min-h-[80px]"
                     />
+                  ) : field.inputType === 'image' ? (
+                    <div className="space-y-2">
+                      {currentValue && (
+                        <img
+                          src={currentValue}
+                          alt=""
+                          className="w-full h-32 object-cover rounded-md border border-border"
+                        />
+                      )}
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = () =>
+                            handleFieldChange(field.id, String(reader.result));
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </div>
                   ) : (
                     <Input
                       value={currentValue}

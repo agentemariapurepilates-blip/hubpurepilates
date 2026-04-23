@@ -3,7 +3,7 @@ export interface TemplateField {
   label: string;
   placeholder: string;
   defaultValue: string;
-  inputType?: 'input' | 'textarea';
+  inputType?: 'input' | 'textarea' | 'image';
   maxLength?: number;
 }
 
@@ -55,6 +55,52 @@ const sejaInstrutorFields: TemplateField[] = [
   { id: 'telefone', label: 'Telefone / WhatsApp', placeholder: '{{telefone}}', defaultValue: '(11) 99999-9999', maxLength: 25 },
 ];
 
+const aniversarioInstrutorPlaceholderPhoto =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 560' preserveAspectRatio='xMidYMid slice'>
+      <defs><linearGradient id='g' x1='0' x2='0' y1='0' y2='1'>
+        <stop offset='0%' stop-color='#c6e6fa'/><stop offset='70%' stop-color='#eaf4fb'/>
+      </linearGradient></defs>
+      <rect width='420' height='560' fill='url(#g)'/>
+      <ellipse cx='230' cy='150' rx='120' ry='55' fill='#ffffff'/>
+      <ellipse cx='320' cy='140' rx='60' ry='35' fill='#ffffff'/>
+      <path d='M0 430 Q 140 360 280 430 T 560 430 L 560 560 L 0 560 Z' fill='#a7c86b'/>
+      <path d='M0 470 Q 200 420 400 470 T 800 470 L 800 560 L 0 560 Z' fill='#7eb04a'/>
+    </svg>`,
+  );
+
+const aniversarioInstrutorHTML = (bgUrl: string, photoDefault: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aniversário do Instrutor</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1080px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif;">
+
+<div style="position:absolute; top:215px; right:95px; width:430px; height:655px; background:#ffffff; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.1); box-sizing:border-box;">
+<img src="{{fotoProfessor}}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.src='${photoDefault}'"/>
+</div>
+
+<div style="position:absolute; top:800px; left:50px; width:470px; font-size:24px; color:#4a4a4a; line-height:1.45; text-align:left; white-space:pre-line;">
+{{mensagem}}
+</div>
+
+<div style="position:absolute; left:80px; bottom:50px; font-size:20px; color:#1a1a1a; font-weight:500;">{{assinatura}}</div>
+
+</div>
+</body>
+</html>`;
+
+const aniversarioInstrutorFields: TemplateField[] = [
+  { id: 'fotoProfessor', label: 'Foto do instrutor(a)', placeholder: '{{fotoProfessor}}', defaultValue: aniversarioInstrutorPlaceholderPhoto, inputType: 'image' },
+  { id: 'mensagem', label: 'Mensagem', placeholder: '{{mensagem}}', defaultValue: 'Instrutor(a) ____ desejamos muitas felicidades neste novo ciclo e que você continue sendo esse exemplo de profissional e de pessoa!', inputType: 'textarea', maxLength: 200 },
+  { id: 'assinatura', label: 'Assinatura', placeholder: '{{assinatura}}', defaultValue: 'de: equipe Pure Pilates', maxLength: 50 },
+];
+
 export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'seja-instrutor',
@@ -75,6 +121,16 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     height: 1440,
     html: sejaInstrutorHTML('/images/pure-design/seja-instrutor-2-bg-v3.png'),
     fields: sejaInstrutorFields,
+  },
+  {
+    id: 'aniversario-instrutor',
+    name: 'Aniversário do Instrutor(a)',
+    category: 'Datas Comemorativas',
+    thumbnail: '/images/pure-design/aniversario-instrutor-bg.png',
+    width: 1080,
+    height: 1080,
+    html: aniversarioInstrutorHTML('/images/pure-design/aniversario-instrutor-bg.png', aniversarioInstrutorPlaceholderPhoto),
+    fields: aniversarioInstrutorFields,
   },
 ];
 
