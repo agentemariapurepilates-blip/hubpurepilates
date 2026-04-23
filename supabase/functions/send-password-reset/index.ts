@@ -4,11 +4,13 @@ import { getCorsHeaders } from '../_shared/cors.ts'
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
 
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    // Get the authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return new Response(
@@ -20,13 +22,13 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')!
-    const resendFrom = Deno.env.get('RESEND_FROM') ?? 'Pure Pilates <onboarding@resend.dev>'
 
+    // Create a client with the user's token to verify they are admin
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     })
 
+    // Get the current user
     const { data: { user: currentUser }, error: userError } = await supabaseClient.auth.getUser()
     if (userError || !currentUser) {
       return new Response(
@@ -35,6 +37,7 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Check if current user is admin
     const { data: roleData, error: roleError } = await supabaseClient
       .from('user_roles')
       .select('role')
@@ -49,6 +52,7 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Get the email from the request body
     const { email } = await req.json()
     if (!email) {
       return new Response(
@@ -57,82 +61,26 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Create admin client to send password reset
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
     })
 
+    // Get the origin from the request for the redirect URL
     const origin = req.headers.get('origin') || 'https://hub.purepilates.com.br'
 
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: { redirectTo: `${origin}/auth?type=recovery` },
+    // Send password reset email using Supabase's built-in functionality
+    const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/auth?type=recovery`,
     })
 
-    if (linkError || !linkData?.properties?.action_link) {
-      console.error('Error generating recovery link:', linkError)
+    if (resetError) {
+      console.error('Error sending password reset:', resetError)
       return new Response(
-        JSON.stringify({ error: 'Failed to generate recovery link', details: linkError?.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const actionLink = linkData.properties.action_link
-
-    const html = `<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="UTF-8"><title>Redefinir senha — Pure Pilates</title></head>
-<body style="margin:0; padding:0; background:#f4f4f5; font-family:Arial, sans-serif;">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f4f5; padding:40px 20px;">
-<tr><td align="center">
-<table role="presentation" width="560" cellspacing="0" cellpadding="0" style="background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-<tr><td style="background:#c41230; padding:24px; text-align:center;">
-<h1 style="color:#ffffff; margin:0; font-size:22px; font-weight:700;">Pure Pilates</h1>
-</td></tr>
-<tr><td style="padding:32px 32px 24px;">
-<h2 style="color:#1a1a1a; font-size:20px; margin:0 0 16px;">Redefinição de senha</h2>
-<p style="color:#444; font-size:15px; line-height:1.5; margin:0 0 24px;">
-Olá! Recebemos uma solicitação para redefinir sua senha do Hub Pure Pilates. Clique no botão abaixo para criar uma nova senha:
-</p>
-<p style="text-align:center; margin:32px 0;">
-<a href="${actionLink}" style="display:inline-block; background:#c41230; color:#ffffff; padding:14px 28px; border-radius:8px; text-decoration:none; font-weight:600; font-size:15px;">Redefinir minha senha</a>
-</p>
-<p style="color:#666; font-size:13px; line-height:1.5; margin:24px 0 0;">
-Se o botão não funcionar, copie e cole este link no navegador:<br>
-<a href="${actionLink}" style="color:#c41230; word-break:break-all;">${actionLink}</a>
-</p>
-<p style="color:#999; font-size:12px; line-height:1.5; margin:24px 0 0;">
-Se você não solicitou essa redefinição, pode ignorar este e-mail. O link expira em 1 hora.
-</p>
-</td></tr>
-<tr><td style="background:#fafafa; padding:16px; text-align:center; color:#999; font-size:12px;">
-Pure Pilates · Hub interno
-</td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`
-
-    const resendResp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: resendFrom,
-        to: [email],
-        subject: 'Redefinição de senha — Hub Pure Pilates',
-        html,
-      }),
-    })
-
-    if (!resendResp.ok) {
-      const errBody = await resendResp.text()
-      console.error('Resend error:', resendResp.status, errBody)
-      return new Response(
-        JSON.stringify({ error: 'Failed to send email via Resend', details: errBody }),
+        JSON.stringify({ error: 'Failed to send password reset email', details: resetError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
