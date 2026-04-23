@@ -51,8 +51,8 @@ function App() {
             <Route path="/materiais-implantacao" element={<ProtectedRoute><MateriaisImplantacao /></ProtectedRoute>} />
             <Route path="/parcerias" element={<ProtectedRoute><Parcerias /></ProtectedRoute>} />
             <Route path="/manual-sistema" element={<ProtectedRoute><ManualSistema /></ProtectedRoute>} />
-            <Route path="/pure-design" element={<ProtectedRoute requireColaborador><PureDesign /></ProtectedRoute>} />
-            <Route path="/pure-design/:id" element={<ProtectedRoute requireColaborador><PureDesignEditor /></ProtectedRoute>} />
+            <Route path="/pure-design" element={<ProtectedRoute><PureDesign /></ProtectedRoute>} />
+            <Route path="/pure-design/:id" element={<ProtectedRoute><PureDesignEditor /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
