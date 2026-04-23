@@ -28,27 +28,27 @@ const sejaInstrutorHTML = (bgUrl: string) => `<!DOCTYPE html>
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1440px; background:#e8e8e8; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif;">
-<div style="position:absolute; right:80px; top:180px; width:420px; text-align:right;">
-<h1 style="font-size:82px; font-weight:800; color:#1a1a1a; letter-spacing:6px; margin:0; line-height:1;">{{titulo1}}</h1>
-<h1 style="font-size:68px; font-weight:800; color:#c41230; letter-spacing:6px; margin:0; line-height:1;">{{titulo2}}</h1>
-<p style="font-size:32px; color:#555555; margin-top:35px;">{{subtitulo}}</p>
-<p style="font-size:40px; font-weight:700; color:#1a1a1a; margin-top:10px;">{{cargo}}</p>
-<p style="font-size:34px; font-weight:700; color:#c41230; margin-top:5px; transform:translateX(20px);">{{localizacao}}</p>
-<p style="font-size:34px; color:#777777; margin-top:5px;">{{horario}}</p>
-<p style="font-size:28px; color:#666666; line-height:1.4; margin-top:25px; width:280px; margin-left:auto;">{{descricao}}</p>
-<p style="font-size:26px; font-weight:600; color:#c41230; margin-top:50px;">{{telefone}}</p>
-<p style="font-size:26px; font-weight:600; color:#c41230; margin-top:6px;">{{email}}</p>
+<div style="position:absolute; right:80px; top:120px; width:700px; text-align:right;">
+<h1 style="font-size:100px; font-weight:800; color:#1a1a1a; letter-spacing:6px; margin:0; line-height:1;">{{titulo1}}</h1>
+<h1 style="font-size:84px; font-weight:800; color:#c41230; letter-spacing:6px; margin:0; line-height:1;">{{titulo2}}</h1>
+<p style="font-size:40px; font-weight:700; color:#1a1a1a; margin-top:35px; width:280px; margin-left:auto;">{{cargo}}</p>
+<p style="font-size:34px; font-weight:700; color:#c41230; margin-top:5px; width:280px; margin-left:auto; transform:translateX(20px);">{{localizacao}}</p>
+<p style="font-size:34px; font-weight:700; color:#777777; margin-top:5px; transform:translateX(20px);">{{dias}}</p>
+<p style="font-size:34px; font-weight:700; color:#777777; margin-top:5px; transform:translateX(20px);">{{horario}}</p>
+<p style="font-size:28px; color:#666666; line-height:1.4; margin-top:25px; width:340px; margin-left:auto;">{{descricao}}</p>
+<p style="font-size:30px; font-weight:600; color:#c41230; margin-top:50px;">{{telefone}}</p>
+<p style="font-size:30px; font-weight:600; color:#c41230; margin-top:6px;">{{email}}</p>
 </div>
 </div>
 </body>
 </html>`;
 
 const sejaInstrutorFields: TemplateField[] = [
-  { id: 'titulo1', label: 'Título linha 1', placeholder: '{{titulo1}}', defaultValue: 'SEJA', maxLength: 8 },
-  { id: 'titulo2', label: 'Título linha 2', placeholder: '{{titulo2}}', defaultValue: 'INSTRUTOR', maxLength: 10 },
-  { id: 'subtitulo', label: 'Subtítulo', placeholder: '{{subtitulo}}', defaultValue: 'Venha fazer parte do nosso time', maxLength: 35 },
+  { id: 'titulo1', label: 'Título linha 1', placeholder: '{{titulo1}}', defaultValue: 'Faça parte', maxLength: 15 },
+  { id: 'titulo2', label: 'Título linha 2', placeholder: '{{titulo2}}', defaultValue: 'do nosso time', maxLength: 15 },
   { id: 'cargo', label: 'Cargo', placeholder: '{{cargo}}', defaultValue: 'Instrutor(a) de Pilates', maxLength: 30 },
   { id: 'localizacao', label: 'Localização', placeholder: '{{localizacao}}', defaultValue: 'São Paulo, SP — Presencial', maxLength: 70 },
+  { id: 'dias', label: 'Dias', placeholder: '{{dias}}', defaultValue: 'De segunda a sexta', maxLength: 50 },
   { id: 'horario', label: 'Horário', placeholder: '{{horario}}', defaultValue: 'Das 07:00 às 14:00', maxLength: 50 },
   { id: 'descricao', label: 'Descrição', placeholder: '{{descricao}}', defaultValue: 'Procuramos profissional com formação completa em Pilates para conduzir aulas em grupo e individuais.', inputType: 'textarea', maxLength: 150 },
   { id: 'email', label: 'E-mail de contato', placeholder: '{{email}}', defaultValue: 'contato@purepilates.com.br', maxLength: 40 },
@@ -60,20 +60,20 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     id: 'seja-instrutor',
     name: 'Seja Instrutor',
     category: 'Recrutamento',
-    thumbnail: '/images/pure-design/seja-instrutor-bg-v2.png',
+    thumbnail: '/images/pure-design/seja-instrutor-bg-v4.png',
     width: 1080,
     height: 1440,
-    html: sejaInstrutorHTML('/images/pure-design/seja-instrutor-bg-v2.png'),
+    html: sejaInstrutorHTML('/images/pure-design/seja-instrutor-bg-v4.png'),
     fields: sejaInstrutorFields,
   },
   {
     id: 'seja-instrutor-2',
     name: 'Seja Instrutor — Modelo 2',
     category: 'Recrutamento',
-    thumbnail: '/images/pure-design/seja-instrutor-2-bg.png',
+    thumbnail: '/images/pure-design/seja-instrutor-2-bg-v3.png',
     width: 1080,
     height: 1440,
-    html: sejaInstrutorHTML('/images/pure-design/seja-instrutor-2-bg.png'),
+    html: sejaInstrutorHTML('/images/pure-design/seja-instrutor-2-bg-v3.png'),
     fields: sejaInstrutorFields,
   },
 ];
