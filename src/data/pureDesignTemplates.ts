@@ -36,7 +36,7 @@ const sejaInstrutorHTML = (bgUrl: string) => `<!DOCTYPE html>
 <p style="font-size:34px; font-weight:700; color:#c41230; margin-top:5px; transform:translateX(20px);">{{localizacao}}</p>
 <p style="font-size:34px; color:#777777; margin-top:5px;">{{horario}}</p>
 <p style="font-size:28px; color:#666666; line-height:1.4; margin-top:25px; width:280px; margin-left:auto;">{{descricao}}</p>
-<p style="font-size:26px; font-weight:600; color:#c41230; margin-top:100px;">{{telefone}}</p>
+<p style="font-size:26px; font-weight:600; color:#c41230; margin-top:50px;">{{telefone}}</p>
 <p style="font-size:26px; font-weight:600; color:#c41230; margin-top:6px;">{{email}}</p>
 </div>
 </div>
