@@ -18,7 +18,7 @@ import TimelineLandingPage, { hasLandingPage } from '@/components/timeline/Timel
 import { toast } from 'sonner';
 
 const POSTS_PER_PAGE = 4;
-const FIXED_MONTHS = ['2026-04', '2026-03'];
+const FIXED_MONTHS = ['2026-05', '2026-04', '2026-03'];
 
 const NovidadesDoMes = () => {
   const { user, loading: authLoading, isApproved, isColaborador, isAdmin } = useAuth();
