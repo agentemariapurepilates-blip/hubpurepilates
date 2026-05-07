@@ -25,6 +25,9 @@ import PureDesign from "./pages/PureDesign";
 import PureDesignEditor from "./pages/PureDesignEditor";
 import NotFound from "./pages/NotFound";
 import AgenteInstagramFacebook from "./pages/AgenteInstagramFacebook";
+import AgenteMonitoramentoMetricas from "./pages/AgenteMonitoramentoMetricas";
+import AuthCallbackMeta from "./pages/AuthCallbackMeta";
+import AuthCallbackTikTok from "./pages/AuthCallbackTikTok";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +61,13 @@ function App() {
             {/* Backward compat: redirect legado */}
             <Route path="/agente-planejamento-editorial" element={<ProtectedRoute><AgenteInstagramFacebook /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />
+            {/* TODO: voltar para `requireAdmin` antes do release. Liberado temporariamente para preview. */}
+            <Route
+              path="/agente-monitoramento/metricas"
+              element={<ProtectedRoute><AgenteMonitoramentoMetricas /></ProtectedRoute>}
+            />
+            <Route path="/auth/callback/meta" element={<AuthCallbackMeta />} />
+            <Route path="/auth/callback/tiktok" element={<AuthCallbackTikTok />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

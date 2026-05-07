@@ -24,7 +24,9 @@ import {
   Megaphone,
   Package,
   Handshake,
-  BookOpen
+  BookOpen,
+  BarChart3,
+  Heart,
 } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState } from 'react';
@@ -82,6 +84,12 @@ const Sidebar = () => {
   const socialMediaNavigation = [
     { name: 'Agente Instagram e Facebook', href: '/agente-instagram-facebook', icon: Video },
     { name: 'Agente Tik Tok', href: '/agente-tiktok', icon: Video },
+  ];
+
+  // Agente Monitoramento section - only for admins
+  const monitoramentoNavigation = [
+    { name: 'Métricas', href: '/agente-monitoramento/metricas', icon: BarChart3, disabled: false },
+    { name: 'Saúde de marca', href: '#', icon: Heart, disabled: true },
   ];
 
   // Minha Área section
@@ -177,6 +185,47 @@ const Sidebar = () => {
                 <item.icon className="h-5 w-5" />
                 {item.name}
               </NavLink>
+            ))}
+          </>
+        )}
+
+        {/* Agente Monitoramento Section · TODO: voltar para `{isAdmin && ...}` antes do release. Liberado temporariamente para preview. */}
+        {(true) && (
+          <>
+            <div className="pt-4 pb-2">
+              <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <BarChart3 className="h-3.5 w-3.5" />
+                Agente Monitoramento
+              </p>
+            </div>
+            {monitoramentoNavigation.map((item) => (
+              item.disabled ? (
+                <div
+                  key={item.name}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground/50 cursor-not-allowed"
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                  <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0">Em breve</Badge>
+                </div>
+              ) : (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200',
+                      isActive
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                    )
+                  }
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                </NavLink>
+              )
             ))}
           </>
         )}
