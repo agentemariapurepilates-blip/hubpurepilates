@@ -615,7 +615,7 @@ const AgenteInstagramFacebook = () => {
             {/* Botão para inicio da atividade */}
             <Button
               onClick={handleGenerate}
-              disabled={!selectedMonth || selectedNetworks.length === 0 || generating}
+              disabled={!selectedMonth || generating}
               className="w-full"
             >
               {generating ? (
