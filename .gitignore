@@ -34,3 +34,4 @@ dist-ssr
 # Dumps de migração do banco e segredos locais
 .migration/
 .supabase-new-db-password.txt
+supabase/.temp/
