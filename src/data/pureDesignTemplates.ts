@@ -124,6 +124,33 @@ const diaDasMaesFields: TemplateField[] = [
   { id: 'unidade', label: 'Unidade', placeholder: '{{unidade}}', defaultValue: 'Unidade Vila Mariana', maxLength: 70 },
 ];
 
+const diaDasMaes50OffHTML = (bgUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dia das Mães - 50% OFF</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1350px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+<div style="position:absolute; left:742px; top:519px; width:338px; height:110px; display:flex; align-items:center; justify-content:center; text-align:center; color:#ffffff; font-size:30px; font-weight:400; line-height:1.1; letter-spacing:0; white-space:nowrap;">
+{{telefone}}
+</div>
+<div style="position:absolute; left:70px; bottom:55px; width:940px; min-height:104px; box-sizing:border-box; padding:22px 34px; border-radius:999px; background:#c10230; color:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+<div style="font-size:34px; font-weight:700; line-height:1.12; white-space:nowrap;">{{nomeUnidade}}</div>
+<div style="margin-top:8px; font-size:24px; font-weight:300; line-height:1.15; white-space:nowrap;">{{enderecoUnidade}}</div>
+</div>
+</div>
+</body>
+</html>`;
+
+const diaDasMaes50OffFields: TemplateField[] = [
+  { id: 'telefone', label: 'Telefone da unidade', placeholder: '{{telefone}}', defaultValue: '(11) 99999-9999', maxLength: 25 },
+  { id: 'nomeUnidade', label: 'Nome da unidade', placeholder: '{{nomeUnidade}}', defaultValue: 'Nome da Unidade', maxLength: 30 },
+  { id: 'enderecoUnidade', label: 'Endereço da unidade', placeholder: '{{enderecoUnidade}}', defaultValue: 'Endereço da unidade', maxLength: 68 },
+];
+
 export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'seja-instrutor',
@@ -158,12 +185,22 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'dia-das-maes',
     name: 'Dia das Mães',
-    category: 'Datas Comemorativas',
+    category: 'Dia das mães',
     thumbnail: '/images/pure-design/dia-das-maes-bg.png',
     width: 1080,
     height: 1440,
     html: diaDasMaesHTML('/images/pure-design/dia-das-maes-bg.png'),
     fields: diaDasMaesFields,
+  },
+  {
+    id: 'dia-das-maes-50-off',
+    name: 'Dupla Dinâmica 50% OFF',
+    category: 'Dia das mães',
+    thumbnail: '/images/pure-design/dia-das-maes-50-off.png',
+    width: 1080,
+    height: 1350,
+    html: diaDasMaes50OffHTML('/images/pure-design/dia-das-maes-50-off.png'),
+    fields: diaDasMaes50OffFields,
   },
 ];
 
