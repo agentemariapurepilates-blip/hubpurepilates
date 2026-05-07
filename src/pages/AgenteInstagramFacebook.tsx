@@ -8,31 +8,36 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CalendarDays, Play, Loader2, Instagram, Facebook, Music2, CheckCircle2, XCircle, Star, Clock } from 'lucide-react';
+import { CalendarDays, Play, Loader2, Instagram, Facebook, CheckCircle2, XCircle, Star, Clock, Download } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isToday, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType } from 'docx';
 
 interface GeneratedContent {
   id: string;
   date: string;
   title: string;
-  network: 'Instagram Studios' | 'Facebook Studios' | 'Tik Tok';
+  network: 'Instagram Studios' | 'Facebook Studios';
   description: string;
   status: 'pending' | 'approved' | 'rejected' | 'favorite';
+  content_type?: 'video' | 'estatico' | 'carrossel' | null;
+  legenda?: string | null;
+  roteiro?: string | null;
+  texto_arte?: string | null;
+  briefing_arte?: string | null;
 }
 
-const AgentePlanejamentoEditorial = () => {
+const AgenteInstagramFacebook = () => {
   const { user } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState('2026');
   const [useGuide2026, setUseGuide2026] = useState(true);
   const [usePdf, setUsePdf] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [instructions, setInstructions] = useState('');
   const [generatedContents, setGeneratedContents] = useState<GeneratedContent[]>([]);
   const [resultMonth, setResultMonth] = useState<Date | null>(null);
@@ -41,23 +46,27 @@ const AgentePlanejamentoEditorial = () => {
   const [loading, setLoading] = useState(false);
   const [expandedItem, setExpandedItem] = useState<GeneratedContent | null>(null);
   const [pastPlans, setPastPlans] = useState<Array<{ month: string; year: string; total: number; approved: number }>>([]);
+  const [downloadingDocx, setDownloadingDocx] = useState(false);
 
   const networkColors: Record<GeneratedContent['network'], string> = {
-    'Tik Tok': 'bg-violet-500 text-white',
     'Instagram Studios': 'bg-pink-500 text-white',
     'Facebook Studios': 'bg-sky-500 text-white',
   };
 
   const networkLegendColors: Record<GeneratedContent['network'], string> = {
-    'Tik Tok': 'bg-violet-500',
     'Instagram Studios': 'bg-pink-500',
     'Facebook Studios': 'bg-sky-500',
   };
 
   const networkIcons: Record<GeneratedContent['network'], typeof Instagram> = {
-    'Tik Tok': Music2,
     'Instagram Studios': Instagram,
     'Facebook Studios': Facebook,
+  };
+
+  const contentTypeLabel: Record<NonNullable<GeneratedContent['content_type']>, string> = {
+    video: 'Vídeo / Reels',
+    estatico: 'Estático',
+    carrossel: 'Carrossel',
   };
 
   const statusIcons: Record<GeneratedContent['status'], typeof Clock> = {
@@ -82,30 +91,8 @@ const AgentePlanejamentoEditorial = () => {
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
 
-  const networkOptions: Array<{ id: string; label: string; sends: string[] }> = [
-    { id: 'instagram-facebook', label: 'Instagram + Facebook', sends: ['Instagram Studios', 'Facebook Studios'] },
-    { id: 'tiktok', label: 'Tik Tok', sends: ['Tik Tok'] },
-  ];
-
-  const isOptionChecked = (option: typeof networkOptions[number]) =>
-    option.sends.every((n) => selectedNetworks.includes(n));
-
-  const handleNetworkOptionChange = (option: typeof networkOptions[number], checked: boolean) => {
-    if (checked) {
-      const merged = Array.from(new Set([...selectedNetworks, ...option.sends]));
-      setSelectedNetworks(merged);
-    } else {
-      setSelectedNetworks(selectedNetworks.filter((n) => !option.sends.includes(n)));
-    }
-  };
-
-  const handleNetworkChange = (network: string, checked: boolean) => {
-    if (checked) {
-      setSelectedNetworks([...selectedNetworks, network]);
-    } else {
-      setSelectedNetworks(selectedNetworks.filter(n => n !== network));
-    }
-  };
+  // Sempre Instagram + Facebook (Facebook é replicado do IG pela edge function)
+  const fixedNetworks = ['Instagram Studios', 'Facebook Studios'];
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -118,6 +105,81 @@ const AgentePlanejamentoEditorial = () => {
   const formatContentDate = (day: number) => {
     const monthIndex = months.indexOf(selectedMonth);
     return new Date(Number(selectedYear), monthIndex, day).toISOString();
+  };
+
+  // Dispara IA #2 (geração de roteiro/legenda/texto-arte) para os posts aprovados que sejam Instagram (Facebook é replicado).
+  // TikTok também é processado.
+  const downloadRoteiroDocx = async (post: GeneratedContent) => {
+    if (!post.roteiro) {
+      toast.error('Esse conteúdo não tem roteiro.');
+      return;
+    }
+    setDownloadingDocx(true);
+    try {
+      const dataFormatada = format(parseISO(post.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+      const lines = post.roteiro.split('\n');
+      const doc = new Document({
+        styles: {
+          default: { document: { run: { font: 'Calibri', size: 22 } } },
+        },
+        sections: [
+          {
+            properties: {},
+            children: [
+              new Paragraph({
+                heading: HeadingLevel.HEADING_1,
+                alignment: AlignmentType.CENTER,
+                children: [new TextRun({ text: 'Roteiro de Vídeo', bold: true, size: 36, color: 'C10230' })],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [new TextRun({ text: 'Pure Pilates · Agente Instagram e Facebook', italics: true, color: '7d7c7c' })],
+              }),
+              new Paragraph({ children: [new TextRun('')] }),
+              new Paragraph({ children: [new TextRun({ text: 'Título: ', bold: true }), new TextRun(post.title)] }),
+              new Paragraph({ children: [new TextRun({ text: 'Data de publicação: ', bold: true }), new TextRun(dataFormatada)] }),
+              new Paragraph({ children: [new TextRun({ text: 'Tipo: ', bold: true }), new TextRun(post.content_type ? contentTypeLabel[post.content_type] : '-')] }),
+              new Paragraph({ children: [new TextRun('')] }),
+              new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'Briefing', bold: true })] }),
+              new Paragraph({ children: [new TextRun(post.description)] }),
+              new Paragraph({ children: [new TextRun('')] }),
+              new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'Roteiro', bold: true })] }),
+              ...lines.map((line) => new Paragraph({ children: [new TextRun(line)] })),
+              new Paragraph({ children: [new TextRun('')] }),
+              ...(post.legenda
+                ? [
+                    new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'Legenda do post', bold: true })] }),
+                    new Paragraph({ children: [new TextRun(post.legenda)] }),
+                  ]
+                : []),
+              ...(post.briefing_arte
+                ? [
+                    new Paragraph({ children: [new TextRun('')] }),
+                    new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'Briefing da arte (designer)', bold: true })] }),
+                    new Paragraph({ children: [new TextRun(post.briefing_arte)] }),
+                  ]
+                : []),
+            ],
+          },
+        ],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const safeTitle = post.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 50);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `roteiro-${format(parseISO(post.date), 'yyyy-MM-dd')}-${safeTitle}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erro ao gerar DOCX:', err);
+      toast.error('Falha ao gerar o DOCX.');
+    } finally {
+      setDownloadingDocx(false);
+    }
   };
 
   const handleUpdateStatus = async (id: string, status: GeneratedContent['status']) => {
@@ -156,9 +218,10 @@ const AgentePlanejamentoEditorial = () => {
     if (error) {
       console.error('Erro ao aprovar tudo:', error);
       toast.error('Falha ao salvar aprovação em massa.');
-    } else {
-      toast.success(`${pendingIds.length} postagens aprovadas.`);
+      return;
     }
+
+    toast.success(`${pendingIds.length} postagens aprovadas.`);
   };
 
   const loadPostsForMonth = async (month: string, year: string) => {
@@ -170,6 +233,7 @@ const AgentePlanejamentoEditorial = () => {
         .eq('user_id', user.id)
         .eq('month', month)
         .eq('year', year)
+        .in('network', ['Instagram Studios', 'Facebook Studios'])
         .order('post_date', { ascending: true });
 
       if (error) throw error;
@@ -181,6 +245,11 @@ const AgentePlanejamentoEditorial = () => {
         title: string;
         description: string;
         status: GeneratedContent['status'];
+        content_type?: string | null;
+        legenda?: string | null;
+        roteiro?: string | null;
+        texto_arte?: string | null;
+        briefing_arte?: string | null;
       }>;
 
       if (posts.length > 0) {
@@ -193,6 +262,11 @@ const AgentePlanejamentoEditorial = () => {
             title: p.title,
             description: p.description,
             status: p.status,
+            content_type: (p.content_type as GeneratedContent['content_type']) ?? null,
+            legenda: p.legenda ?? null,
+            roteiro: p.roteiro ?? null,
+            texto_arte: p.texto_arte ?? null,
+            briefing_arte: p.briefing_arte ?? null,
           })),
         );
         setResultMonth(new Date(Number(year), monthIndex, 1));
@@ -211,7 +285,8 @@ const AgentePlanejamentoEditorial = () => {
     if (!user) return;
     const { data, error } = await (supabase.from('editorial_posts' as never) as any)
       .select('month, year, status')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .in('network', ['Instagram Studios', 'Facebook Studios']);
 
     if (error) {
       console.error('Erro ao listar planos:', error);
@@ -250,7 +325,7 @@ const AgentePlanejamentoEditorial = () => {
   const generateMockContent = (): GeneratedContent[] => {
     const monthIndex = months.indexOf(selectedMonth);
     const baseDates = [3, 6, 9, 12, 16, 19, 22, 25, 28];
-    return selectedNetworks.flatMap((network, index) =>
+    return fixedNetworks.flatMap((network, index) =>
       baseDates.slice(0, 3).map((day, offset) => ({
         id: `${network}-${day}-${offset}`,
         date: new Date(Number(selectedYear), monthIndex, Math.min(day + index * 2, 28)).toISOString(),
@@ -258,18 +333,24 @@ const AgentePlanejamentoEditorial = () => {
         title: `${network} - Conteúdo ${offset + 1}`,
         description: `Agenda ${selectedMonth} ${selectedYear} para ${network}. Instruções: ${instructions || 'Sem instruções adicionais.'}`,
         status: 'pending' as const,
+        content_type: (offset === 0 ? 'video' : offset === 1 ? 'estatico' : 'carrossel') as GeneratedContent['content_type'],
+        legenda: 'Legenda de exemplo no modo demo. Ative o motor de IA para textos reais.',
+        roteiro: offset === 0 ? 'Roteiro de exemplo no modo demo.' : '',
+        texto_arte: offset !== 0 ? 'Texto na arte (demo)' : '',
+        briefing_arte: 'Briefing da arte (demo).',
       })),
     );
   };
 
   const persistPosts = async (posts: GeneratedContent[]) => {
     if (!user) return [];
-    // Apaga posts existentes do mês/ano antes de inserir os novos
+    // Apaga posts existentes do mês/ano (apenas IG/FB) antes de inserir os novos
     await (supabase.from('editorial_posts' as never) as any)
       .delete()
       .eq('user_id', user.id)
       .eq('month', selectedMonth)
-      .eq('year', selectedYear);
+      .eq('year', selectedYear)
+      .in('network', ['Instagram Studios', 'Facebook Studios']);
 
     const rows = posts.map((p) => ({
       user_id: user.id,
@@ -280,6 +361,11 @@ const AgentePlanejamentoEditorial = () => {
       title: p.title,
       description: p.description,
       status: p.status,
+      content_type: p.content_type ?? null,
+      legenda: p.legenda ?? null,
+      roteiro: p.roteiro ?? null,
+      texto_arte: p.texto_arte ?? null,
+      briefing_arte: p.briefing_arte ?? null,
     }));
 
     const { data, error } = await (supabase.from('editorial_posts' as never) as any)
@@ -292,19 +378,24 @@ const AgentePlanejamentoEditorial = () => {
       return posts;
     }
 
-    return ((data ?? []) as Array<{ id: string; post_date: string; network: string; title: string; description: string; status: GeneratedContent['status'] }>).map((row) => ({
+    return ((data ?? []) as Array<{ id: string; post_date: string; network: string; title: string; description: string; status: GeneratedContent['status']; content_type?: string | null; legenda?: string | null; roteiro?: string | null; texto_arte?: string | null; briefing_arte?: string | null }>).map((row) => ({
       id: row.id,
       date: row.post_date,
       network: row.network as GeneratedContent['network'],
       title: row.title,
       description: row.description,
       status: row.status,
+      content_type: (row.content_type as GeneratedContent['content_type']) ?? null,
+      legenda: row.legenda ?? null,
+      roteiro: row.roteiro ?? null,
+      texto_arte: row.texto_arte ?? null,
+      briefing_arte: row.briefing_arte ?? null,
     }));
   };
 
   const handleGenerate = async () => {
-    if (!selectedMonth || selectedNetworks.length === 0) {
-      toast.error('Selecione o mês e ao menos uma rede.');
+    if (!selectedMonth) {
+      toast.error('Selecione o mês.');
       return;
     }
 
@@ -327,7 +418,7 @@ const AgentePlanejamentoEditorial = () => {
         body: {
           month: selectedMonth,
           year: selectedYear,
-          networks: selectedNetworks,
+          networks: fixedNetworks,
           instructions: instructions || undefined,
           editorialGuide: guides.join(' + '),
         },
@@ -335,7 +426,7 @@ const AgentePlanejamentoEditorial = () => {
 
       if (error) throw error;
 
-      const posts = (data?.posts ?? []) as Array<{ date: string; network: string; title: string; description: string }>;
+      const posts = (data?.posts ?? []) as Array<{ date: string; network: string; title: string; description: string; content_type?: string; legenda?: string; roteiro?: string; texto_arte?: string; briefing_arte?: string }>;
       if (!posts.length) {
         throw new Error('Nenhum conteúdo retornado.');
       }
@@ -347,12 +438,17 @@ const AgentePlanejamentoEditorial = () => {
         title: p.title,
         description: p.description,
         status: 'pending',
+        content_type: (p.content_type as GeneratedContent['content_type']) ?? null,
+        legenda: p.legenda ?? null,
+        roteiro: p.roteiro ?? null,
+        texto_arte: p.texto_arte ?? null,
+        briefing_arte: p.briefing_arte ?? null,
       }));
 
       const saved = await persistPosts(generated);
       setGeneratedContents(saved);
       setResultMonth(new Date(Number(selectedYear), monthIndex, 1));
-      toast.success(`${posts.length} postagens geradas e salvas.`);
+      toast.success(`${posts.length} postagens geradas com roteiros, legendas e textos prontos.`);
     } catch (err) {
       console.error(err);
       toast.error('Não foi possível gerar pela IA. Usando exemplo.');
@@ -380,8 +476,8 @@ const AgentePlanejamentoEditorial = () => {
         <div className="flex items-center gap-3 mb-6">
           <CalendarDays className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">Agente Planejamento Editorial</h1>
-            <p className="text-muted-foreground">Configure os calendários para todas as redes sociais</p>
+            <h1 className="text-3xl font-bold">Agente Instagram e Facebook</h1>
+            <p className="text-muted-foreground">Planeja o mês inteiro de Instagram + Facebook e gera roteiros, legendas, textos da arte e briefings de design — tudo de uma vez.</p>
           </div>
         </div>
 
@@ -493,24 +589,11 @@ const AgentePlanejamentoEditorial = () => {
               </div>
             </div>
 
-            {/* Selecionar redes sociais */}
-            <div className="space-y-4">
-              <Label>Redes Sociais</Label>
-              <p className="text-xs text-muted-foreground -mt-2">
-                Instagram e Facebook compartilham o mesmo conteúdo. Tik Tok tem conteúdo próprio (3x/semana).
-              </p>
-              <div className="space-y-2">
-                {networkOptions.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={option.id}
-                      checked={isOptionChecked(option)}
-                      onCheckedChange={(checked) => handleNetworkOptionChange(option, checked as boolean)}
-                    />
-                    <Label htmlFor={option.id} className="cursor-pointer">{option.label}</Label>
-                  </div>
-                ))}
-              </div>
+            {/* Redes: fixo Instagram + Facebook (Facebook replica IG) */}
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground flex items-center gap-2">
+              <Instagram className="h-3.5 w-3.5 text-pink-500" />
+              <Facebook className="h-3.5 w-3.5 text-sky-500" />
+              <span>Conteúdo gerado para <strong className="text-foreground">Instagram + Facebook</strong>. Facebook replica o Instagram automaticamente.</span>
             </div>
 
             {/* Campo de Instruções específicas */}
@@ -704,40 +787,103 @@ const AgentePlanejamentoEditorial = () => {
       </div>
 
       <Dialog open={!!expandedItem} onOpenChange={(open) => !open && setExpandedItem(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           {expandedItem && (
             <>
               <DialogHeader>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${networkColors[expandedItem.network]}`}>
-                    {expandedItem.network}
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  {expandedItem.content_type && (
+                    <span className="rounded-full px-3 py-1 text-xs font-semibold bg-purple-500 text-white">
+                      {contentTypeLabel[expandedItem.content_type]}
+                    </span>
+                  )}
+                  <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-pink-500 text-white flex items-center gap-1">
+                    <Instagram className="h-3 w-3" /> Instagram
+                  </span>
+                  <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-sky-500 text-white flex items-center gap-1">
+                    <Facebook className="h-3 w-3" /> Facebook
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {format(new Date(expandedItem.date), "dd/MM/yyyy")}
                   </span>
                 </div>
-                <DialogTitle className="text-left mt-3">{expandedItem.title}</DialogTitle>
+                <DialogTitle className="text-left text-xl">{expandedItem.title}</DialogTitle>
               </DialogHeader>
+
               <div className="space-y-4 py-2">
                 <div>
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Briefing</Label>
                   <p className="text-sm mt-1 whitespace-pre-line">{expandedItem.description}</p>
                 </div>
+
+                {/* Roteiro (vídeo) */}
+                {expandedItem.content_type === 'video' && (
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-xs uppercase tracking-wider text-purple-700">Roteiro</Label>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => downloadRoteiroDocx(expandedItem)}
+                        disabled={downloadingDocx || !expandedItem.roteiro}
+                        className="gap-1.5"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        {downloadingDocx ? 'Gerando...' : 'Baixar .docx'}
+                      </Button>
+                    </div>
+                    {expandedItem.roteiro ? (
+                      <p className="text-sm whitespace-pre-line bg-muted/30 p-3 rounded">{expandedItem.roteiro}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Roteiro ainda não gerado.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Texto na arte (estático/carrossel) */}
+                {(expandedItem.content_type === 'estatico' || expandedItem.content_type === 'carrossel') && (
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <Label className="text-xs uppercase tracking-wider text-blue-700">Texto na arte</Label>
+                    {expandedItem.texto_arte ? (
+                      <p className="text-sm whitespace-pre-line mt-2 bg-muted/30 p-3 rounded font-medium">{expandedItem.texto_arte}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic mt-1">Texto da arte não definido.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Briefing para o designer da arte */}
+                {expandedItem.briefing_arte && (
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <Label className="text-xs uppercase tracking-wider text-amber-700">Briefing da arte (para o designer)</Label>
+                    <p className="text-sm whitespace-pre-line mt-2 text-muted-foreground">{expandedItem.briefing_arte}</p>
+                  </div>
+                )}
+
+                {/* Legenda */}
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <Label className="text-xs uppercase tracking-wider text-pink-700">Legenda do post</Label>
+                  {expandedItem.legenda ? (
+                    <p className="text-sm whitespace-pre-line mt-2 bg-muted/30 p-3 rounded">{expandedItem.legenda}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic mt-1">Legenda não definida.</p>
+                  )}
+                </div>
+
                 <div>
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status atual</Label>
-                  <p className="text-sm font-medium mt-1">
-                    {expandedItem.status === 'pending' ? 'Pendente' : expandedItem.status === 'approved' ? 'Aprovado' : expandedItem.status === 'rejected' ? 'Reprovado' : 'Favorito'}
-                  </p>
+                  <p className="text-sm font-medium mt-1">{statusLabels[expandedItem.status]}</p>
                 </div>
-                <div className="flex flex-wrap gap-2 pt-2 border-t">
-                  <Button size="sm" variant="secondary" onClick={() => { handleUpdateStatus(expandedItem.id, 'approved'); setExpandedItem(null); }}>
-                    Aprovar
+
+                <div className="flex flex-wrap gap-2 pt-3 border-t">
+                  <Button size="sm" onClick={() => { handleUpdateStatus(expandedItem.id, 'approved'); setExpandedItem(null); }} className="gap-1.5">
+                    <CheckCircle2 className="h-4 w-4" /> Aprovar
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => { handleUpdateStatus(expandedItem.id, 'rejected'); setExpandedItem(null); }}>
-                    Reprovar
+                  <Button size="sm" variant="destructive" onClick={() => { handleUpdateStatus(expandedItem.id, 'rejected'); setExpandedItem(null); }} className="gap-1.5">
+                    <XCircle className="h-4 w-4" /> Reprovar
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => { handleUpdateStatus(expandedItem.id, 'favorite'); setExpandedItem(null); }}>
-                    Favorito
+                  <Button size="sm" variant="outline" onClick={() => { handleUpdateStatus(expandedItem.id, 'favorite'); setExpandedItem(null); }} className="gap-1.5">
+                    <Star className="h-4 w-4" /> Favorito
                   </Button>
                 </div>
               </div>
@@ -749,4 +895,4 @@ const AgentePlanejamentoEditorial = () => {
   );
 };
 
-export default AgentePlanejamentoEditorial;
+export default AgenteInstagramFacebook;
