@@ -151,6 +151,37 @@ const diaDasMaes50OffFields: TemplateField[] = [
   { id: 'enderecoUnidade', label: 'Endereço da unidade', placeholder: '{{enderecoUnidade}}', defaultValue: 'Endereço da unidade', maxLength: 68 },
 ];
 
+const a4InformativoHTML = (bgUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A4 Informativo</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1410px; height:2000px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+<div style="position:absolute; top:340px; left:80px; right:80px; text-align:center;">
+<h1 style="font-size:62px; font-weight:800; color:#1a1a1a; margin:0; letter-spacing:3px; text-transform:uppercase;">{{titulo}}</h1>
+<h2 style="font-size:32px; font-weight:600; color:#c41230; margin:18px 0 0; letter-spacing:1px;">{{subtitulo}}</h2>
+</div>
+<div style="position:absolute; top:620px; left:140px; right:140px; bottom:240px; display:flex; align-items:flex-start; justify-content:center;">
+<p style="font-size:32px; color:#2a2a2a; line-height:1.6; white-space:pre-line; text-align:left; margin:0; width:100%;">{{mensagem}}</p>
+</div>
+<div style="position:absolute; bottom:90px; left:80px; right:80px; text-align:center;">
+<p style="font-size:24px; font-weight:600; color:#1a1a1a; margin:0; letter-spacing:1px;">{{assinatura}}</p>
+</div>
+</div>
+</body>
+</html>`;
+
+const a4InformativoFields: TemplateField[] = [
+  { id: 'titulo', label: 'Título', placeholder: '{{titulo}}', defaultValue: 'COMUNICADO IMPORTANTE', maxLength: 35 },
+  { id: 'subtitulo', label: 'Subtítulo', placeholder: '{{subtitulo}}', defaultValue: 'Aviso a todos os colaboradores', maxLength: 60 },
+  { id: 'mensagem', label: 'Mensagem', placeholder: '{{mensagem}}', defaultValue: 'Prezados,\n\nInformamos que a unidade estará em horário especial nos próximos dias devido a manutenção programada.\n\nAgradecemos a compreensão de todos.', inputType: 'textarea', maxLength: 600 },
+  { id: 'assinatura', label: 'Assinatura', placeholder: '{{assinatura}}', defaultValue: 'Pure Pilates Unidade X', maxLength: 80 },
+];
+
 export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'seja-instrutor',
@@ -211,6 +242,16 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     height: 1350,
     html: diaDasMaes50OffHTML('/images/pure-design/dia-das-maes-50-off.png'),
     fields: diaDasMaes50OffFields,
+  },
+  {
+    id: 'a4-informativo',
+    name: 'A4 Informativo',
+    category: 'Informativos',
+    thumbnail: '/images/pure-design/a4-base.png',
+    width: 1410,
+    height: 2000,
+    html: a4InformativoHTML('/images/pure-design/a4-base.png'),
+    fields: a4InformativoFields,
   },
 ];
 
