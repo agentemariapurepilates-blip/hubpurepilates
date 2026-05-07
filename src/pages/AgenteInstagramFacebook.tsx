@@ -472,6 +472,16 @@ const AgenteInstagramFacebook = () => {
     }));
   };
 
+  const fetchGuideText = async (): Promise<string> => {
+    const resp = await fetch('/guia-editorial-2026.html', { cache: 'force-cache' });
+    if (!resp.ok) throw new Error('falha ao baixar guia');
+    const html = await resp.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    doc.querySelectorAll('style, script, link, meta, noscript').forEach((el) => el.remove());
+    const raw = doc.body?.textContent ?? '';
+    return raw.replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n\n').trim();
+  };
+
   const handleGenerate = async () => {
     if (!selectedMonth) {
       toast.error('Selecione o mês.');
@@ -479,9 +489,6 @@ const AgenteInstagramFacebook = () => {
     }
 
     const monthIndex = months.indexOf(selectedMonth);
-    const guides: string[] = [];
-    if (useGuide2026) guides.push('Guia Editorial 2026');
-    if (usePdf && uploadedFile) guides.push(`PDF: ${uploadedFile.name}`);
 
     if (!aiEnabled) {
       const mock = generateMockContent();
@@ -493,13 +500,23 @@ const AgenteInstagramFacebook = () => {
 
     setGenerating(true);
     try {
+      let guideText = '';
+      if (useGuide2026) {
+        try {
+          guideText = await fetchGuideText();
+        } catch (err) {
+          console.error('Falha ao carregar guia editorial:', err);
+          toast.error('Não consegui carregar o Guia Editorial — vou gerar sem ele.');
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-editorial-plan', {
         body: {
           month: selectedMonth,
           year: selectedYear,
           networks: fixedNetworks,
           instructions: instructions || undefined,
-          editorialGuide: guides.join(' + '),
+          editorialGuide: guideText || undefined,
         },
       });
 

@@ -139,10 +139,24 @@ Data ISO de exemplo do mês: "${exampleDate}".
 ## QUANTIDADE PARA ESTE LOTE
 ${chunkRules.join('\n')}
 
-${instructions ? `## INSTRUÇÕES ESPECÍFICAS DESTE MÊS\n${instructions}\n` : ''}${editorialGuide ? `## GUIA EDITORIAL DESTE MÊS\n${editorialGuide}\n` : ''}
-Inclua as datas comemorativas e sazonais relevantes de ${month}/${year} que caiam dentro desta janela.
+${instructions ? `## INSTRUÇÕES ESPECÍFICAS DESTE MÊS\n${instructions}\n` : ''}
+Inclua as datas comemorativas e sazonais relevantes de ${month}/${year} que caiam dentro desta janela. Aplique RIGOROSAMENTE o tom, vocabulário e regras do Guia Editorial Pure Pilates fornecido no system prompt.
 
 Responda agora com o JSON completo seguindo exatamente o formato definido no system prompt.`
+    }
+
+    // System prompt blocks: cada bloco tem seu cache_control próprio.
+    // 1) Regras estáveis da marca (sempre cacheado, mesmo sem guia).
+    // 2) Guia Editorial completo (cacheado quando presente — pode ter ~50K tokens).
+    const systemBlocks: Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }> = [
+      { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+    ]
+    if (editorialGuide && editorialGuide.trim().length > 0) {
+      systemBlocks.push({
+        type: 'text',
+        text: `## GUIA EDITORIAL OFICIAL DA PURE PILATES (siga RIGOROSAMENTE)\n\n${editorialGuide.trim()}`,
+        cache_control: { type: 'ephemeral' },
+      })
     }
 
     const callAnthropicChunk = async (userMessage: string): Promise<{ posts: GeneratedPost[]; usage: Record<string, number> } > => {
@@ -156,9 +170,7 @@ Responda agora com o JSON completo seguindo exatamente o formato definido no sys
         body: JSON.stringify({
           model: 'claude-haiku-4-5',
           max_tokens: 12000,
-          system: [
-            { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-          ],
+          system: systemBlocks,
           messages: [
             { role: 'user', content: userMessage },
           ],
@@ -220,7 +232,11 @@ Responda agora com o JSON completo seguindo exatamente o formato definido no sys
 
     if (!parsed && geminiApiKey) {
       try {
-        const fullPrompt = `${SYSTEM_PROMPT}\n\n---\n\n${userMessage}`
+        const guideBlock = editorialGuide?.trim()
+          ? `\n\n## GUIA EDITORIAL OFICIAL DA PURE PILATES (siga RIGOROSAMENTE)\n${editorialGuide.trim()}\n`
+          : ''
+        const geminiUserMsg = `Crie o plano editorial COMPLETO de **${month} de ${year}**.\nData ISO de exemplo: "${exampleDate}".\n\n## QUANTIDADE OBRIGATÓRIA\n${generationRules.join('\n')}\n\n${instructions ? `## INSTRUÇÕES ESPECÍFICAS DESTE MÊS\n${instructions}\n` : ''}\nResponda com o JSON completo.`
+        const fullPrompt = `${SYSTEM_PROMPT}${guideBlock}\n\n---\n\n${geminiUserMsg}`
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiApiKey}`
         const geminiResp = await fetch(geminiUrl, {
           method: 'POST',
