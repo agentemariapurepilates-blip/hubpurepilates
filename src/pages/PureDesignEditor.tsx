@@ -32,6 +32,32 @@ function defaultValues(template: PureDesignTemplate): Record<string, string> {
   return values;
 }
 
+function extractBody(html: string): string {
+  const m = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  return m ? m[1] : html;
+}
+
+function preloadImage(url: string): Promise<void> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+    img.src = url;
+  });
+}
+
+function collectBackgroundImageUrls(root: HTMLElement): string[] {
+  const urls = new Set<string>();
+  const all = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
+  for (const el of all) {
+    const bg = el.style?.backgroundImage;
+    if (!bg || bg === 'none') continue;
+    const m = bg.match(/url\(["']?([^"')]+)["']?\)/);
+    if (m && !m[1].startsWith('data:')) urls.add(m[1]);
+  }
+  return Array.from(urls);
+}
+
 const PureDesignEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -40,6 +66,7 @@ const PureDesignEditor = () => {
 
   const previewWrapRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const captureRef = useRef<HTMLDivElement>(null);
 
   const [values, setValues] = useState<Record<string, string>>(() =>
     template ? defaultValues(template) : {},
@@ -102,26 +129,41 @@ const PureDesignEditor = () => {
       toast.error('Digite um email válido');
       return;
     }
-    const iframe = iframeRef.current;
-    if (!iframe) return;
+    const target = captureRef.current;
+    if (!target) return;
 
     setSending(true);
     try {
-      const doc = iframe.contentDocument;
-      const target = doc?.body.firstElementChild as HTMLElement | null;
-      if (!doc || !target) throw new Error('preview não disponível');
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
+      const imgs = Array.from(target.querySelectorAll('img'));
+      await Promise.all(
+        imgs.map((img) =>
+          img.complete && img.naturalWidth > 0
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                img.addEventListener('load', () => resolve(), { once: true });
+                img.addEventListener('error', () => resolve(), { once: true });
+              }),
+        ),
+      );
+
+      await Promise.all(collectBackgroundImageUrls(target).map(preloadImage));
 
       const canvas = await html2canvas(target, {
         scale: 1,
         useCORS: true,
         allowTaint: true,
-        width: template.width,
-        height: template.height,
         backgroundColor: null,
       });
 
       const blob: Blob = await new Promise((resolve, reject) => {
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('falha ao gerar PNG'))), 'image/png');
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error('falha ao gerar PNG'))),
+          'image/png',
+        );
       });
 
       const formData = new FormData();
@@ -167,8 +209,8 @@ const PureDesignEditor = () => {
         </Button>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        <aside className="w-full lg:w-[380px] bg-card border-b lg:border-b-0 lg:border-r border-border overflow-hidden shrink-0 order-2 lg:order-1 flex flex-col">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+        <aside className="w-full lg:w-[380px] bg-card border-b lg:border-b-0 lg:border-r border-border overflow-hidden flex-1 lg:flex-none lg:shrink-0 min-h-0 order-2 lg:order-1 flex flex-col">
           <div className="border-b border-border bg-muted/50 shrink-0 px-6 py-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Editar campos
@@ -234,27 +276,48 @@ const PureDesignEditor = () => {
           </div>
         </aside>
 
-        <main className="flex-1 overflow-auto order-1 lg:order-2 bg-muted/50">
+        <main className="flex-1 min-h-0 overflow-auto order-1 lg:order-2 bg-muted/50">
           <div
             ref={previewWrapRef}
             className="w-full h-full flex items-center justify-center p-4"
           >
-            <iframe
-              ref={iframeRef}
-              srcDoc={renderedHTML}
-              title="Pré-visualização"
-              className="shadow-2xl rounded-lg bg-white"
-              style={{
-                width: template.width,
-                height: template.height,
-                transform: `scale(${zoom})`,
-                transformOrigin: 'center',
-                border: 'none',
-              }}
-            />
+            <div
+              className="shadow-2xl rounded-lg overflow-hidden bg-white shrink-0"
+              style={{ width: template.width * zoom, height: template.height * zoom }}
+            >
+              <iframe
+                ref={iframeRef}
+                srcDoc={renderedHTML}
+                title="Pré-visualização"
+                style={{
+                  width: template.width,
+                  height: template.height,
+                  transform: `scale(${zoom})`,
+                  transformOrigin: 'top left',
+                  border: 'none',
+                  display: 'block',
+                }}
+              />
+            </div>
           </div>
         </main>
       </div>
+
+      <div
+        ref={captureRef}
+        aria-hidden
+        style={{
+          position: 'fixed',
+          left: '-99999px',
+          top: 0,
+          width: `${template.width}px`,
+          height: `${template.height}px`,
+          pointerEvents: 'none',
+          overflow: 'hidden',
+          fontFamily: 'Montserrat, sans-serif',
+        }}
+        dangerouslySetInnerHTML={{ __html: extractBody(renderedHTML) }}
+      />
 
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
         <DialogContent className="sm:max-w-md">
