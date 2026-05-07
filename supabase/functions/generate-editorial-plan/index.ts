@@ -55,23 +55,40 @@ Deno.serve(async (req) => {
     const monthNum = String(monthIdx + 1).padStart(2, '0')
     const exampleDate = `${year}-${monthNum}-15`
 
+    // Determina o que precisa ser gerado pela IA
+    const wantInstagram = networks.includes('Instagram Studios')
+    const wantFacebook = networks.includes('Facebook Studios')
+    const wantTiktok = networks.includes('Tik Tok')
+    const generateInstagramBlock = wantInstagram || wantFacebook
+
+    const generationRules: string[] = []
+    if (generateInstagramBlock) {
+      generationRules.push('- Gere NO MÍNIMO 25 postagens com network = "Instagram Studios" (essas mesmas postagens serão replicadas para o Facebook automaticamente).')
+    }
+    if (wantTiktok) {
+      generationRules.push('- Gere NO MÍNIMO 12 postagens com network = "Tik Tok" (pelo menos 3 por semana, distribuídas ao longo do mês).')
+    }
+
     const prompt = `Você é um especialista em planejamento editorial de redes sociais para a marca Pure Pilates (rede de estúdios de Pilates no Brasil).
 
-Crie um plano editorial mensal completo para ${month} de ${year}, distribuído nas seguintes redes: ${networks.join(', ')}.
+Crie um plano editorial mensal completo para ${month} de ${year}.
 
 ${instructions ? `Instruções específicas do cliente: ${instructions}` : ''}
 ${editorialGuide ? `Guia editorial: ${editorialGuide}` : ''}
 
-REGRAS OBRIGATÓRIAS:
-1. Gere NO MÍNIMO 25 postagens no total para o mês (somando todas as redes). Pode gerar até 35 se fizer sentido.
-2. Distribua bem ao longo do mês, sem concentrar em poucos dias.
-3. INCLUA OBRIGATORIAMENTE conteúdos sazonais e datas comemorativas relevantes do mês de ${month}/${year} no Brasil — feriados nacionais, datas comerciais (ex: Dia das Mães em maio, Dia dos Namorados em junho, Dia dos Pais em agosto, Black Friday em novembro, Natal em dezembro), datas de saúde (Setembro Amarelo, Outubro Rosa, Novembro Azul) e datas relacionadas ao universo Pilates/saúde/bem-estar.
-4. Misture tipos de conteúdo: educativo sobre Pilates, depoimentos/social proof, promocional sutil, datas comemorativas/sazonais, bastidores, dicas de saúde/postura, motivacional.
-5. Cada rede deve receber entre 8 e 12 postagens (ajuste conforme número de redes solicitadas para totalizar pelo menos 25).
+REGRAS OBRIGATÓRIAS DE QUANTIDADE POR REDE:
+${generationRules.join('\n')}
+
+REGRAS DE CONTEÚDO:
+1. Distribua bem ao longo do mês, sem concentrar em poucos dias.
+2. INCLUA OBRIGATORIAMENTE conteúdos sazonais e datas comemorativas relevantes do mês de ${month}/${year} no Brasil — feriados nacionais, datas comerciais (ex: Dia das Mães em maio, Dia dos Namorados em junho, Dia dos Pais em agosto, Black Friday em novembro, Natal em dezembro), datas de saúde (Setembro Amarelo, Outubro Rosa, Novembro Azul) e datas relacionadas ao universo Pilates/saúde/bem-estar.
+3. Misture tipos de conteúdo: educativo sobre Pilates, depoimentos/social proof, promocional sutil, datas comemorativas/sazonais, bastidores, dicas de saúde/postura, motivacional.
+4. Conteúdos do Tik Tok devem ser pensados como vídeo curto (Reels/Shorts) — desafios, transformações, dicas rápidas, antes/depois.
+5. Conteúdos do Instagram são mais variados: posts estáticos, carrosséis, Reels, depoimentos.
 
 Para cada postagem, retorne:
 - "date": data ISO 8601 (ex: "${exampleDate}")
-- "network": uma das redes informadas (use exatamente o nome dado)
+- "network": "Instagram Studios" ou "Tik Tok" (use EXATAMENTE esses valores; NUNCA gere "Facebook Studios" — Facebook é replicado automaticamente do Instagram)
 - "title": título curto (até 60 caracteres)
 - "description": briefing da postagem (2-4 linhas, o que postar e como; mencione explicitamente quando for sazonal/comemorativo)
 
@@ -123,8 +140,30 @@ Sem texto antes ou depois. Sem markdown. Sem comentários.`
       )
     }
 
+    let finalPosts = parsed.posts.filter((p) => {
+      // Filtra fora networks que IA possa ter inventado
+      return p.network === 'Instagram Studios' || p.network === 'Tik Tok'
+    })
+
+    // Se Facebook foi pedido, replica todos os posts do Instagram como Facebook
+    if (wantFacebook) {
+      const igPosts = finalPosts.filter((p) => p.network === 'Instagram Studios')
+      const fbPosts = igPosts.map((p) => ({ ...p, network: 'Facebook Studios' }))
+      finalPosts = [...finalPosts, ...fbPosts]
+    }
+
+    // Se Instagram NÃO foi pedido (só Facebook), remove os Instagram (já replicados como FB)
+    if (!wantInstagram && wantFacebook) {
+      finalPosts = finalPosts.filter((p) => p.network !== 'Instagram Studios')
+    }
+
+    // Remove TikTok se não foi pedido
+    if (!wantTiktok) {
+      finalPosts = finalPosts.filter((p) => p.network !== 'Tik Tok')
+    }
+
     return new Response(
-      JSON.stringify({ posts: parsed.posts }),
+      JSON.stringify({ posts: finalPosts }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {

@@ -8,11 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CalendarDays, Play, Loader2 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
+import { CalendarDays, Play, Loader2, Instagram, Facebook, Music2, CheckCircle2, XCircle, Star, Clock } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isToday, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface GeneratedContent {
   id: string;
@@ -46,16 +48,56 @@ const AgentePlanejamentoEditorial = () => {
     'Facebook Studios': 'bg-sky-500 text-white',
   };
 
+  const networkLegendColors: Record<GeneratedContent['network'], string> = {
+    'Tik Tok': 'bg-violet-500',
+    'Instagram Studios': 'bg-pink-500',
+    'Facebook Studios': 'bg-sky-500',
+  };
+
+  const networkIcons: Record<GeneratedContent['network'], typeof Instagram> = {
+    'Tik Tok': Music2,
+    'Instagram Studios': Instagram,
+    'Facebook Studios': Facebook,
+  };
+
+  const statusIcons: Record<GeneratedContent['status'], typeof Clock> = {
+    pending: Clock,
+    approved: CheckCircle2,
+    rejected: XCircle,
+    favorite: Star,
+  };
+
+  const statusLabels: Record<GeneratedContent['status'], string> = {
+    pending: 'Pendente',
+    approved: 'Aprovado',
+    rejected: 'Reprovado',
+    favorite: 'Favorito',
+  };
+
+  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const weekDaysShort = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
   const months = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
 
-  const networks = [
-    'Instagram Studios',
-    'Facebook Studios',
-    'Tik Tok'
+  const networkOptions: Array<{ id: string; label: string; sends: string[] }> = [
+    { id: 'instagram-facebook', label: 'Instagram + Facebook', sends: ['Instagram Studios', 'Facebook Studios'] },
+    { id: 'tiktok', label: 'Tik Tok', sends: ['Tik Tok'] },
   ];
+
+  const isOptionChecked = (option: typeof networkOptions[number]) =>
+    option.sends.every((n) => selectedNetworks.includes(n));
+
+  const handleNetworkOptionChange = (option: typeof networkOptions[number], checked: boolean) => {
+    if (checked) {
+      const merged = Array.from(new Set([...selectedNetworks, ...option.sends]));
+      setSelectedNetworks(merged);
+    } else {
+      setSelectedNetworks(selectedNetworks.filter((n) => !option.sends.includes(n)));
+    }
+  };
 
   const handleNetworkChange = (network: string, checked: boolean) => {
     if (checked) {
@@ -443,15 +485,18 @@ const AgentePlanejamentoEditorial = () => {
             {/* Selecionar redes sociais */}
             <div className="space-y-4">
               <Label>Redes Sociais</Label>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Instagram e Facebook compartilham o mesmo conteúdo. Tik Tok tem conteúdo próprio (3x/semana).
+              </p>
               <div className="space-y-2">
-                {networks.map((network) => (
-                  <div key={network} className="flex items-center space-x-2">
+                {networkOptions.map((option) => (
+                  <div key={option.id} className="flex items-center space-x-2">
                     <Checkbox
-                      id={network}
-                      checked={selectedNetworks.includes(network)}
-                      onCheckedChange={(checked) => handleNetworkChange(network, checked as boolean)}
+                      id={option.id}
+                      checked={isOptionChecked(option)}
+                      onCheckedChange={(checked) => handleNetworkOptionChange(option, checked as boolean)}
                     />
-                    <Label htmlFor={network}>{network}</Label>
+                    <Label htmlFor={option.id} className="cursor-pointer">{option.label}</Label>
                   </div>
                 ))}
               </div>
@@ -493,82 +538,105 @@ const AgentePlanejamentoEditorial = () => {
             </Button>
 
             {resultMonth && generatedContents.length > 0 && (
-              <div className="mt-8">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+              <div className="mt-8 space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-xl font-semibold">Calendário de Conteúdo — {selectedMonth} {selectedYear}</h2>
+                    <h2 className="text-xl sm:text-2xl font-bold capitalize">
+                      {format(resultMonth, 'MMMM yyyy', { locale: ptBR })}
+                    </h2>
                     <p className="text-sm text-muted-foreground">
                       {generatedContents.length} postagens · {generatedContents.filter((c) => c.status === 'approved').length} aprovadas · {generatedContents.filter((c) => c.status === 'pending').length} pendentes
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      size="sm"
-                      onClick={handleApproveAll}
-                      disabled={!generatedContents.some((c) => c.status === 'pending')}
-                    >
-                      Aprovar tudo
-                    </Button>
-                    {(['Tik Tok', 'Instagram Studios', 'Facebook Studios'] as GeneratedContent['network'][]).map((network) => (
-                      <span
-                        key={network}
-                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${networkColors[network]}`}
-                      >
-                        {network}
-                      </span>
-                    ))}
-                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleApproveAll}
+                    disabled={!generatedContents.some((c) => c.status === 'pending')}
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Aprovar tudo
+                  </Button>
                 </div>
 
-                <div className="grid grid-cols-7 gap-px bg-border rounded-xl overflow-hidden border border-border">
-                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
-                    <div key={day} className="bg-slate-100 px-3 py-2 text-center text-xs font-semibold uppercase text-muted-foreground">
-                      {day}
-                    </div>
-                  ))}
-
-                  {paddingDays.map((_, index) => (
-                    <div key={`pad-${index}`} className="min-h-[100px] bg-background p-2" />
-                  ))}
-
-                  {daysInMonth.map((date) => {
-                    const items = getItemsForDay(date);
+                {/* Legenda das redes */}
+                <div className="flex flex-wrap gap-3 sm:gap-4">
+                  {(Object.keys(networkLegendColors) as GeneratedContent['network'][]).map((network) => {
+                    const Icon = networkIcons[network];
                     return (
-                      <div key={date.toISOString()} className="min-h-[140px] bg-background p-3 border border-border">
-                        <div className="mb-2 text-sm font-semibold">{format(date, 'd')}</div>
-                        <div className="space-y-2">
-                          {items.length === 0 ? (
-                            <div className="text-xs text-muted-foreground">Sem conteúdo</div>
-                          ) : (
-                            items.map((item) => (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => setExpandedItem(item)}
-                                className="block w-full text-left rounded-2xl border border-border p-3 space-y-2 bg-white shadow-sm hover:shadow-md hover:border-primary/40 transition cursor-pointer"
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${networkColors[item.network]}`}>
-                                    {item.network}
-                                  </span>
-                                  <span className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
-                                    {item.status === 'pending' ? 'Pendente' : item.status === 'approved' ? 'Aprovado' : item.status === 'rejected' ? 'Reprovado' : 'Favorito'}
-                                  </span>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold line-clamp-2">{item.title}</p>
-                                  <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{item.description}</p>
-                                </div>
-                                <p className="text-[10px] text-primary font-medium uppercase tracking-wider">Clique para expandir</p>
-                              </button>
-                            ))
-                          )}
-                        </div>
+                      <div key={network} className="flex items-center gap-1.5">
+                        <span className={cn('w-4 h-4 sm:w-5 sm:h-5 rounded flex items-center justify-center', networkLegendColors[network])}>
+                          <Icon className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
+                        </span>
+                        <span className="text-xs sm:text-sm text-muted-foreground">{network}</span>
                       </div>
                     );
                   })}
                 </div>
 
+                <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+                  <div className="grid grid-cols-7 border-b border-border">
+                    {weekDays.map((day, index) => (
+                      <div key={day} className="p-1.5 sm:p-3 text-center text-xs sm:text-sm font-medium text-muted-foreground bg-muted/20">
+                        <span className="hidden sm:inline">{day}</span>
+                        <span className="sm:hidden">{weekDaysShort[index]}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7">
+                    {paddingDays.map((_, index) => (
+                      <div key={`pad-${index}`} className="min-h-16 sm:min-h-24 md:min-h-28 p-1 sm:p-2 border-b border-r border-border bg-muted/10" />
+                    ))}
+
+                    {daysInMonth.map((day) => {
+                      const items = getItemsForDay(day);
+                      const hasContent = items.length > 0;
+                      const isDayToday = isToday(day);
+
+                      return (
+                        <div
+                          key={day.toISOString()}
+                          className={cn(
+                            'min-h-16 sm:min-h-24 md:min-h-28 p-1 sm:p-2 border-b border-r border-border transition-colors',
+                            !isSameMonth(day, resultMonth) && 'bg-muted/20 text-muted-foreground',
+                            isDayToday && 'bg-primary/5',
+                          )}
+                        >
+                          <div className={cn('text-xs sm:text-sm font-medium mb-0.5 sm:mb-1', isDayToday && 'text-primary font-bold')}>
+                            {format(day, 'd')}
+                          </div>
+                          {hasContent && (
+                            <div className="space-y-0.5 sm:space-y-1">
+                              {items.map((item) => {
+                                const NetworkIcon = networkIcons[item.network];
+                                const StatusIcon = statusIcons[item.status];
+                                return (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() => setExpandedItem(item)}
+                                    title={`${item.title} — ${statusLabels[item.status]}`}
+                                    className={cn(
+                                      'w-full text-[10px] sm:text-xs p-1 sm:p-1.5 rounded font-medium flex items-center gap-0.5 sm:gap-1 cursor-pointer hover:opacity-80 transition-opacity text-left',
+                                      networkColors[item.network],
+                                      item.status === 'rejected' && 'opacity-50 line-through',
+                                    )}
+                                  >
+                                    <NetworkIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />
+                                    <span className="truncate hidden sm:inline flex-1">{item.title}</span>
+                                    {item.status !== 'pending' && (
+                                      <StatusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0 opacity-90" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
