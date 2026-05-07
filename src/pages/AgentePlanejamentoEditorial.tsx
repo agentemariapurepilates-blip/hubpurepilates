@@ -454,6 +454,17 @@ const AgentePlanejamentoEditorial = () => {
                     onCheckedChange={(checked) => setUseGuide2026(checked === true)}
                   />
                   <Label htmlFor="guide2026" className="cursor-pointer">Guia Editorial 2026</Label>
+                  <a
+                    href="/guia-editorial-2026.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    Abrir Guia
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M7 17 17 7M7 7h10v10" />
+                    </svg>
+                  </a>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
