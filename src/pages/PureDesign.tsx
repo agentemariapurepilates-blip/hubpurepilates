@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Paintbrush, Search } from 'lucide-react';
+import { Paintbrush, Search, FolderOpen, ChevronLeft } from 'lucide-react';
 import { pureDesignTemplates } from '@/data/pureDesignTemplates';
 
 const normalize = (s: string) =>
@@ -11,14 +11,31 @@ const normalize = (s: string) =>
 
 const PureDesign = () => {
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const filteredTemplates = useMemo(() => {
     const q = normalize(search);
-    if (!q) return pureDesignTemplates;
-    return pureDesignTemplates.filter((t) =>
-      normalize(`${t.name} ${t.category}`).includes(q),
-    );
-  }, [search]);
+    return pureDesignTemplates.filter((t) => {
+      if (selectedCategory && t.category !== selectedCategory) return false;
+      if (q && !normalize(`${t.name} ${t.category}`).includes(q)) return false;
+      return true;
+    });
+  }, [search, selectedCategory]);
+
+  const categories = useMemo(
+    () =>
+      Array.from(
+        pureDesignTemplates.reduce((map, template) => {
+          const list = map.get(template.category) ?? [];
+          list.push(template);
+          map.set(template.category, list);
+          return map;
+        }, new Map<string, typeof pureDesignTemplates>()),
+      ),
+    [],
+  );
+
+  const showCategoryCards = !selectedCategory && !search;
 
   return (
     <MainLayout>
@@ -52,12 +69,75 @@ const PureDesign = () => {
           <Card className="p-10 text-center text-muted-foreground">
             Nenhum modelo disponível ainda.
           </Card>
+        ) : showCategoryCards ? (
+          <div className="space-y-4">
+            <h2 className="text-base font-semibold text-foreground border-b pb-2">
+              Explorar categorias
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {categories.map(([category, templates]) => {
+                const preview = templates[0];
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setSelectedCategory(category)}
+                    className="text-left"
+                  >
+                    <Card className="h-28 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group bg-card">
+                      <div
+                        className="relative h-full bg-muted"
+                        style={{
+                          background:
+                            'linear-gradient(105deg, hsl(var(--card)) 0%, hsl(var(--card)) 43%, hsl(var(--muted)) 43%, hsl(var(--muted)) 100%)',
+                        }}
+                      >
+                        <div className="absolute inset-y-0 right-0 w-[54%] overflow-hidden">
+                          <div
+                            className="h-full w-full bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
+                            style={{ backgroundImage: `url(${preview.thumbnail})` }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-r from-card via-card/35 to-transparent" />
+                        </div>
+                        <div className="relative z-10 flex h-full w-[58%] items-center gap-3 p-4">
+                          <div className="h-9 w-9 shrink-0 rounded-md bg-primary/10 flex items-center justify-center">
+                            <FolderOpen className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="line-clamp-2 text-base font-semibold leading-snug text-foreground group-hover:text-primary transition-colors">
+                              {category}
+                            </h3>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {templates.length} {templates.length === 1 ? 'modelo' : 'modelos'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         ) : filteredTemplates.length === 0 ? (
           <Card className="p-10 text-center text-muted-foreground">
             Nenhuma arte encontrada para "{search}".
           </Card>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-5">
+            {selectedCategory && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory(null);
+                  setSearch('');
+                }}
+                className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Voltar para categorias
+              </button>
+            )}
             {Array.from(
               filteredTemplates.reduce((map, template) => {
                 const list = map.get(template.category) ?? [];
@@ -67,24 +147,32 @@ const PureDesign = () => {
               }, new Map<string, typeof pureDesignTemplates>()),
             ).map(([category, templates]) => (
               <section key={category} className="space-y-3">
-                <h2 className="text-lg font-semibold text-foreground border-b pb-2">
+                <h2 className="text-base font-semibold text-foreground border-b pb-2">
                   {category}
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                   {templates.map((template) => (
                     <Link key={template.id} to={`/pure-design/${template.id}`}>
-                      <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
+                      <Card className="h-28 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group bg-card">
                         <div
-                          className="aspect-[3/4] bg-muted bg-cover bg-center"
-                          style={{ backgroundImage: `url(${template.thumbnail})` }}
-                        />
-                        <div className="p-4">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {template.category}
-                          </p>
-                          <h3 className="font-semibold text-foreground mt-1 group-hover:text-primary transition-colors">
-                            {template.name}
-                          </h3>
+                          className="relative h-full bg-muted"
+                          style={{
+                            background:
+                              'linear-gradient(105deg, hsl(var(--card)) 0%, hsl(var(--card)) 43%, hsl(var(--muted)) 43%, hsl(var(--muted)) 100%)',
+                          }}
+                        >
+                          <div className="absolute inset-y-0 right-0 w-[54%] overflow-hidden">
+                            <div
+                              className="h-full w-full bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
+                              style={{ backgroundImage: `url(${template.thumbnail})` }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/35 to-transparent" />
+                          </div>
+                          <div className="relative z-10 flex h-full w-[58%] items-center p-4">
+                            <h3 className="line-clamp-2 text-base font-semibold leading-snug text-foreground group-hover:text-primary transition-colors">
+                              {template.name}
+                            </h3>
+                          </div>
                         </div>
                       </Card>
                     </Link>

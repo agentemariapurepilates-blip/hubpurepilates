@@ -186,10 +186,10 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     id: 'dia-das-maes',
     name: 'Dia das Mães',
     category: 'Dia das mães',
-    thumbnail: '/images/pure-design/dia-das-maes-bg.png',
+    thumbnail: '/images/pure-design/dia-das-maes-bg-v2.png',
     width: 1080,
     height: 1440,
-    html: diaDasMaesHTML('/images/pure-design/dia-das-maes-bg.png'),
+    html: diaDasMaesHTML('/images/pure-design/dia-das-maes-bg-v2.png'),
     fields: diaDasMaesFields,
   },
   {
