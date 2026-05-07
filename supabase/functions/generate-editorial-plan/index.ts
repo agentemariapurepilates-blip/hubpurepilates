@@ -123,7 +123,22 @@ Deno.serve(async (req) => {
       generationRules.push('- Gere NO MÍNIMO 12 postagens com network = "Tik Tok" (pelo menos 3 por semana, distribuídas ao longo do mês).')
     }
 
-    const buildUserMessage = (chunkLabel: string, dayRange: string, igTarget: number, tiktokTarget: number) => {
+    // ============================================================
+    // RAG: Memória do agente — busca histórico do usuário e monta
+    // bloco de exemplos pra calibrar tom/estilo nas próximas geracões.
+    // ============================================================
+    const memoryBlock = await buildMemoryBlock(supabaseClient, user.id)
+
+    // Calendário OFICIAL de datas comemorativas brasileiras pro mês/ano em questão.
+    // CRÍTICO: o modelo erra datas calculadas (ex: 2º domingo de maio). Aqui calculamos no servidor.
+    const allDates = getCommemorativeDates(monthIdx, Number(year))
+    const datesByRange = (fromDay: number, toDay: number) =>
+      allDates.filter((d) => {
+        const dia = Number(d.iso.slice(8, 10))
+        return dia >= fromDay && dia <= toDay
+      })
+
+    const buildUserMessage = (chunkLabel: string, dayRange: string, fromDay: number, toDay: number, igTarget: number, tiktokTarget: number) => {
       const chunkRules: string[] = []
       if (generateInstagramBlock && igTarget > 0) {
         chunkRules.push(`- Gere EXATAMENTE ${igTarget} postagens com network = "Instagram Studios" para esta janela.`)
@@ -131,6 +146,11 @@ Deno.serve(async (req) => {
       if (wantTiktok && tiktokTarget > 0) {
         chunkRules.push(`- Gere EXATAMENTE ${tiktokTarget} postagens com network = "Tik Tok" para esta janela.`)
       }
+      const datesInWindow = datesByRange(fromDay, toDay)
+      const datesBlock = datesInWindow.length > 0
+        ? `## DATAS COMEMORATIVAS REAIS DESTA JANELA (USE EXATAMENTE ESTAS DATAS — NÃO INVENTE)\n${datesInWindow.map((d) => `- **${d.iso}** — ${d.nome}`).join('\n')}\n\nPara cada data acima, gere PELO MENOS uma postagem (Instagram e/ou TikTok conforme aplicável) usando EXATAMENTE essa data ISO. NUNCA invente outra data para esses eventos. Se não estiver na lista acima, NÃO mencione como data comemorativa.`
+        : '## DATAS COMEMORATIVAS\nNenhuma data oficial nesta janela. Foque em conteúdo recorrente da marca.'
+
       return `Crie ${chunkLabel} do plano editorial de **${month} de ${year}**.
 
 JANELA DESTE LOTE: ${dayRange} (todas as datas devem cair dentro dessa janela).
@@ -139,15 +159,19 @@ Data ISO de exemplo do mês: "${exampleDate}".
 ## QUANTIDADE PARA ESTE LOTE
 ${chunkRules.join('\n')}
 
+${datesBlock}
+
 ${instructions ? `## INSTRUÇÕES ESPECÍFICAS DESTE MÊS\n${instructions}\n` : ''}
-Inclua as datas comemorativas e sazonais relevantes de ${month}/${year} que caiam dentro desta janela. Aplique RIGOROSAMENTE o tom, vocabulário e regras do Guia Editorial Pure Pilates fornecido no system prompt.
+Aplique RIGOROSAMENTE o tom, vocabulário e regras do Guia Editorial Pure Pilates fornecido no system prompt.
 
 Responda agora com o JSON completo seguindo exatamente o formato definido no system prompt.`
     }
 
     // System prompt blocks: cada bloco tem seu cache_control próprio.
-    // 1) Regras estáveis da marca (sempre cacheado, mesmo sem guia).
-    // 2) Guia Editorial completo (cacheado quando presente — pode ter ~50K tokens).
+    // 1) Regras estáveis da marca.
+    // 2) Guia Editorial completo (~50K tokens quando presente).
+    // 3) Memória do agente — exemplos do que funcionou/não funcionou (RAG).
+    // Anthropic permite até 4 cache_control breakpoints; usamos no máximo 3.
     const systemBlocks: Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }> = [
       { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
     ]
@@ -158,6 +182,14 @@ Responda agora com o JSON completo seguindo exatamente o formato definido no sys
         cache_control: { type: 'ephemeral' },
       })
     }
+    if (memoryBlock && memoryBlock.trim().length > 0) {
+      systemBlocks.push({
+        type: 'text',
+        text: memoryBlock,
+        cache_control: { type: 'ephemeral' },
+      })
+    }
+    console.log('System blocks:', systemBlocks.length, '| memory chars:', memoryBlock.length)
 
     const callAnthropicChunk = async (userMessage: string): Promise<{ posts: GeneratedPost[]; usage: Record<string, number> } > => {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -171,6 +203,9 @@ Responda agora com o JSON completo seguindo exatamente o formato definido no sys
           model: 'claude-haiku-4-5',
           max_tokens: 12000,
           system: systemBlocks,
+          // Web search server-side: Claude decide quando buscar (max 2 buscas por chunk).
+          // Útil pra trends atuais, referências culturais, datas que não estão no calendário fixo.
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 }],
           messages: [
             { role: 'user', content: userMessage },
           ],
@@ -181,7 +216,11 @@ Responda agora com o JSON completo seguindo exatamente o formato definido no sys
         throw new Error(`Anthropic ${resp.status}: ${errBody}`)
       }
       const data = await resp.json()
-      const text: string = data?.content?.[0]?.text ?? ''
+      // Com tool use, content pode ter blocks de tipo "text", "tool_use", "web_search_tool_result".
+      // Pegamos o ULTIMO bloco de texto (resposta final do Claude após buscas).
+      // deno-lint-ignore no-explicit-any
+      const textBlocks: any[] = (data?.content ?? []).filter((b: { type?: string }) => b?.type === 'text')
+      const text: string = textBlocks.length > 0 ? (textBlocks[textBlocks.length - 1].text ?? '') : ''
       const chunkParsed = JSON.parse(stripCodeFences(text)) as { posts: GeneratedPost[] }
       return { posts: chunkParsed.posts ?? [], usage: data?.usage ?? {} }
     }
@@ -202,12 +241,16 @@ Responda agora com o JSON completo seguindo exatamente o formato definido no sys
         const msgFirst = buildUserMessage(
           'a PRIMEIRA METADE',
           `dias 1 a ${midDay}`,
+          1,
+          midDay,
           igHalf,
           tiktokHalf,
         )
         const msgSecond = buildUserMessage(
           'a SEGUNDA METADE',
           `dias ${midDay + 1} a ${lastDay}`,
+          midDay + 1,
+          lastDay,
           igTotal - igHalf,
           tiktokTotal - tiktokHalf,
         )
@@ -308,6 +351,157 @@ function getMonthIndex(name: string): number {
   return months.indexOf(name)
 }
 
+interface DataComemorativa {
+  iso: string
+  nome: string
+}
+
+// Calcula o N-ésimo dia-da-semana do mês (ex: 2º domingo de maio).
+// dow: 0=domingo, 1=segunda, ..., 6=sábado.
+function nthWeekdayOfMonth(year: number, monthIdx: number, dow: number, n: number): string {
+  const first = new Date(Date.UTC(year, monthIdx, 1))
+  const firstDow = first.getUTCDay()
+  let dayOfMonth = 1 + ((dow - firstDow + 7) % 7) + (n - 1) * 7
+  const last = new Date(Date.UTC(year, monthIdx + 1, 0)).getUTCDate()
+  if (dayOfMonth > last) dayOfMonth = last
+  const mm = String(monthIdx + 1).padStart(2, '0')
+  const dd = String(dayOfMonth).padStart(2, '0')
+  return `${year}-${mm}-${dd}`
+}
+
+// Calcula a Páscoa (algoritmo Anonymous Gregorian).
+function easterSunday(year: number): Date {
+  const a = year % 19
+  const b = Math.floor(year / 100)
+  const c = year % 100
+  const d = Math.floor(b / 4)
+  const e = b % 4
+  const f = Math.floor((b + 8) / 25)
+  const g = Math.floor((b - f + 1) / 3)
+  const h = (19 * a + b - d - g + 15) % 30
+  const i = Math.floor(c / 4)
+  const k = c % 4
+  const l = (32 + 2 * e + 2 * i - h - k) % 7
+  const m = Math.floor((a + 11 * h + 22 * l) / 451)
+  const month = Math.floor((h + l - 7 * m + 114) / 31)
+  const day = ((h + l - 7 * m + 114) % 31) + 1
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
+function fmtIso(d: Date): string {
+  const y = d.getUTCFullYear()
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function addDays(d: Date, days: number): Date {
+  return new Date(d.getTime() + days * 86400000)
+}
+
+function getCommemorativeDates(monthIdx: number, year: number): DataComemorativa[] {
+  const items: DataComemorativa[] = []
+  const easter = easterSunday(year)
+  const carnavalTerca = addDays(easter, -47)
+  const carnavalSegunda = addDays(easter, -48)
+  const sextaSanta = addDays(easter, -2)
+  const corpusChristi = addDays(easter, 60)
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const iso = (m: number, d: number) => `${year}-${pad(m + 1)}-${pad(d)}`
+
+  // Datas fixas + móveis por mês (Brasil + universo Pilates/saúde).
+  switch (monthIdx) {
+    case 0: // Janeiro
+      items.push({ iso: iso(0, 1), nome: 'Confraternização Universal (feriado nacional)' })
+      items.push({ iso: iso(0, 6), nome: 'Dia de Reis' })
+      items.push({ iso: iso(0, 25), nome: 'Aniversário de São Paulo' })
+      break
+    case 1: // Fevereiro
+      if (carnavalSegunda.getUTCMonth() === 1) items.push({ iso: fmtIso(carnavalSegunda), nome: 'Carnaval (segunda)' })
+      if (carnavalTerca.getUTCMonth() === 1) items.push({ iso: fmtIso(carnavalTerca), nome: 'Carnaval (terça-feira)' })
+      items.push({ iso: iso(1, 14), nome: "Valentine's Day (referência internacional)" })
+      break
+    case 2: // Março
+      if (carnavalSegunda.getUTCMonth() === 2) items.push({ iso: fmtIso(carnavalSegunda), nome: 'Carnaval (segunda)' })
+      if (carnavalTerca.getUTCMonth() === 2) items.push({ iso: fmtIso(carnavalTerca), nome: 'Carnaval (terça-feira)' })
+      items.push({ iso: iso(2, 8), nome: 'Dia Internacional da Mulher' })
+      items.push({ iso: iso(2, 21), nome: 'Dia Internacional contra Discriminação Racial' })
+      if (sextaSanta.getUTCMonth() === 2) items.push({ iso: fmtIso(sextaSanta), nome: 'Sexta-feira Santa' })
+      if (easter.getUTCMonth() === 2) items.push({ iso: fmtIso(easter), nome: 'Páscoa' })
+      break
+    case 3: // Abril
+      if (sextaSanta.getUTCMonth() === 3) items.push({ iso: fmtIso(sextaSanta), nome: 'Sexta-feira Santa' })
+      if (easter.getUTCMonth() === 3) items.push({ iso: fmtIso(easter), nome: 'Páscoa' })
+      items.push({ iso: iso(3, 6), nome: 'Dia Mundial da Atividade Física' })
+      items.push({ iso: iso(3, 7), nome: 'Dia Mundial da Saúde' })
+      items.push({ iso: iso(3, 21), nome: 'Tiradentes (feriado nacional)' })
+      items.push({ iso: iso(3, 22), nome: 'Descobrimento do Brasil' })
+      break
+    case 4: // Maio
+      items.push({ iso: iso(4, 1), nome: 'Dia do Trabalhador (feriado nacional)' })
+      items.push({ iso: nthWeekdayOfMonth(year, 4, 0, 2), nome: 'Dia das Mães (2º domingo de maio)' })
+      items.push({ iso: iso(4, 13), nome: 'Dia da Abolição da Escravatura' })
+      items.push({ iso: iso(4, 28), nome: 'Dia Internacional pela Saúde da Mulher' })
+      if (corpusChristi.getUTCMonth() === 4) items.push({ iso: fmtIso(corpusChristi), nome: 'Corpus Christi' })
+      break
+    case 5: // Junho
+      items.push({ iso: iso(5, 5), nome: 'Dia Mundial do Meio Ambiente' })
+      items.push({ iso: iso(5, 12), nome: 'Dia dos Namorados' })
+      items.push({ iso: iso(5, 24), nome: 'Dia de São João' })
+      if (corpusChristi.getUTCMonth() === 5) items.push({ iso: fmtIso(corpusChristi), nome: 'Corpus Christi' })
+      break
+    case 6: // Julho
+      items.push({ iso: iso(6, 9), nome: 'Revolução Constitucionalista (SP)' })
+      items.push({ iso: iso(6, 26), nome: 'Dia dos Avós' })
+      // mês de férias escolares — bom pra conteúdo família/criança
+      break
+    case 7: // Agosto
+      items.push({ iso: nthWeekdayOfMonth(year, 7, 0, 2), nome: 'Dia dos Pais (2º domingo de agosto)' })
+      items.push({ iso: iso(7, 11), nome: 'Dia do Estudante' })
+      items.push({ iso: iso(7, 22), nome: 'Dia do Folclore' })
+      items.push({ iso: iso(7, 31), nome: 'Dia do Nutricionista' })
+      // Agosto Dourado (amamentação)
+      break
+    case 8: // Setembro
+      items.push({ iso: iso(8, 7), nome: 'Independência do Brasil (feriado nacional)' })
+      items.push({ iso: iso(8, 10), nome: 'Dia Mundial de Prevenção ao Suicídio (Setembro Amarelo)' })
+      items.push({ iso: iso(8, 21), nome: 'Dia Mundial do Alzheimer' })
+      items.push({ iso: iso(8, 22), nome: 'Dia da Primavera' })
+      // Setembro Amarelo: o mês inteiro
+      break
+    case 9: // Outubro
+      items.push({ iso: iso(9, 12), nome: 'Dia das Crianças / Nossa Senhora Aparecida (feriado nacional)' })
+      items.push({ iso: iso(9, 15), nome: 'Dia do Professor' })
+      items.push({ iso: iso(9, 28), nome: 'Dia do Servidor Público' })
+      items.push({ iso: iso(9, 31), nome: 'Halloween (referência cultural)' })
+      // Outubro Rosa: o mês inteiro
+      break
+    case 10: { // Novembro
+      items.push({ iso: iso(10, 2), nome: 'Finados (feriado nacional)' })
+      items.push({ iso: iso(10, 15), nome: 'Proclamação da República (feriado nacional)' })
+      items.push({ iso: iso(10, 20), nome: 'Dia da Consciência Negra' })
+      // Black Friday = última sexta de novembro
+      const lastDay = new Date(Date.UTC(year, 11, 0))
+      const lastDow = lastDay.getUTCDay()
+      const blackFridayDay = lastDay.getUTCDate() - ((lastDow - 5 + 7) % 7)
+      items.push({ iso: iso(10, blackFridayDay), nome: 'Black Friday' })
+      items.push({ iso: iso(10, blackFridayDay + 3), nome: 'Cyber Monday' })
+      // Novembro Azul: o mês inteiro
+      break
+    }
+    case 11: // Dezembro
+      items.push({ iso: iso(11, 8), nome: 'Dia da Imaculada Conceição' })
+      items.push({ iso: iso(11, 24), nome: 'Véspera de Natal' })
+      items.push({ iso: iso(11, 25), nome: 'Natal (feriado nacional)' })
+      items.push({ iso: iso(11, 31), nome: 'Véspera de Ano Novo / Réveillon' })
+      break
+  }
+
+  // Ordena por dia
+  return items.sort((a, b) => a.iso.localeCompare(b.iso))
+}
+
 function stripCodeFences(text: string): string {
   return text
     .trim()
@@ -315,3 +509,108 @@ function stripCodeFences(text: string): string {
     .replace(/\s*```$/i, '')
     .trim()
 }
+
+interface MemoryRow {
+  title: string | null
+  network: string | null
+  content_type: string | null
+  legenda: string | null
+  roteiro: string | null
+  texto_arte: string | null
+  feedback_motivo: string | null
+  versao_editada: { legenda?: string; roteiro?: string; texto_arte?: string } | null
+}
+
+// deno-lint-ignore no-explicit-any
+async function buildMemoryBlock(supabaseClient: any, userId: string): Promise<string> {
+  try {
+    // Aprovados recentes (positivos): só os últimos 8 com legenda preenchida.
+    const { data: approved } = await supabaseClient
+      .from('editorial_posts')
+      .select('title, network, content_type, legenda, roteiro, texto_arte')
+      .eq('user_id', userId)
+      .eq('status', 'approved')
+      .not('legenda', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(8)
+
+    // Reprovados com motivo (negativos): últimos 8 com feedback explicito.
+    const { data: rejected } = await supabaseClient
+      .from('editorial_posts')
+      .select('title, network, content_type, legenda, feedback_motivo')
+      .eq('user_id', userId)
+      .eq('status', 'rejected')
+      .not('feedback_motivo', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(8)
+
+    // Edições manuais (deltas IA -> versão final): últimas 6.
+    const { data: edited } = await supabaseClient
+      .from('editorial_posts')
+      .select('title, network, content_type, legenda, roteiro, texto_arte, versao_editada')
+      .eq('user_id', userId)
+      .not('versao_editada', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(6)
+
+    const sections: string[] = []
+
+    if (Array.isArray(approved) && approved.length > 0) {
+      const items = (approved as MemoryRow[]).map((r, i) => {
+        const parts = [`### Aprovado ${i + 1} — ${r.network ?? '?'} (${r.content_type ?? 'n/a'})`]
+        if (r.title) parts.push(`Título: ${r.title}`)
+        if (r.legenda) parts.push(`Legenda:\n${r.legenda}`)
+        if (r.roteiro) parts.push(`Roteiro:\n${r.roteiro}`)
+        if (r.texto_arte) parts.push(`Texto na arte:\n${r.texto_arte}`)
+        return parts.join('\n')
+      })
+      sections.push(`## ✅ EXEMPLOS APROVADOS (siga ESTE tom, ritmo e vocabulário)\n\n${items.join('\n\n---\n\n')}`)
+    }
+
+    if (Array.isArray(rejected) && rejected.length > 0) {
+      const items = (rejected as MemoryRow[]).map((r, i) => {
+        const parts = [`### Reprovado ${i + 1} — ${r.network ?? '?'} (${r.content_type ?? 'n/a'})`]
+        if (r.title) parts.push(`Título: ${r.title}`)
+        if (r.legenda) parts.push(`Legenda original (que foi reprovada):\n${r.legenda}`)
+        parts.push(`MOTIVO DA REPROVAÇÃO: ${r.feedback_motivo}`)
+        return parts.join('\n')
+      })
+      sections.push(`## ❌ EXEMPLOS REPROVADOS (NÃO repita esses padrões — leia o motivo)\n\n${items.join('\n\n---\n\n')}`)
+    }
+
+    if (Array.isArray(edited) && edited.length > 0) {
+      const items = (edited as MemoryRow[]).map((r, i) => {
+        const parts = [`### Edição ${i + 1} — ${r.network ?? '?'} (${r.content_type ?? 'n/a'})`]
+        if (r.title) parts.push(`Título: ${r.title}`)
+        if (r.legenda && r.versao_editada?.legenda) {
+          parts.push(`Legenda IA (original):\n${r.legenda}`)
+          parts.push(`Legenda VERSÃO FINAL (corrigida pela usuária — é ASSIM que ela quer):\n${r.versao_editada.legenda}`)
+        }
+        if (r.roteiro && r.versao_editada?.roteiro) {
+          parts.push(`Roteiro IA:\n${r.roteiro}`)
+          parts.push(`Roteiro VERSÃO FINAL:\n${r.versao_editada.roteiro}`)
+        }
+        if (r.texto_arte && r.versao_editada?.texto_arte) {
+          parts.push(`Texto arte IA:\n${r.texto_arte}`)
+          parts.push(`Texto arte VERSÃO FINAL:\n${r.versao_editada.texto_arte}`)
+        }
+        return parts.join('\n')
+      })
+      sections.push(`## ✏️ EDIÇÕES MANUAIS (delta IA → versão final — aprenda o ajuste)\n\n${items.join('\n\n---\n\n')}`)
+    }
+
+    if (sections.length === 0) return ''
+
+    return `## MEMÓRIA DO AGENTE — HISTÓRICO DESTA USUÁRIA
+Esta memória vem das últimas decisões da Renata sobre conteúdos gerados por você. Use isso como CALIBRAÇÃO DE TOM:
+- Repita o estilo dos APROVADOS.
+- Evite os padrões dos REPROVADOS (e leia o motivo).
+- Para EDIÇÕES, compare a versão IA com a versão final dela e aprenda o ajuste.
+
+${sections.join('\n\n')}`
+  } catch (err) {
+    console.error('Falha ao montar memoryBlock:', err)
+    return ''
+  }
+}
+

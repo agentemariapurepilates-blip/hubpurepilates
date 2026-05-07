@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CalendarDays, Play, Loader2, Instagram, Facebook, CheckCircle2, XCircle, Star, Clock, Download, Pencil, Save, X, Sparkles } from 'lucide-react';
+import { CalendarDays, Play, Loader2, Instagram, Facebook, CheckCircle2, XCircle, Star, Clock, Download, Pencil, Save, X, Sparkles, Brain } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isToday, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -482,6 +483,27 @@ const AgenteInstagramFacebook = () => {
     return raw.replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n\n').trim();
   };
 
+  const extractPdfText = async (file: File): Promise<string> => {
+    // Lazy import pra não inflar o bundle inicial.
+    const pdfjs = await import('pdfjs-dist');
+    // Worker via CDN (jsdelivr serve o build correspondente da versão).
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+    const buf = await file.arrayBuffer();
+    const doc = await pdfjs.getDocument({ data: buf }).promise;
+    const pageTexts: string[] = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((it: any) => (typeof it.str === 'string' ? it.str : ''))
+        .filter(Boolean)
+        .join(' ');
+      pageTexts.push(pageText);
+    }
+    return pageTexts.join('\n\n').replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n\n').trim();
+  };
+
   const handleGenerate = async () => {
     if (!selectedMonth) {
       toast.error('Selecione o mês.');
@@ -500,15 +522,25 @@ const AgenteInstagramFacebook = () => {
 
     setGenerating(true);
     try {
-      let guideText = '';
+      const guideParts: string[] = [];
       if (useGuide2026) {
         try {
-          guideText = await fetchGuideText();
+          guideParts.push(await fetchGuideText());
         } catch (err) {
           console.error('Falha ao carregar guia editorial:', err);
           toast.error('Não consegui carregar o Guia Editorial — vou gerar sem ele.');
         }
       }
+      if (usePdf && uploadedFile) {
+        try {
+          const pdfText = await extractPdfText(uploadedFile);
+          if (pdfText) guideParts.push(`### GUIA ADICIONAL (PDF — ${uploadedFile.name})\n\n${pdfText}`);
+        } catch (err) {
+          console.error('Falha ao extrair PDF:', err);
+          toast.error(`Não consegui ler o PDF "${uploadedFile.name}". Vou gerar sem ele.`);
+        }
+      }
+      const guideText = guideParts.join('\n\n---\n\n');
 
       const { data, error } = await supabase.functions.invoke('generate-editorial-plan', {
         body: {
@@ -569,12 +601,20 @@ const AgenteInstagramFacebook = () => {
   return (
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-3 mb-6">
-          <CalendarDays className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Agente Instagram e Facebook</h1>
-            <p className="text-muted-foreground">Planeja o mês inteiro de Instagram + Facebook e gera roteiros, legendas, textos da arte e briefings de design — tudo de uma vez.</p>
+        <div className="flex items-start justify-between gap-3 mb-6 flex-wrap">
+          <div className="flex items-center gap-3">
+            <CalendarDays className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold">Agente Instagram e Facebook</h1>
+              <p className="text-muted-foreground">Planeja o mês inteiro de Instagram + Facebook e gera roteiros, legendas, textos da arte e briefings de design — tudo de uma vez.</p>
+            </div>
           </div>
+          <Link to="/agente-instagram-facebook/memoria">
+            <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
+              <Brain className="h-4 w-4" />
+              Memória do Agente
+            </Button>
+          </Link>
         </div>
 
         <div className="rounded-2xl border border-border bg-slate-50 p-4 mb-6 text-sm text-slate-700">

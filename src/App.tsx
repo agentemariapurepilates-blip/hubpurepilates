@@ -25,6 +25,7 @@ import PureDesign from "./pages/PureDesign";
 import PureDesignEditor from "./pages/PureDesignEditor";
 import NotFound from "./pages/NotFound";
 import AgenteInstagramFacebook from "./pages/AgenteInstagramFacebook";
+import MemoriaAgente from "./pages/MemoriaAgente";
 import AgenteMonitoramentoMetricas from "./pages/AgenteMonitoramentoMetricas";
 import AuthCallbackMeta from "./pages/AuthCallbackMeta";
 import AuthCallbackTikTok from "./pages/AuthCallbackTikTok";
@@ -58,6 +59,7 @@ function App() {
             <Route path="/pure-design" element={<ProtectedRoute><PureDesign /></ProtectedRoute>} />
             <Route path="/pure-design/:id" element={<ProtectedRoute><PureDesignEditor /></ProtectedRoute>} />
             <Route path="/agente-instagram-facebook" element={<ProtectedRoute><AgenteInstagramFacebook /></ProtectedRoute>} />
+            <Route path="/agente-instagram-facebook/memoria" element={<ProtectedRoute><MemoriaAgente /></ProtectedRoute>} />
             {/* Backward compat: redirect legado */}
             <Route path="/agente-planejamento-editorial" element={<ProtectedRoute><AgenteInstagramFacebook /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />
