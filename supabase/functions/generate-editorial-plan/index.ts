@@ -149,7 +149,7 @@ Responda agora com o JSON completo seguindo exatamente o formato definido no sys
             'content-type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
+            model: 'claude-haiku-4-5',
             max_tokens: 16000,
             system: [
               {
