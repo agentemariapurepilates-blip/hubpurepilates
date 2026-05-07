@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CalendarDays, Play, Loader2, Instagram, Facebook, CheckCircle2, XCircle, Star, Clock, Download, Pencil, Save, X, Sparkles, Brain } from 'lucide-react';
+import { CalendarDays, Play, Loader2, Instagram, Facebook, CheckCircle2, XCircle, Star, Clock, Download, Pencil, Save, X, Sparkles, Brain, MessageSquare } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isToday, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +22,13 @@ interface VersaoEditada {
   legenda?: string;
   roteiro?: string;
   texto_arte?: string;
+}
+
+interface RefinementEntry {
+  prompt: string;
+  before?: { title?: string | null; legenda?: string | null; roteiro?: string | null; texto_arte?: string | null; briefing_arte?: string | null };
+  after?: { title?: string | null; legenda?: string | null; roteiro?: string | null; texto_arte?: string | null; briefing_arte?: string | null };
+  at: string;
 }
 
 interface GeneratedContent {
@@ -38,6 +45,7 @@ interface GeneratedContent {
   briefing_arte?: string | null;
   feedback_motivo?: string | null;
   versao_editada?: VersaoEditada | null;
+  refinements?: RefinementEntry[] | null;
 }
 
 const AgenteInstagramFacebook = () => {
@@ -61,6 +69,8 @@ const AgenteInstagramFacebook = () => {
   const [editForm, setEditForm] = useState<VersaoEditada>({ legenda: '', roteiro: '', texto_arte: '' });
   const [savingEdit, setSavingEdit] = useState(false);
   const [savingReject, setSavingReject] = useState(false);
+  const [refinePrompt, setRefinePrompt] = useState('');
+  const [refining, setRefining] = useState(false);
 
   const networkColors: Record<GeneratedContent['network'], string> = {
     'Instagram Studios': 'bg-pink-500 text-white',
@@ -264,6 +274,48 @@ const AgenteInstagramFacebook = () => {
     setEditMode(false);
   };
 
+  const handleRefine = async () => {
+    if (!expandedItem) return;
+    const prompt = refinePrompt.trim();
+    if (!prompt) {
+      toast.error('Escreve o que você quer ajustar.');
+      return;
+    }
+    setRefining(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('refine-editorial-post', {
+        body: { post_id: expandedItem.id, prompt },
+      });
+      if (error) throw error;
+      const refined = (data?.refined ?? {}) as { title?: string; description?: string; legenda?: string; roteiro?: string; texto_arte?: string; briefing_arte?: string };
+      const refinement = data?.refinement as RefinementEntry | undefined;
+
+      const updated: GeneratedContent = {
+        ...expandedItem,
+        title: refined.title ?? expandedItem.title,
+        description: refined.description ?? expandedItem.description,
+        legenda: refined.legenda ?? expandedItem.legenda,
+        roteiro: refined.roteiro ?? expandedItem.roteiro,
+        texto_arte: refined.texto_arte ?? expandedItem.texto_arte,
+        briefing_arte: refined.briefing_arte ?? expandedItem.briefing_arte,
+        versao_editada: null,
+        refinements: refinement
+          ? [...(expandedItem.refinements ?? []), refinement]
+          : expandedItem.refinements,
+      };
+
+      setGeneratedContents((current) => current.map((it) => (it.id === expandedItem.id ? updated : it)));
+      setExpandedItem(updated);
+      setRefinePrompt('');
+      toast.success('IA reescreveu — confere aí.');
+    } catch (err) {
+      console.error('Refine falhou:', err);
+      toast.error('Não consegui reescrever. Tenta de novo daqui a pouco.');
+    } finally {
+      setRefining(false);
+    }
+  };
+
   const startEditing = (item: GeneratedContent) => {
     setEditForm({
       legenda: item.versao_editada?.legenda ?? item.legenda ?? '',
@@ -328,6 +380,7 @@ const AgenteInstagramFacebook = () => {
         briefing_arte?: string | null;
         feedback_motivo?: string | null;
         versao_editada?: VersaoEditada | null;
+        refinements?: RefinementEntry[] | null;
       }>;
 
       if (posts.length > 0) {
@@ -347,6 +400,7 @@ const AgenteInstagramFacebook = () => {
             briefing_arte: p.briefing_arte ?? null,
             feedback_motivo: p.feedback_motivo ?? null,
             versao_editada: p.versao_editada ?? null,
+            refinements: p.refinements ?? null,
           })),
         );
         setResultMonth(new Date(Number(year), monthIndex, 1));
@@ -922,7 +976,7 @@ const AgenteInstagramFacebook = () => {
         )}
       </div>
 
-      <Dialog open={!!expandedItem} onOpenChange={(open) => { if (!open) { setExpandedItem(null); setEditMode(false); } }}>
+      <Dialog open={!!expandedItem} onOpenChange={(open) => { if (!open) { setExpandedItem(null); setEditMode(false); setRefinePrompt(''); } }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           {expandedItem && (
             <>
@@ -1057,6 +1111,52 @@ const AgenteInstagramFacebook = () => {
                     <p className="text-xs text-muted-foreground italic mt-1">Legenda não definida.</p>
                   )}
                 </div>
+
+                {/* Histórico de refinações anteriores */}
+                {expandedItem.refinements && expandedItem.refinements.length > 0 && (
+                  <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-4 space-y-3">
+                    <Label className="text-xs uppercase tracking-wider text-violet-700 flex items-center gap-1.5">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      Conversa com o agente ({expandedItem.refinements.length})
+                    </Label>
+                    {expandedItem.refinements.map((r, i) => (
+                      <div key={i} className="text-xs space-y-1 border-l-2 border-violet-300 pl-3">
+                        <div className="text-violet-700 font-semibold">
+                          Você: <span className="font-normal text-foreground">{r.prompt}</span>
+                        </div>
+                        <div className="text-muted-foreground italic">
+                          → IA reescreveu em {format(new Date(r.at), "dd/MM 'às' HH:mm")}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Chat: Editar com novo prompt para o agente */}
+                {!editMode && (
+                  <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-4 space-y-2">
+                    <Label className="text-xs uppercase tracking-wider text-primary flex items-center gap-1.5">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      Editar com novo prompt para o agente
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Conta o que mudar — a IA reescreve este post mantendo o resto. Tudo fica salvo na memória.
+                    </p>
+                    <Textarea
+                      value={refinePrompt}
+                      onChange={(e) => setRefinePrompt(e.target.value)}
+                      rows={3}
+                      placeholder='Ex: "deixa mais emocional", "tira a hashtag de emagrecimento", "muda o roteiro pra começar com pergunta", "torna a CTA mais direta"'
+                      disabled={refining}
+                    />
+                    <div className="flex justify-end">
+                      <Button size="sm" onClick={handleRefine} disabled={refining || !refinePrompt.trim()} className="gap-1.5">
+                        {refining ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        {refining ? 'Reescrevendo…' : 'Reescrever com IA'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status atual</Label>

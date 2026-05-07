@@ -519,6 +519,7 @@ interface MemoryRow {
   texto_arte: string | null
   feedback_motivo: string | null
   versao_editada: { legenda?: string; roteiro?: string; texto_arte?: string } | null
+  refinements: Array<{ prompt: string; after?: { legenda?: string | null; roteiro?: string | null; texto_arte?: string | null }; at: string }> | null
 }
 
 // deno-lint-ignore no-explicit-any
@@ -552,6 +553,14 @@ async function buildMemoryBlock(supabaseClient: any, userId: string): Promise<st
       .not('versao_editada', 'is', null)
       .order('updated_at', { ascending: false })
       .limit(6)
+
+    // Conversas com o agente (refinações por prompt): últimos 8 posts com refinements.
+    const { data: refinedRows } = await supabaseClient
+      .from('editorial_posts')
+      .select('title, network, content_type, refinements')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(40)
 
     const sections: string[] = []
 
@@ -597,6 +606,27 @@ async function buildMemoryBlock(supabaseClient: any, userId: string): Promise<st
         return parts.join('\n')
       })
       sections.push(`## ✏️ EDIÇÕES MANUAIS (delta IA → versão final — aprenda o ajuste)\n\n${items.join('\n\n---\n\n')}`)
+    }
+
+    // Refinações por prompt — peso ALTO porque é feedback direto da Renata em linguagem natural
+    if (Array.isArray(refinedRows)) {
+      const refinedFiltered = (refinedRows as MemoryRow[]).filter((r) => Array.isArray(r.refinements) && r.refinements!.length > 0).slice(0, 8)
+      if (refinedFiltered.length > 0) {
+        const items = refinedFiltered.map((r, i) => {
+          const lastRefinement = r.refinements![r.refinements!.length - 1]
+          const parts = [`### Conversa ${i + 1} — ${r.network ?? '?'} (${r.content_type ?? 'n/a'})`]
+          if (r.title) parts.push(`Post: ${r.title}`)
+          parts.push(`Histórico (mais recente por último):`)
+          r.refinements!.forEach((ref, j) => {
+            parts.push(`  Turn ${j + 1}: A Renata pediu: "${ref.prompt}"`)
+          })
+          if (lastRefinement.after?.legenda) {
+            parts.push(`Resultado final aceito (legenda):\n${lastRefinement.after.legenda}`)
+          }
+          return parts.join('\n')
+        })
+        sections.push(`## 💬 REFINAÇÕES POR PROMPT (instruções diretas da Renata sobre posts específicos — aplique padrões similares)\n\n${items.join('\n\n---\n\n')}`)
+      }
     }
 
     if (sections.length === 0) return ''

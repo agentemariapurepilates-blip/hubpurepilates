@@ -4,7 +4,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Brain, CheckCircle2, XCircle, Pencil, Download, RefreshCw, Loader2 } from 'lucide-react';
+import { ArrowLeft, Brain, CheckCircle2, XCircle, Pencil, Download, RefreshCw, Loader2, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -42,18 +42,33 @@ interface EditedRow {
   versao_editada: VersaoEditada | null;
 }
 
+interface RefinementEntry {
+  prompt: string;
+  before?: { legenda?: string | null; roteiro?: string | null; texto_arte?: string | null };
+  after?: { legenda?: string | null; roteiro?: string | null; texto_arte?: string | null };
+  at: string;
+}
+
+interface RefinedRow {
+  title: string | null;
+  network: string | null;
+  content_type: string | null;
+  refinements: RefinementEntry[] | null;
+}
+
 const MemoriaAgente = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [approved, setApproved] = useState<ApprovedRow[]>([]);
   const [rejected, setRejected] = useState<RejectedRow[]>([]);
   const [edited, setEdited] = useState<EditedRow[]>([]);
+  const [refined, setRefined] = useState<RefinedRow[]>([]);
 
   const loadMemory = async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const [aprovedRes, rejectedRes, editedRes] = await Promise.all([
+      const [aprovedRes, rejectedRes, editedRes, refinedRes] = await Promise.all([
         (supabase.from('editorial_posts' as never) as any)
           .select('title, network, content_type, legenda, roteiro, texto_arte')
           .eq('user_id', user.id)
@@ -74,11 +89,18 @@ const MemoriaAgente = () => {
           .not('versao_editada', 'is', null)
           .order('updated_at', { ascending: false })
           .limit(6),
+        (supabase.from('editorial_posts' as never) as any)
+          .select('title, network, content_type, refinements')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(20),
       ]);
 
       setApproved((aprovedRes.data ?? []) as ApprovedRow[]);
       setRejected((rejectedRes.data ?? []) as RejectedRow[]);
       setEdited((editedRes.data ?? []) as EditedRow[]);
+      const refinedAll = ((refinedRes.data ?? []) as RefinedRow[]).filter((r) => Array.isArray(r.refinements) && r.refinements.length > 0);
+      setRefined(refinedAll.slice(0, 8));
     } catch (err) {
       console.error('Erro ao carregar memória:', err);
       toast.error('Não foi possível carregar a memória do agente.');
@@ -147,8 +169,25 @@ const MemoriaAgente = () => {
       parts.push('');
     }
 
-    if (approved.length === 0 && rejected.length === 0 && edited.length === 0) {
-      parts.push('_(A memória do agente está vazia. Aprove, reprove com motivo ou edite conteúdos para começar a ensiná-lo.)_');
+    if (refined.length > 0) {
+      parts.push('## 💬 Conversas com o Agente (refinações por prompt)');
+      parts.push('');
+      refined.forEach((r, i) => {
+        parts.push(`### ${i + 1}. ${r.title ?? '(sem título)'} — ${r.network ?? '?'} (${r.content_type ?? 'n/a'})`);
+        (r.refinements ?? []).forEach((ref, j) => {
+          parts.push(`**Turn ${j + 1} (${new Date(ref.at).toLocaleString('pt-BR')}):**`);
+          parts.push(`> Você: ${ref.prompt}`);
+          if (ref.after?.legenda) parts.push(`> IA → Legenda: ${ref.after.legenda.slice(0, 280)}${ref.after.legenda.length > 280 ? '…' : ''}`);
+          if (ref.after?.roteiro) parts.push(`> IA → Roteiro: ${ref.after.roteiro.slice(0, 280)}${ref.after.roteiro.length > 280 ? '…' : ''}`);
+          parts.push('');
+        });
+        parts.push('---');
+      });
+      parts.push('');
+    }
+
+    if (approved.length === 0 && rejected.length === 0 && edited.length === 0 && refined.length === 0) {
+      parts.push('_(A memória do agente está vazia. Aprove, reprove com motivo, edite conteúdos ou converse com o agente via prompt para começar a ensiná-lo.)_');
     }
 
     return parts.join('\n');
@@ -167,7 +206,8 @@ const MemoriaAgente = () => {
     toast.success('Memória exportada.');
   };
 
-  const totalRows = approved.length + rejected.length + edited.length;
+  const totalRows = approved.length + rejected.length + edited.length + refined.length;
+  const totalRefinementTurns = refined.reduce((sum, r) => sum + (r.refinements?.length ?? 0), 0);
 
   return (
     <MainLayout>
@@ -201,27 +241,34 @@ const MemoriaAgente = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="rounded-lg border bg-emerald-50 border-emerald-200 p-4">
-            <div className="flex items-center gap-2 text-emerald-700 font-semibold">
+            <div className="flex items-center gap-2 text-emerald-700 font-semibold text-sm">
               <CheckCircle2 className="h-4 w-4" /> Aprovados
             </div>
             <div className="text-2xl font-bold text-emerald-900 mt-1">{approved.length}</div>
-            <div className="text-xs text-emerald-700">últimos exemplos positivos no contexto</div>
+            <div className="text-[10px] text-emerald-700">positivos no contexto</div>
           </div>
           <div className="rounded-lg border bg-rose-50 border-rose-200 p-4">
-            <div className="flex items-center gap-2 text-rose-700 font-semibold">
-              <XCircle className="h-4 w-4" /> Reprovados c/ motivo
+            <div className="flex items-center gap-2 text-rose-700 font-semibold text-sm">
+              <XCircle className="h-4 w-4" /> Reprovados
             </div>
             <div className="text-2xl font-bold text-rose-900 mt-1">{rejected.length}</div>
-            <div className="text-xs text-rose-700">padrões a evitar</div>
+            <div className="text-[10px] text-rose-700">padrões a evitar</div>
           </div>
           <div className="rounded-lg border bg-blue-50 border-blue-200 p-4">
-            <div className="flex items-center gap-2 text-blue-700 font-semibold">
-              <Pencil className="h-4 w-4" /> Edições manuais
+            <div className="flex items-center gap-2 text-blue-700 font-semibold text-sm">
+              <Pencil className="h-4 w-4" /> Edições
             </div>
             <div className="text-2xl font-bold text-blue-900 mt-1">{edited.length}</div>
-            <div className="text-xs text-blue-700">deltas IA → versão final</div>
+            <div className="text-[10px] text-blue-700">deltas IA → final</div>
+          </div>
+          <div className="rounded-lg border bg-violet-50 border-violet-200 p-4">
+            <div className="flex items-center gap-2 text-violet-700 font-semibold text-sm">
+              <MessageSquare className="h-4 w-4" /> Conversas
+            </div>
+            <div className="text-2xl font-bold text-violet-900 mt-1">{totalRefinementTurns}</div>
+            <div className="text-[10px] text-violet-700">refinações por prompt</div>
           </div>
         </div>
 
@@ -299,6 +346,40 @@ const MemoriaAgente = () => {
                           <p className="text-xs whitespace-pre-line text-muted-foreground line-through opacity-70">{r.legenda}</p>
                         </div>
                       )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {refined.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-violet-700">
+                    <MessageSquare className="h-5 w-5" /> Conversas com o Agente — refinações por prompt
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {refined.map((r, i) => (
+                    <div key={i} className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold">
+                        <Badge variant="outline" className="text-[10px]">{r.network}</Badge>
+                        <Badge variant="outline" className="text-[10px]">{r.content_type ?? 'n/a'}</Badge>
+                        <span>{r.title}</span>
+                      </div>
+                      {(r.refinements ?? []).map((ref, j) => (
+                        <div key={j} className="text-xs space-y-1 border-l-2 border-violet-300 pl-3">
+                          <div className="text-violet-700 font-semibold">
+                            Você: <span className="font-normal text-foreground">{ref.prompt}</span>
+                          </div>
+                          <div className="text-muted-foreground">
+                            → IA reescreveu em {new Date(ref.at).toLocaleString('pt-BR')}
+                          </div>
+                          {ref.after?.legenda && (
+                            <p className="text-[11px] whitespace-pre-line bg-white/70 p-2 rounded mt-1 line-clamp-4">{ref.after.legenda}</p>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </CardContent>
