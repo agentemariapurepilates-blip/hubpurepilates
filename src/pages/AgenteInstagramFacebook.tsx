@@ -287,16 +287,28 @@ const AgenteInstagramFacebook = () => {
         body: { post_id: expandedItem.id, prompt },
       });
       if (error) throw error;
-      const refined = (data?.refined ?? {}) as { title?: string; description?: string; legenda?: string; roteiro?: string; texto_arte?: string; briefing_arte?: string };
+      const refined = (data?.refined ?? {}) as { title?: string; description?: string; content_type?: string; legenda?: string; roteiro?: string; texto_arte?: string; briefing_arte?: string };
       const refinement = data?.refinement as RefinementEntry | undefined;
+
+      const validTypes = new Set(['video', 'estatico', 'carrossel']);
+      const newContentType = refined.content_type && validTypes.has(refined.content_type)
+        ? (refined.content_type as GeneratedContent['content_type'])
+        : expandedItem.content_type;
+
+      // Quando muda pra video: limpa texto_arte. Quando muda pra estatico/carrossel: limpa roteiro.
+      let finalRoteiro: string | null | undefined = refined.roteiro && refined.roteiro.trim() ? refined.roteiro : expandedItem.roteiro;
+      let finalTextoArte: string | null | undefined = refined.texto_arte && refined.texto_arte.trim() ? refined.texto_arte : expandedItem.texto_arte;
+      if (newContentType === 'video') finalTextoArte = null;
+      if (newContentType === 'estatico' || newContentType === 'carrossel') finalRoteiro = null;
 
       const updated: GeneratedContent = {
         ...expandedItem,
         title: refined.title ?? expandedItem.title,
         description: refined.description ?? expandedItem.description,
+        content_type: newContentType,
         legenda: refined.legenda ?? expandedItem.legenda,
-        roteiro: refined.roteiro ?? expandedItem.roteiro,
-        texto_arte: refined.texto_arte ?? expandedItem.texto_arte,
+        roteiro: finalRoteiro,
+        texto_arte: finalTextoArte,
         briefing_arte: refined.briefing_arte ?? expandedItem.briefing_arte,
         versao_editada: null,
         refinements: refinement

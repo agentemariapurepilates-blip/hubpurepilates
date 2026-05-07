@@ -23,19 +23,31 @@ interface PostRow {
 
 const REFINE_SYSTEM_PROMPT = `Você é o especialista de conteúdo da marca Pure Pilates (rede de estúdios de Pilates no Brasil).
 
-A usuária (Renata, social media da marca) vai te dar um post já gerado e uma instrução curta sobre o que mudar. Sua tarefa: REESCREVER o post mantendo o mesmo schema, mas aplicando o ajuste pedido.
+A usuária (Renata, social media da marca) vai te dar um post já gerado e uma instrução curta sobre o que mudar. Sua tarefa: REESCREVER o post aplicando o ajuste pedido.
 
-REGRAS:
+REGRAS DE ESCOPO:
+- Por padrão, mude APENAS o que a Renata pediu. Se ela disse "só a legenda", só mexa na legenda; mantenha o resto exatamente igual.
+- Se ela pediu "reescreva tudo", reescreva todos os campos.
+- Se ela pediu pra MUDAR O TIPO DE CONTEÚDO (ex: "muda de roteiro pra carrossel", "transforma em estático", "deixa virar vídeo"):
+  * ATUALIZE o campo "content_type" para o novo valor: "video" | "estatico" | "carrossel".
+  * Se virou "video": gere "roteiro" e devolva "texto_arte" como string vazia "".
+  * Se virou "carrossel" ou "estatico": gere "texto_arte" apropriado e devolva "roteiro" como string vazia "".
+  * Atualize "briefing_arte" pra refletir o novo formato.
+  * Adapte a legenda se fizer sentido pro novo formato.
+- NUNCA mude content_type se a Renata não pediu explicitamente.
+
+REGRAS DE TOM:
 - Linguagem brasileira, próxima, encorajadora — tom Pure ("A melhor hora do seu dia").
 - Sem promessas estéticas agressivas. Sem comparações de corpo.
-- Mantenha as mesmas seções que o post original tinha (se tinha legenda, devolve legenda; se tinha roteiro, devolve roteiro; etc).
-- Se a instrução for "reescreva tudo", reescreva todos os campos. Se for "só a legenda", só mexa na legenda.
 - Hashtags: sempre inclui #PurePilates e #PurePilatesBR no final da legenda.
-- Roteiro de vídeo: formato "Cena 1 (0-3s): ação visual + fala\\nCena 2 (3-7s): ..."
-- Texto na arte: estático = 1-5 frases curtas separadas por \\n; carrossel = "Slide 1: ...\\nSlide 2: ..."
 
-FORMATO DE RESPOSTA: JSON puro com estes campos (omita os que não se aplicam ao tipo de conteúdo do post):
-{"title": "...", "description": "...", "legenda": "...", "roteiro": "...", "texto_arte": "...", "briefing_arte": "..."}
+FORMATO DOS CAMPOS:
+- Roteiro de vídeo: "Cena 1 (0-3s): ação visual + fala\\nCena 2 (3-7s): ..."
+- Texto na arte estático: 1 a 5 frases curtas separadas por \\n (5-12 palavras cada)
+- Texto na arte carrossel: "Slide 1: ...\\nSlide 2: ...\\nSlide 3: ..." (3 a 8 slides)
+
+FORMATO DE RESPOSTA: JSON puro com estes campos (sempre devolva TODOS, usando "" quando não aplicável):
+{"title": "...", "description": "...", "content_type": "video|estatico|carrossel", "legenda": "...", "roteiro": "...", "texto_arte": "...", "briefing_arte": "..."}
 
 Sem markdown, sem code fences, sem texto fora do JSON.`
 
@@ -177,7 +189,7 @@ Reescreva o post aplicando essa instrução. Devolva o JSON conforme o schema do
     const text: string = textBlocks.length > 0 ? (textBlocks[textBlocks.length - 1].text ?? '') : ''
     const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
 
-    let refined: { title?: string; description?: string; legenda?: string; roteiro?: string; texto_arte?: string; briefing_arte?: string }
+    let refined: { title?: string; description?: string; content_type?: string; legenda?: string; roteiro?: string; texto_arte?: string; briefing_arte?: string }
     try {
       refined = JSON.parse(cleaned)
     } catch (err) {
@@ -188,9 +200,27 @@ Reescreva o post aplicando essa instrução. Devolva o JSON conforme o schema do
       })
     }
 
+    // Valida content_type que voltou: aceita só video|estatico|carrossel; senão mantém o atual
+    const validTypes = new Set(['video', 'estatico', 'carrossel'])
+    const newContentType = refined.content_type && validTypes.has(refined.content_type)
+      ? refined.content_type
+      : (post.content_type ?? null)
+    const typeChanged = newContentType !== post.content_type
+
+    // Quando muda pra video: roteiro deve estar preenchido, texto_arte vai pra null.
+    // Quando muda pra estatico/carrossel: texto_arte deve estar preenchido, roteiro vai pra null.
+    let finalRoteiro = refined.roteiro && refined.roteiro.trim() ? refined.roteiro : post.roteiro
+    let finalTextoArte = refined.texto_arte && refined.texto_arte.trim() ? refined.texto_arte : post.texto_arte
+    if (newContentType === 'video') {
+      finalTextoArte = null
+    } else if (newContentType === 'estatico' || newContentType === 'carrossel') {
+      finalRoteiro = null
+    }
+
     // Monta o "before" e "after" pro histórico
     const before = {
       title: post.title,
+      content_type: post.content_type,
       legenda: currentLegenda || null,
       roteiro: currentRoteiro || null,
       texto_arte: currentTextoArte || null,
@@ -198,9 +228,10 @@ Reescreva o post aplicando essa instrução. Devolva o JSON conforme o schema do
     }
     const after = {
       title: refined.title ?? post.title,
+      content_type: newContentType,
       legenda: refined.legenda ?? null,
-      roteiro: refined.roteiro ?? null,
-      texto_arte: refined.texto_arte ?? null,
+      roteiro: finalRoteiro,
+      texto_arte: finalTextoArte,
       briefing_arte: refined.briefing_arte ?? post.briefing_arte,
     }
 
@@ -209,16 +240,18 @@ Reescreva o post aplicando essa instrução. Devolva o JSON conforme o schema do
       before,
       after,
       at: new Date().toISOString(),
+      type_changed: typeChanged,
     }
 
-    // Atualiza o post: a IA reescreveu, então a saída IA dela vira a versão "oficial"
-    // (sobrescreve legenda/roteiro/texto_arte). versao_editada é limpa porque a versão atual já é a refinada.
+    // Atualiza o post: sobrescreve campos, limpa versao_editada (ja refinada),
+    // e ajusta content_type + roteiro/texto_arte pra ficarem coerentes.
     const updates: Record<string, unknown> = {
       title: refined.title ?? post.title,
       description: refined.description ?? post.description,
+      content_type: newContentType,
       legenda: refined.legenda ?? post.legenda,
-      roteiro: refined.roteiro ?? post.roteiro,
-      texto_arte: refined.texto_arte ?? post.texto_arte,
+      roteiro: finalRoteiro,
+      texto_arte: finalTextoArte,
       briefing_arte: refined.briefing_arte ?? post.briefing_arte,
       versao_editada: null,
       refinements: [...previousRefinements, newRefinement],
