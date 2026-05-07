@@ -24,6 +24,7 @@ import ManualSistema from "./pages/ManualSistema";
 import PureDesign from "./pages/PureDesign";
 import PureDesignEditor from "./pages/PureDesignEditor";
 import NotFound from "./pages/NotFound";
+import AgentePlanejamentoEditorial from "./pages/AgentePlanejamentoEditorial";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ function App() {
             <Route path="/manual-sistema" element={<ProtectedRoute><ManualSistema /></ProtectedRoute>} />
             <Route path="/pure-design" element={<ProtectedRoute><PureDesign /></ProtectedRoute>} />
             <Route path="/pure-design/:id" element={<ProtectedRoute><PureDesignEditor /></ProtectedRoute>} />
+            <Route path="/agente-planejamento-editorial" element={<ProtectedRoute><AgentePlanejamentoEditorial /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

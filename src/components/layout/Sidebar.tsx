@@ -78,6 +78,13 @@ const Sidebar = () => {
     { name: 'Solicitação de demandas', href: '/pedidos-demanda', icon: ClipboardList },
   ];
 
+  // Agente Social Media - Studios section - only for colaboradores and admins
+  const socialMediaNavigation = [
+    { name: 'Agente Planejamento Editorial', href: '/agente-planejamento-editorial', icon: Video },
+    { name: 'Agente Instagram e Facebook', href: '/agente-instagram-facebook', icon: Video },
+    { name: 'Agente Tik Tok', href: '/agente-tiktok', icon: Video },
+  ];
+
   // Minha Área section
   const minhaAreaNavigation = [
     { name: 'Relatórios', href: '#', icon: FileText, disabled: true },
@@ -125,6 +132,36 @@ const Sidebar = () => {
               </p>
             </div>
             {colaboradoresNavigation.map((item) => (
+              <NavLink
+                key={item.name}
+                to={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200',
+                    isActive
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                  )
+                }
+              >
+                <item.icon className="h-5 w-5" />
+                {item.name}
+              </NavLink>
+            ))}
+          </>
+        )}
+
+        {/* Agente Social Media - Studios Section - Only for colaboradores and admins */}
+        {(isColaborador || isAdmin) && (
+          <>
+            <div className="pt-4 pb-2">
+              <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <Video className="h-3.5 w-3.5" />
+                Agente Social Media - Studios
+              </p>
+            </div>
+            {socialMediaNavigation.map((item) => (
               <NavLink
                 key={item.name}
                 to={item.href}
