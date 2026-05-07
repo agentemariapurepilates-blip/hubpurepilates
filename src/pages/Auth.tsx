@@ -50,6 +50,8 @@ const Auth = () => {
 
   // Password recovery state (when user clicks the email link)
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [recoverySessionReady, setRecoverySessionReady] = useState(false);
+  const [recoveryLinkError, setRecoveryLinkError] = useState<'expired' | 'invalid' | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [updatingPassword, setUpdatingPassword] = useState(false);
@@ -65,22 +67,58 @@ const Auth = () => {
   const [fullName, setFullName] = useState('');
   const [selectedUserType, setSelectedUserType] = useState<UserType>('colaborador');
 
-  // Listen for PASSWORD_RECOVERY event from Supabase
+  // Detect recovery mode, validate session, and surface link errors
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsRecoveryMode(true);
+    const queryParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+
+    const isRecoveryQuery = queryParams.get('type') === 'recovery';
+    const isRecoveryHash = hashParams.get('type') === 'recovery';
+    const hashError = hashParams.get('error');
+    const hashErrorCode = hashParams.get('error_code');
+
+    const inRecovery = isRecoveryQuery || isRecoveryHash || hashError !== null;
+    if (!inRecovery) return;
+
+    setIsRecoveryMode(true);
+
+    // Supabase redirects with error params in the hash when the link is bad
+    if (hashError) {
+      setRecoveryLinkError(hashErrorCode === 'otp_expired' ? 'expired' : 'invalid');
+      return;
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        setRecoverySessionReady(true);
       }
     });
 
-    // Also check URL for recovery type
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('type') === 'recovery') {
-      setIsRecoveryMode(true);
-    }
+    // Cover the case where the session was already established (event missed on reload)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setRecoverySessionReady(true);
+    });
 
-    return () => subscription.unsubscribe();
+    // If no session materializes, the token was likely already consumed (email scanner / reuse)
+    const timer = setTimeout(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) setRecoveryLinkError('invalid');
+    }, 4000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
   }, []);
+
+  const handleRequestNewRecoveryLink = () => {
+    setIsRecoveryMode(false);
+    setRecoverySessionReady(false);
+    setRecoveryLinkError(null);
+    setError(null);
+    setShowForgotPassword(true);
+    navigate('/auth', { replace: true });
+  };
 
   // Redirect if already logged in (but not in recovery mode)
   useEffect(() => {
@@ -115,8 +153,23 @@ const Auth = () => {
       setConfirmNewPassword('');
       navigate('/');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erro ao atualizar senha';
-      setError(message);
+      const raw = err instanceof Error ? err.message : '';
+      const lower = raw.toLowerCase();
+
+      let friendly = 'Não foi possível atualizar a senha. Tente novamente.';
+      if (lower.includes('session') && lower.includes('missing')) {
+        friendly = 'Seu link de recuperação expirou ou já foi utilizado. Solicite um novo e-mail de redefinição.';
+      } else if (lower.includes('different from the old') || lower.includes('should be different') || lower.includes('same password') || lower.includes('new password should be different')) {
+        friendly = 'A nova senha precisa ser diferente da senha atual.';
+      } else if (lower.includes('weak password') || (lower.includes('password') && lower.includes('short'))) {
+        friendly = 'Senha muito curta. Use no mínimo 6 caracteres.';
+      } else if (lower.includes('rate limit') || lower.includes('too many')) {
+        friendly = 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.';
+      } else if (lower.includes('jwt') && lower.includes('expired')) {
+        friendly = 'Sua sessão de recuperação expirou. Solicite um novo link de redefinição.';
+      }
+
+      setError(friendly);
     } finally {
       setUpdatingPassword(false);
     }
@@ -215,6 +268,67 @@ const Auth = () => {
 
   // Recovery mode - user clicked the email link
   if (isRecoveryMode) {
+    // Link expirado ou inválido / já utilizado
+    if (recoveryLinkError) {
+      const isExpired = recoveryLinkError === 'expired';
+      return (
+        <div className="min-h-screen flex items-center justify-center gradient-hero p-4">
+          <div className="w-full max-w-md animate-fade-in">
+            <div className="text-center mb-8">
+              <img src={logo} alt="Pure Pilates" className="h-20 mx-auto mb-4" />
+            </div>
+
+            <Card className="card-pure">
+              <CardHeader className="text-center">
+                <CardTitle className="text-xl">
+                  {isExpired ? 'Link expirado' : 'Link inválido ou já utilizado'}
+                </CardTitle>
+                <CardDescription>
+                  {isExpired
+                    ? 'Este link de redefinição expirou. Solicite um novo e-mail para continuar.'
+                    : 'Este link já foi utilizado ou não é mais válido. Isso pode acontecer quando o filtro de segurança do seu e-mail abre o link antes de você. Solicite um novo para continuar.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  type="button"
+                  className="w-full btn-pure"
+                  onClick={handleRequestNewRecoveryLink}
+                >
+                  Solicitar novo link
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    // Aguardando Supabase processar o token da URL
+    if (!recoverySessionReady) {
+      return (
+        <div className="min-h-screen flex items-center justify-center gradient-hero p-4">
+          <div className="w-full max-w-md animate-fade-in">
+            <div className="text-center mb-8">
+              <img src={logo} alt="Pure Pilates" className="h-20 mx-auto mb-4" />
+            </div>
+
+            <Card className="card-pure">
+              <CardHeader className="text-center">
+                <CardTitle className="text-xl">Validando link...</CardTitle>
+                <CardDescription>
+                  Aguarde enquanto verificamos seu link de recuperação.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center py-6">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center gradient-hero p-4">
         <div className="w-full max-w-md animate-fade-in">
