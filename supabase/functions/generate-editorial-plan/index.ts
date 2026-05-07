@@ -123,17 +123,56 @@ Deno.serve(async (req) => {
       generationRules.push('- Gere NO MÍNIMO 12 postagens com network = "Tik Tok" (pelo menos 3 por semana, distribuídas ao longo do mês).')
     }
 
-    const userMessage = `Crie um plano editorial mensal completo para **${month} de ${year}**.
+    const buildUserMessage = (chunkLabel: string, dayRange: string, igTarget: number, tiktokTarget: number) => {
+      const chunkRules: string[] = []
+      if (generateInstagramBlock && igTarget > 0) {
+        chunkRules.push(`- Gere EXATAMENTE ${igTarget} postagens com network = "Instagram Studios" para esta janela.`)
+      }
+      if (wantTiktok && tiktokTarget > 0) {
+        chunkRules.push(`- Gere EXATAMENTE ${tiktokTarget} postagens com network = "Tik Tok" para esta janela.`)
+      }
+      return `Crie ${chunkLabel} do plano editorial de **${month} de ${year}**.
 
-Use a data ISO de exemplo "${exampleDate}" como referência de formato.
+JANELA DESTE LOTE: ${dayRange} (todas as datas devem cair dentro dessa janela).
+Data ISO de exemplo do mês: "${exampleDate}".
 
-## QUANTIDADE OBRIGATÓRIA POR REDE
-${generationRules.join('\n')}
+## QUANTIDADE PARA ESTE LOTE
+${chunkRules.join('\n')}
 
 ${instructions ? `## INSTRUÇÕES ESPECÍFICAS DESTE MÊS\n${instructions}\n` : ''}${editorialGuide ? `## GUIA EDITORIAL DESTE MÊS\n${editorialGuide}\n` : ''}
-Lembre-se de incluir as datas comemorativas e sazonais relevantes especificamente de ${month}/${year}.
+Inclua as datas comemorativas e sazonais relevantes de ${month}/${year} que caiam dentro desta janela.
 
 Responda agora com o JSON completo seguindo exatamente o formato definido no system prompt.`
+    }
+
+    const callAnthropicChunk = async (userMessage: string): Promise<{ posts: GeneratedPost[]; usage: Record<string, number> } > => {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': anthropicApiKey!,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 12000,
+          system: [
+            { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+          ],
+          messages: [
+            { role: 'user', content: userMessage },
+          ],
+        }),
+      })
+      if (!resp.ok) {
+        const errBody = await resp.text()
+        throw new Error(`Anthropic ${resp.status}: ${errBody}`)
+      }
+      const data = await resp.json()
+      const text: string = data?.content?.[0]?.text ?? ''
+      const chunkParsed = JSON.parse(stripCodeFences(text)) as { posts: GeneratedPost[] }
+      return { posts: chunkParsed.posts ?? [], usage: data?.usage ?? {} }
+    }
 
     let parsed: { posts: GeneratedPost[] } | null = null
     let providerUsed = 'none'
@@ -141,49 +180,37 @@ Responda agora com o JSON completo seguindo exatamente o formato definido no sys
 
     if (anthropicApiKey) {
       try {
-        const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'x-api-key': anthropicApiKey,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'claude-haiku-4-5',
-            max_tokens: 16000,
-            system: [
-              {
-                type: 'text',
-                text: SYSTEM_PROMPT,
-                cache_control: { type: 'ephemeral' },
-              },
-            ],
-            messages: [
-              { role: 'user', content: userMessage },
-            ],
-          }),
-        })
+        const lastDay = new Date(Number(year), monthIdx + 1, 0).getDate()
+        const midDay = Math.floor(lastDay / 2)
+        const igTotal = generateInstagramBlock ? 25 : 0
+        const tiktokTotal = wantTiktok ? 12 : 0
+        const igHalf = Math.ceil(igTotal / 2)
+        const tiktokHalf = Math.ceil(tiktokTotal / 2)
 
-        if (!anthropicResp.ok) {
-          const errBody = await anthropicResp.text()
-          throw new Error(`Anthropic ${anthropicResp.status}: ${errBody}`)
-        }
+        const msgFirst = buildUserMessage(
+          'a PRIMEIRA METADE',
+          `dias 1 a ${midDay}`,
+          igHalf,
+          tiktokHalf,
+        )
+        const msgSecond = buildUserMessage(
+          'a SEGUNDA METADE',
+          `dias ${midDay + 1} a ${lastDay}`,
+          igTotal - igHalf,
+          tiktokTotal - tiktokHalf,
+        )
 
-        const anthropicData = await anthropicResp.json()
-        const text: string = anthropicData?.content?.[0]?.text ?? ''
-        const cleaned = stripCodeFences(text)
-        parsed = JSON.parse(cleaned)
+        const t0 = Date.now()
+        const [first, second] = await Promise.all([
+          callAnthropicChunk(msgFirst),
+          callAnthropicChunk(msgSecond),
+        ])
+        console.log('Anthropic parallel chunks done in', Date.now() - t0, 'ms')
+        console.log('Usage chunk1:', JSON.stringify(first.usage))
+        console.log('Usage chunk2:', JSON.stringify(second.usage))
+
+        parsed = { posts: [...first.posts, ...second.posts] }
         providerUsed = 'anthropic'
-
-        const usage = anthropicData?.usage
-        if (usage) {
-          console.log('Anthropic usage:', JSON.stringify({
-            input: usage.input_tokens,
-            output: usage.output_tokens,
-            cache_create: usage.cache_creation_input_tokens,
-            cache_read: usage.cache_read_input_tokens,
-          }))
-        }
       } catch (err) {
         lastError = String(err)
         console.error('Anthropic failed, will try Gemini fallback:', lastError)

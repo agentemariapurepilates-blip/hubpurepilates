@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CalendarDays, Play, Loader2, Instagram, Facebook, CheckCircle2, XCircle, Star, Clock, Download } from 'lucide-react';
+import { CalendarDays, Play, Loader2, Instagram, Facebook, CheckCircle2, XCircle, Star, Clock, Download, Pencil, Save, X, Sparkles } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isToday, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +16,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType } from 'docx';
+
+interface VersaoEditada {
+  legenda?: string;
+  roteiro?: string;
+  texto_arte?: string;
+}
 
 interface GeneratedContent {
   id: string;
@@ -29,6 +35,8 @@ interface GeneratedContent {
   roteiro?: string | null;
   texto_arte?: string | null;
   briefing_arte?: string | null;
+  feedback_motivo?: string | null;
+  versao_editada?: VersaoEditada | null;
 }
 
 const AgenteInstagramFacebook = () => {
@@ -47,6 +55,11 @@ const AgenteInstagramFacebook = () => {
   const [expandedItem, setExpandedItem] = useState<GeneratedContent | null>(null);
   const [pastPlans, setPastPlans] = useState<Array<{ month: string; year: string; total: number; approved: number }>>([]);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
+  const [rejectDialog, setRejectDialog] = useState<{ open: boolean; item: GeneratedContent | null; reason: string }>({ open: false, item: null, reason: '' });
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState<VersaoEditada>({ legenda: '', roteiro: '', texto_arte: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [savingReject, setSavingReject] = useState(false);
 
   const networkColors: Record<GeneratedContent['network'], string> = {
     'Instagram Studios': 'bg-pink-500 text-white',
@@ -197,6 +210,68 @@ const AgenteInstagramFacebook = () => {
     }
   };
 
+  const handleSaveReject = async () => {
+    if (!rejectDialog.item) return;
+    if (!rejectDialog.reason.trim()) {
+      toast.error('Conta rapidinho por que está reprovando — esse motivo vai ensinar a IA.');
+      return;
+    }
+    setSavingReject(true);
+    const id = rejectDialog.item.id;
+    const reason = rejectDialog.reason.trim();
+    setGeneratedContents((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, status: 'rejected', feedback_motivo: reason } : item,
+      ),
+    );
+    const { error } = await (supabase.from('editorial_posts' as never) as any)
+      .update({ status: 'rejected', feedback_motivo: reason })
+      .eq('id', id);
+    setSavingReject(false);
+    if (error) {
+      console.error('Erro ao salvar reprovação:', error);
+      toast.error('Não foi possível salvar.');
+      return;
+    }
+    toast.success('Reprovação salva — a IA vai usar isso na próxima geração.');
+    setRejectDialog({ open: false, item: null, reason: '' });
+    setExpandedItem(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!expandedItem) return;
+    setSavingEdit(true);
+    const cleanEdit: VersaoEditada = {};
+    if (editForm.legenda?.trim()) cleanEdit.legenda = editForm.legenda.trim();
+    if (editForm.roteiro?.trim()) cleanEdit.roteiro = editForm.roteiro.trim();
+    if (editForm.texto_arte?.trim()) cleanEdit.texto_arte = editForm.texto_arte.trim();
+    const id = expandedItem.id;
+    setGeneratedContents((current) =>
+      current.map((item) => (item.id === id ? { ...item, versao_editada: cleanEdit } : item)),
+    );
+    const { error } = await (supabase.from('editorial_posts' as never) as any)
+      .update({ versao_editada: cleanEdit })
+      .eq('id', id);
+    setSavingEdit(false);
+    if (error) {
+      console.error('Erro ao salvar edição:', error);
+      toast.error('Não foi possível salvar a edição.');
+      return;
+    }
+    toast.success('Edição salva — a IA vai aprender com sua versão.');
+    setExpandedItem((current) => (current ? { ...current, versao_editada: cleanEdit } : current));
+    setEditMode(false);
+  };
+
+  const startEditing = (item: GeneratedContent) => {
+    setEditForm({
+      legenda: item.versao_editada?.legenda ?? item.legenda ?? '',
+      roteiro: item.versao_editada?.roteiro ?? item.roteiro ?? '',
+      texto_arte: item.versao_editada?.texto_arte ?? item.texto_arte ?? '',
+    });
+    setEditMode(true);
+  };
+
   const handleApproveAll = async () => {
     if (!user) return;
     const pendingIds = generatedContents.filter((c) => c.status === 'pending').map((c) => c.id);
@@ -250,6 +325,8 @@ const AgenteInstagramFacebook = () => {
         roteiro?: string | null;
         texto_arte?: string | null;
         briefing_arte?: string | null;
+        feedback_motivo?: string | null;
+        versao_editada?: VersaoEditada | null;
       }>;
 
       if (posts.length > 0) {
@@ -267,6 +344,8 @@ const AgenteInstagramFacebook = () => {
             roteiro: p.roteiro ?? null,
             texto_arte: p.texto_arte ?? null,
             briefing_arte: p.briefing_arte ?? null,
+            feedback_motivo: p.feedback_motivo ?? null,
+            versao_editada: p.versao_editada ?? null,
           })),
         );
         setResultMonth(new Date(Number(year), monthIndex, 1));
@@ -786,7 +865,7 @@ const AgenteInstagramFacebook = () => {
         )}
       </div>
 
-      <Dialog open={!!expandedItem} onOpenChange={(open) => !open && setExpandedItem(null)}>
+      <Dialog open={!!expandedItem} onOpenChange={(open) => { if (!open) { setExpandedItem(null); setEditMode(false); } }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           {expandedItem && (
             <>
@@ -803,12 +882,32 @@ const AgenteInstagramFacebook = () => {
                   <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-sky-500 text-white flex items-center gap-1">
                     <Facebook className="h-3 w-3" /> Facebook
                   </span>
+                  {expandedItem.versao_editada && (
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-600 text-white flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" /> Editado por você
+                    </span>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {format(new Date(expandedItem.date), "dd/MM/yyyy")}
                   </span>
                 </div>
-                <DialogTitle className="text-left text-xl">{expandedItem.title}</DialogTitle>
+                <div className="flex items-start justify-between gap-3">
+                  <DialogTitle className="text-left text-xl">{expandedItem.title}</DialogTitle>
+                  {!editMode && (
+                    <Button size="sm" variant="outline" onClick={() => startEditing(expandedItem)} className="gap-1.5 shrink-0">
+                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    </Button>
+                  )}
+                </div>
               </DialogHeader>
+
+              {/* Aviso quando estava reprovado */}
+              {expandedItem.feedback_motivo && (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs">
+                  <div className="font-semibold text-rose-700 mb-1">Motivo da reprovação anterior</div>
+                  <p className="text-rose-900 whitespace-pre-line">{expandedItem.feedback_motivo}</p>
+                </div>
+              )}
 
               <div className="space-y-4 py-2">
                 <div>
@@ -821,19 +920,31 @@ const AgenteInstagramFacebook = () => {
                   <div className="rounded-lg border border-border bg-card p-4">
                     <div className="flex items-center justify-between mb-2">
                       <Label className="text-xs uppercase tracking-wider text-purple-700">Roteiro</Label>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => downloadRoteiroDocx(expandedItem)}
-                        disabled={downloadingDocx || !expandedItem.roteiro}
-                        className="gap-1.5"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        {downloadingDocx ? 'Gerando...' : 'Baixar .docx'}
-                      </Button>
+                      {!editMode && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => downloadRoteiroDocx(expandedItem)}
+                          disabled={downloadingDocx || !(expandedItem.versao_editada?.roteiro || expandedItem.roteiro)}
+                          className="gap-1.5"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          {downloadingDocx ? 'Gerando...' : 'Baixar .docx'}
+                        </Button>
+                      )}
                     </div>
-                    {expandedItem.roteiro ? (
-                      <p className="text-sm whitespace-pre-line bg-muted/30 p-3 rounded">{expandedItem.roteiro}</p>
+                    {editMode ? (
+                      <Textarea
+                        value={editForm.roteiro ?? ''}
+                        onChange={(e) => setEditForm((f) => ({ ...f, roteiro: e.target.value }))}
+                        rows={8}
+                        placeholder="Roteiro cena-a-cena…"
+                        className="font-mono text-xs"
+                      />
+                    ) : (expandedItem.versao_editada?.roteiro || expandedItem.roteiro) ? (
+                      <p className="text-sm whitespace-pre-line bg-muted/30 p-3 rounded">
+                        {expandedItem.versao_editada?.roteiro ?? expandedItem.roteiro}
+                      </p>
                     ) : (
                       <p className="text-xs text-muted-foreground italic">Roteiro ainda não gerado.</p>
                     )}
@@ -844,8 +955,18 @@ const AgenteInstagramFacebook = () => {
                 {(expandedItem.content_type === 'estatico' || expandedItem.content_type === 'carrossel') && (
                   <div className="rounded-lg border border-border bg-card p-4">
                     <Label className="text-xs uppercase tracking-wider text-blue-700">Texto na arte</Label>
-                    {expandedItem.texto_arte ? (
-                      <p className="text-sm whitespace-pre-line mt-2 bg-muted/30 p-3 rounded font-medium">{expandedItem.texto_arte}</p>
+                    {editMode ? (
+                      <Textarea
+                        value={editForm.texto_arte ?? ''}
+                        onChange={(e) => setEditForm((f) => ({ ...f, texto_arte: e.target.value }))}
+                        rows={6}
+                        placeholder="Frases que vão dentro da arte…"
+                        className="mt-2"
+                      />
+                    ) : (expandedItem.versao_editada?.texto_arte || expandedItem.texto_arte) ? (
+                      <p className="text-sm whitespace-pre-line mt-2 bg-muted/30 p-3 rounded font-medium">
+                        {expandedItem.versao_editada?.texto_arte ?? expandedItem.texto_arte}
+                      </p>
                     ) : (
                       <p className="text-xs text-muted-foreground italic mt-1">Texto da arte não definido.</p>
                     )}
@@ -863,8 +984,18 @@ const AgenteInstagramFacebook = () => {
                 {/* Legenda */}
                 <div className="rounded-lg border border-border bg-card p-4">
                   <Label className="text-xs uppercase tracking-wider text-pink-700">Legenda do post</Label>
-                  {expandedItem.legenda ? (
-                    <p className="text-sm whitespace-pre-line mt-2 bg-muted/30 p-3 rounded">{expandedItem.legenda}</p>
+                  {editMode ? (
+                    <Textarea
+                      value={editForm.legenda ?? ''}
+                      onChange={(e) => setEditForm((f) => ({ ...f, legenda: e.target.value }))}
+                      rows={8}
+                      placeholder="Legenda completa…"
+                      className="mt-2"
+                    />
+                  ) : (expandedItem.versao_editada?.legenda || expandedItem.legenda) ? (
+                    <p className="text-sm whitespace-pre-line mt-2 bg-muted/30 p-3 rounded">
+                      {expandedItem.versao_editada?.legenda ?? expandedItem.legenda}
+                    </p>
                   ) : (
                     <p className="text-xs text-muted-foreground italic mt-1">Legenda não definida.</p>
                   )}
@@ -876,19 +1007,63 @@ const AgenteInstagramFacebook = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-3 border-t">
-                  <Button size="sm" onClick={() => { handleUpdateStatus(expandedItem.id, 'approved'); setExpandedItem(null); }} className="gap-1.5">
-                    <CheckCircle2 className="h-4 w-4" /> Aprovar
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => { handleUpdateStatus(expandedItem.id, 'rejected'); setExpandedItem(null); }} className="gap-1.5">
-                    <XCircle className="h-4 w-4" /> Reprovar
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => { handleUpdateStatus(expandedItem.id, 'favorite'); setExpandedItem(null); }} className="gap-1.5">
-                    <Star className="h-4 w-4" /> Favorito
-                  </Button>
+                  {editMode ? (
+                    <>
+                      <Button size="sm" onClick={handleSaveEdit} disabled={savingEdit} className="gap-1.5">
+                        {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        Salvar edição
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditMode(false)} className="gap-1.5">
+                        <X className="h-4 w-4" /> Cancelar
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button size="sm" onClick={() => { handleUpdateStatus(expandedItem.id, 'approved'); setExpandedItem(null); }} className="gap-1.5">
+                        <CheckCircle2 className="h-4 w-4" /> Aprovar
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => setRejectDialog({ open: true, item: expandedItem, reason: expandedItem.feedback_motivo ?? '' })} className="gap-1.5">
+                        <XCircle className="h-4 w-4" /> Reprovar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { handleUpdateStatus(expandedItem.id, 'favorite'); setExpandedItem(null); }} className="gap-1.5">
+                        <Star className="h-4 w-4" /> Favorito
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: motivo da reprovação */}
+      <Dialog open={rejectDialog.open} onOpenChange={(open) => !open && setRejectDialog({ open: false, item: null, reason: '' })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Por que está reprovando?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Conta o motivo — a IA vai usar isso na próxima geração pra evitar o mesmo problema. Quanto mais específico, melhor.
+            </p>
+            <Textarea
+              value={rejectDialog.reason}
+              onChange={(e) => setRejectDialog((d) => ({ ...d, reason: e.target.value }))}
+              rows={5}
+              placeholder='Ex: "Tom muito clínico, falta o calor da Pure" ou "Hashtag genérica demais"'
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" size="sm" onClick={() => setRejectDialog({ open: false, item: null, reason: '' })}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" size="sm" onClick={handleSaveReject} disabled={savingReject} className="gap-1.5">
+                {savingReject ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                Reprovar
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </MainLayout>
