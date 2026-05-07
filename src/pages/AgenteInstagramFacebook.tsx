@@ -1112,26 +1112,6 @@ const AgenteInstagramFacebook = () => {
                   )}
                 </div>
 
-                {/* Histórico de refinações anteriores */}
-                {expandedItem.refinements && expandedItem.refinements.length > 0 && (
-                  <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-4 space-y-3">
-                    <Label className="text-xs uppercase tracking-wider text-violet-700 flex items-center gap-1.5">
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      Conversa com o agente ({expandedItem.refinements.length})
-                    </Label>
-                    {expandedItem.refinements.map((r, i) => (
-                      <div key={i} className="text-xs space-y-1 border-l-2 border-violet-300 pl-3">
-                        <div className="text-violet-700 font-semibold">
-                          Você: <span className="font-normal text-foreground">{r.prompt}</span>
-                        </div>
-                        <div className="text-muted-foreground italic">
-                          → IA reescreveu em {format(new Date(r.at), "dd/MM 'às' HH:mm")}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 {/* Chat: Editar com novo prompt para o agente */}
                 {!editMode && (
                   <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-4 space-y-2">
