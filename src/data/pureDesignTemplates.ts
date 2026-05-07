@@ -193,6 +193,16 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     fields: diaDasMaesFields,
   },
   {
+    id: 'dia-das-maes-comemorativa',
+    name: 'Dia das Mães',
+    category: 'Datas Comemorativas',
+    thumbnail: '/images/pure-design/dia-das-maes-bg-v2.png',
+    width: 1080,
+    height: 1440,
+    html: diaDasMaesHTML('/images/pure-design/dia-das-maes-bg-v2.png'),
+    fields: diaDasMaesFields,
+  },
+  {
     id: 'dia-das-maes-50-off',
     name: 'Dupla Dinâmica 50% OFF',
     category: 'Dia das mães',
