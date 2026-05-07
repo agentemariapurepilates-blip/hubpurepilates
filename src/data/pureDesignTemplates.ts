@@ -33,8 +33,8 @@ const sejaInstrutorHTML = (bgUrl: string) => `<!DOCTYPE html>
 <h1 style="font-size:84px; font-weight:800; color:#c41230; letter-spacing:6px; margin:0; line-height:1;">{{titulo2}}</h1>
 <p style="font-size:40px; font-weight:700; color:#1a1a1a; margin-top:35px; width:280px; margin-left:auto;">{{cargo}}</p>
 <p style="font-size:34px; font-weight:700; color:#c41230; margin-top:5px; width:280px; margin-left:auto; transform:translateX(20px);">{{localizacao}}</p>
-<p style="font-size:34px; font-weight:700; color:#777777; margin-top:5px; transform:translateX(20px);">{{dias}}</p>
-<p style="font-size:34px; font-weight:700; color:#777777; margin-top:5px; transform:translateX(20px);">{{horario}}</p>
+<p style="font-size:34px; font-weight:700; color:#777777; margin-top:5px; width:340px; margin-left:auto; line-height:1.25; transform:translateX(20px);">{{dias}}</p>
+<p style="font-size:34px; font-weight:700; color:#777777; margin-top:5px; width:340px; margin-left:auto; line-height:1.25; transform:translateX(20px);">{{horario}}</p>
 <p style="font-size:28px; color:#666666; line-height:1.4; margin-top:25px; width:340px; margin-left:auto;">{{descricao}}</p>
 <p style="font-size:30px; font-weight:600; color:#c41230; margin-top:50px;">{{telefone}}</p>
 <p style="font-size:30px; font-weight:600; color:#c41230; margin-top:6px;">{{email}}</p>
@@ -53,6 +53,29 @@ const sejaInstrutorFields: TemplateField[] = [
   { id: 'descricao', label: 'Descrição', placeholder: '{{descricao}}', defaultValue: 'Procuramos profissional com formação completa em Pilates para conduzir aulas em grupo e individuais.', inputType: 'textarea', maxLength: 150 },
   { id: 'email', label: 'E-mail de contato', placeholder: '{{email}}', defaultValue: 'contato@purepilates.com.br', maxLength: 40 },
   { id: 'telefone', label: 'Telefone / WhatsApp', placeholder: '{{telefone}}', defaultValue: '(11) 99999-9999', maxLength: 25 },
+];
+
+const diaDasMaesHTML = (bgUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dia das Mães</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1440px; background:#ffffff; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif;">
+<div style="position:absolute; right:80px; top:340px; width:380px; text-align:left;">
+<span style="display:inline; background:#c41230; color:#ffffff; padding:6px 14px; box-decoration-break:clone; -webkit-box-decoration-break:clone; font-size:32px; font-weight:500; line-height:1.7;">{{mensagem}}</span>
+</div>
+<div style="position:absolute; left:90px; top:870px; width:380px; color:#c41230; font-size:22px; font-weight:700; letter-spacing:3px; line-height:1.3; text-transform:uppercase;">{{unidade}}</div>
+</div>
+</body>
+</html>`;
+
+const diaDasMaesFields: TemplateField[] = [
+  { id: 'mensagem', label: 'Mensagem', placeholder: '{{mensagem}}', defaultValue: 'Mãe é amor, cuidado e carinho que dura pra toda vida.', inputType: 'textarea', maxLength: 120 },
+  { id: 'unidade', label: 'Unidade', placeholder: '{{unidade}}', defaultValue: 'Unidade Vila Mariana', maxLength: 70 },
 ];
 
 export const pureDesignTemplates: PureDesignTemplate[] = [
@@ -75,6 +98,16 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     height: 1440,
     html: sejaInstrutorHTML('/images/pure-design/seja-instrutor-2-bg-v3.png'),
     fields: sejaInstrutorFields,
+  },
+  {
+    id: 'dia-das-maes',
+    name: 'Dia das Mães',
+    category: 'Datas Importantes (Feriados)',
+    thumbnail: '/images/pure-design/dia-das-maes-bg.png',
+    width: 1080,
+    height: 1440,
+    html: diaDasMaesHTML('/images/pure-design/dia-das-maes-bg.png'),
+    fields: diaDasMaesFields,
   },
 ];
 
