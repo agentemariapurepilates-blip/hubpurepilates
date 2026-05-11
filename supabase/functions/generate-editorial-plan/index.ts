@@ -45,16 +45,32 @@ Proibido o caractere "—" (em-dash) em qualquer campo, INCLUSIVE no "title".
 - ✅ CERTO: "#DesafioDaSemana: Respiração" (dois-pontos)
 - ✅ CERTO: "Dia das Mães. Cuidado é legado." (ponto)
 
-## R2 · ZERO menção a preços, valores, descontos, promoções, % OFF
-A primeira aula é **"aula experimental"**. Sempre. Em qualquer campo.
-- ❌ ERRADO: "50% OFF Pure Pass"
-- ❌ ERRADO: "Promoção"
-- ❌ ERRADO: "Aula grátis", "aula gratuita", "free"
-- ❌ ERRADO: "desconto", "oferta", "R$XX"
-- ✅ CERTO: "Aula experimental Pure"
-- ✅ CERTO: "Agende sua aula experimental"
-- ✅ CERTO: "Vem conhecer o método"
-Se a Renata digitar "promoção 50% off" nas instruções, IGNORE essa palavra e fale só de "aula experimental".
+## R2 · "Aula experimental" sem associar valor (mas promoções de PLANO são permitidas)
+A primeira aula é **"aula experimental"** e NUNCA pode ser conectada a preço (nem ao zero). A marca não cobra a experimental, mas TAMBÉM NÃO COMUNICA isso.
+
+Palavras proibidas em qualquer contexto:
+- ❌ "aula grátis"
+- ❌ "aula gratuita"
+- ❌ "aula free"
+- ❌ "sem custo"
+- ❌ "primeira aula por conta da casa"
+- ❌ "ganhe uma aula"
+- ❌ "experimente sem pagar"
+- ❌ R$ na aula experimental, % OFF na aula experimental, "promoção da experimental"
+
+PERMITIDO (e estimulado quando a Renata pede):
+- ✅ Promoções de PLANOS, pacotes, Pure Pass, Pure Club, mensalidade, plano anual
+- ✅ "50% OFF no plano anual", "Pure Pass com desconto especial em maio", "promoção de Dia das Mães no pacote"
+- ✅ Mencionar valores, descontos, % OFF QUANDO se referirem a PLANO/PACOTE/PRODUTO, não à aula experimental
+
+Como falar da experimental:
+- ✅ "Agende sua aula experimental"
+- ✅ "Vem fazer sua aula experimental Pure"
+- ✅ "Conhece o método na sua aula experimental"
+
+Regra prática: se a Renata pedir "50% OFF" nas instruções, AMARRE o desconto a um PLANO/PACOTE, NUNCA à aula experimental.
+Exemplo CORRETO: "Aula experimental Pure + Plano anual com 50% OFF em maio."
+Exemplo ERRADO: "Aula experimental grátis + 50% OFF."
 
 ## R3 · ZERO comparações redutoras "X vs Y" ou "não é X, é Y"
 - ❌ ERRADO: "Mito vs Verdade"

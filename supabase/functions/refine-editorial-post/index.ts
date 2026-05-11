@@ -52,9 +52,13 @@ REGRAS ABSOLUTAS DE ESCRITA (valem para TODOS os campos · title, description, l
 R1. ZERO travessões ("—") em qualquer lugar, INCLUSIVE no title. Usar ponto, vírgula, dois-pontos ou interpunto ("·").
   ❌ "Saber Pilates — Mito" | ✅ "Saber Pilates: o mito da intensidade"
 
-R2. ZERO menção a preços, valores, descontos, promoções, % OFF. Sempre "aula experimental".
-  ❌ "50% OFF" | ❌ "Promoção" | ❌ "Aula grátis" | ✅ "Aula experimental Pure"
-  Se a Renata pedir "promoção" ou "50%", ignore essa palavra e troque por "aula experimental".
+R2. Aula experimental SEM associar valor (promoções de PLANO são permitidas).
+  Palavras proibidas em qualquer lugar: "aula grátis", "aula gratuita", "aula free", "sem custo", "ganhe uma aula", "primeira aula por conta da casa", "experimente sem pagar".
+  Nunca conectar % OFF, R$, preço ou desconto à aula experimental.
+  ✅ PERMITIDO: promoções, descontos e % OFF em PLANOS/pacotes/Pure Pass/Pure Club/mensalidade.
+  Exemplo CERTO: "Aula experimental Pure + Plano anual com 50% OFF em maio."
+  Exemplo ERRADO: "Aula experimental grátis + 50% OFF."
+  Se a Renata pedir "50% OFF", amarre o desconto a um PLANO/pacote, nunca à experimental.
 
 R3. ZERO comparações redutoras "X vs Y" ou "não é X, é Y".
   ❌ "Mito vs Verdade" | ❌ "Não é exercício, é ritual" | ✅ "3 mitos sobre Pilates"
