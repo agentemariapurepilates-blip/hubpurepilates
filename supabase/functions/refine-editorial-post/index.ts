@@ -10,9 +10,11 @@ interface RequestBody {
 
 interface SceneEntry {
   numero: number
-  tempo: string
-  descricao?: string
+  cena?: string
+  narracao?: string
   // Legacy
+  tempo?: string
+  descricao?: string
   fala?: string
   textoTela?: string
   imagem?: string
@@ -82,7 +84,7 @@ TOM:
 
 FORMATO DOS CAMPOS:
 - "roteiro" (vídeo): resumo do arco narrativo em 2-4 linhas. NÃO é o roteiro cena-a-cena.
-- "cenas" (vídeo): array de 3 a 8 objetos { "numero": 1, "tempo": "0-2s", "descricao": "..." }. Cenas duram 2-8s em média. Última cena fecha com CTA. A "descricao" combina visual + ação + texto na tela (quando houver, entre aspas).
+- "cenas" (vídeo): array de 3 a 8 objetos { "numero": 1, "cena": "...", "narracao": "..." }. SOMENTE 2 campos de conteúdo: "cena" (ação/visual em frase curta) e "narracao" (o que a pessoa fala; vazio se cena muda). Última cena fecha com CTA. NÃO use "tempo", "textoTela", "fala" ou "imagem".
 - "texto_arte" estático: 1 a 5 frases curtas separadas por \\n (5-12 palavras cada).
 - "texto_arte" carrossel: "Slide 1: ...\\nSlide 2: ...\\nSlide 3: ..." (3 a 8 slides).
 

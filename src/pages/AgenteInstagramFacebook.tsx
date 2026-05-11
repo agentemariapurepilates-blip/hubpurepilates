@@ -27,19 +27,21 @@ interface VersaoEditada {
 
 interface SceneEntry {
   numero: number;
-  tempo: string;
+  cena?: string;
+  narracao?: string;
+  // Legacy (dados antigos)
+  tempo?: string;
   descricao?: string;
-  // Legacy (dados antigos antes da simplificacao do schema)
   fala?: string;
   textoTela?: string;
   imagem?: string;
 }
 
-const sceneDescricao = (c: SceneEntry): string => {
-  if (c.descricao && c.descricao.trim()) return c.descricao.trim();
-  const partes = [c.imagem, c.fala && `Fala: ${c.fala}`, c.textoTela && `Texto na tela: ${c.textoTela}`].filter(Boolean) as string[];
-  return partes.join(' · ');
-};
+const sceneCena = (c: SceneEntry): string =>
+  c.cena?.trim() || c.imagem?.trim() || c.descricao?.trim() || '';
+
+const sceneNarracao = (c: SceneEntry): string =>
+  c.narracao?.trim() || c.fala?.trim() || '';
 
 type FieldKey = 'legenda' | 'roteiro' | 'texto_arte' | 'briefing_arte';
 
@@ -176,8 +178,7 @@ const AgenteInstagramFacebook = () => {
     return new Date(Number(selectedYear), monthIndex, day).toISOString();
   };
 
-  // Gera DOCX no estilo do template HTML da Pure: header vermelho, secoes
-  // (Info Gerais, Briefing, Roteiro 3-col, Legenda, Briefing da Arte).
+  // Gera DOCX no estilo do template HTML da Pure: header padrao (grid 2 cols) + tabela 2 cols (Cena | Narracao).
   const downloadRoteiroDocx = async (post: GeneratedContent) => {
     const cenas = Array.isArray(post.cenas) ? post.cenas : [];
     const fallbackRoteiro = post.versao_editada?.roteiro ?? post.roteiro ?? '';
@@ -187,22 +188,9 @@ const AgenteInstagramFacebook = () => {
     }
     setDownloadingDocx(true);
     try {
-      const dataFormatada = format(parseISO(post.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-      const legendaTxt = post.versao_editada?.legenda ?? post.legenda ?? '';
-      const briefingArteTxt = post.versao_editada?.briefing_arte ?? post.briefing_arte ?? '';
-      const formatoLabel = post.content_type === 'video' ? 'Vídeo / Reels' : post.content_type === 'carrossel' ? 'Carrossel' : 'Estático';
-
-      const para = (text: string, opts: { bold?: boolean; size?: number; color?: string; italics?: boolean; alignment?: typeof AlignmentType[keyof typeof AlignmentType] } = {}) =>
-        new Paragraph({
-          alignment: opts.alignment,
-          children: [new TextRun({ text, bold: opts.bold, size: opts.size, color: opts.color, italics: opts.italics })],
-        });
-
       const PURE_RED = 'C10230';
       const LIGHT_GREY = 'FAFAFA';
       const BORDER_GREY = 'EEEEEE';
-      const PINK_BORDER = 'FFD4DF';
-      const PINK_BG = 'FFF7F9';
 
       const noBorders = {
         top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
@@ -220,106 +208,100 @@ const AgenteInstagramFacebook = () => {
         right: { style: BorderStyle.SINGLE, size: 4, color: BORDER_GREY },
       } as const;
 
-      // Header vermelho com titulo + caption
+      const safeFileTitle = post.title
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '')
+        .slice(0, 40);
+      const nomeArquivo = `[Redes sociais]_Estudio_${safeFileTitle || 'Roteiro'}_VH`;
+
+      // Header vermelho (Campanha, Nome do Arquivo, Observacao, Referencia, Produtora, Apresentacao, Direcao)
+      // Renderizamos como 2 colunas (grid 2x4) dentro de uma cell vermelha.
+      const headerItem = (label: string, value: string) => [
+        new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: label.toUpperCase(), color: 'FFFFFF', size: 14 })] }),
+        new Paragraph({ spacing: { after: 240 }, children: [new TextRun({ text: value, color: 'FFFFFF', bold: true, size: 22 })] }),
+      ];
+
+      const headerLeftCell = new TableCell({
+        width: { size: 50, type: WidthType.PERCENTAGE },
+        shading: { type: ShadingType.CLEAR, fill: PURE_RED, color: 'auto' },
+        margins: { top: 200, bottom: 200, left: 200, right: 200 },
+        borders: noBorders,
+        children: [
+          ...headerItem('Campanha', 'CLIENTE: Estúdio'),
+          ...headerItem('Observação', 'Vertical e horizontal'),
+          ...headerItem('Produtora', 'BONIARTE'),
+          ...headerItem('Direção', 'ANDRÉ ÂNGELO'),
+        ],
+      });
+
+      const headerRightCell = new TableCell({
+        width: { size: 50, type: WidthType.PERCENTAGE },
+        shading: { type: ShadingType.CLEAR, fill: PURE_RED, color: 'auto' },
+        margins: { top: 200, bottom: 200, left: 200, right: 200 },
+        borders: noBorders,
+        children: [
+          ...headerItem('Nome do Arquivo', nomeArquivo),
+          ...headerItem('Referência', post.description?.slice(0, 200) || post.title),
+          ...headerItem('Apresentação', 'Professor(a) / Porta voz Pure Pilates'),
+        ],
+      });
+
       const headerTable = new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         borders: noBorders,
         rows: [
+          // Linha do titulo "ROTEIROS"
           new TableRow({
             children: [
               new TableCell({
                 width: { size: 100, type: WidthType.PERCENTAGE },
+                columnSpan: 2,
                 shading: { type: ShadingType.CLEAR, fill: PURE_RED, color: 'auto' },
-                margins: { top: 400, bottom: 400, left: 500, right: 500 },
-                children: [
-                  new Paragraph({ children: [new TextRun({ text: post.title, bold: true, size: 36, color: 'FFFFFF' })] }),
-                  new Paragraph({ children: [new TextRun({ text: 'Pure Pilates · Agente Instagram e Facebook', color: 'FFFFFF' })] }),
-                ],
+                margins: { top: 400, bottom: 200, left: 400, right: 400 },
+                borders: noBorders,
+                children: [new Paragraph({ children: [new TextRun({ text: 'ROTEIROS', bold: true, color: 'FFFFFF', size: 36 })] })],
               }),
             ],
           }),
-        ],
-      });
-
-      // Card "Informações Gerais" — table com 3 cells horizontais
-      const infoCard = (titulo: string, valor: string) =>
-        new TableCell({
-          width: { size: 33, type: WidthType.PERCENTAGE },
-          shading: { type: ShadingType.CLEAR, fill: LIGHT_GREY, color: 'auto' },
-          margins: { top: 200, bottom: 200, left: 250, right: 250 },
-          borders: greyBorders,
-          children: [
-            new Paragraph({ children: [new TextRun({ text: titulo.toUpperCase(), bold: true, size: 16, color: '777777' })] }),
-            new Paragraph({ children: [new TextRun({ text: valor, bold: true, size: 22 })] }),
-          ],
-        });
-
-      const infoGrid = new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: noBorders,
-        rows: [
+          // Linha do grid de metadados (2 colunas)
           new TableRow({
-            children: [
-              infoCard('Data de publicação', dataFormatada),
-              infoCard('Formato', formatoLabel),
-              infoCard('Objetivo', post.description.slice(0, 60) || 'Conteúdo Pure'),
-            ],
+            children: [headerLeftCell, headerRightCell],
           }),
         ],
       });
 
-      // Tabela do Roteiro (Tempo | Cena | Descrição)
+      // Tabela do roteiro: Cena | Narracao
       const roteiroHeader = new TableRow({
         tableHeader: true,
         children: [
           new TableCell({
-            width: { size: 18, type: WidthType.PERCENTAGE },
-            shading: { type: ShadingType.CLEAR, fill: PURE_RED, color: 'auto' },
-            margins: { top: 200, bottom: 200, left: 200, right: 200 },
-            children: [new Paragraph({ children: [new TextRun({ text: 'Tempo', bold: true, color: 'FFFFFF' })] })],
-          }),
-          new TableCell({
-            width: { size: 14, type: WidthType.PERCENTAGE },
+            width: { size: 50, type: WidthType.PERCENTAGE },
             shading: { type: ShadingType.CLEAR, fill: PURE_RED, color: 'auto' },
             margins: { top: 200, bottom: 200, left: 200, right: 200 },
             children: [new Paragraph({ children: [new TextRun({ text: 'Cena', bold: true, color: 'FFFFFF' })] })],
           }),
           new TableCell({
-            width: { size: 68, type: WidthType.PERCENTAGE },
+            width: { size: 50, type: WidthType.PERCENTAGE },
             shading: { type: ShadingType.CLEAR, fill: PURE_RED, color: 'auto' },
             margins: { top: 200, bottom: 200, left: 200, right: 200 },
-            children: [new Paragraph({ children: [new TextRun({ text: 'Descrição', bold: true, color: 'FFFFFF' })] })],
+            children: [new Paragraph({ children: [new TextRun({ text: 'Narração', bold: true, color: 'FFFFFF' })] })],
           }),
         ],
       });
 
       const cenaRows = cenas.map((c, idx) => {
-        const desc =
-          c.descricao && c.descricao.trim()
-            ? c.descricao.trim()
-            : [c.imagem, c.fala && `Fala: ${c.fala}`, c.textoTela && `Texto na tela: ${c.textoTela}`].filter(Boolean).join(' · ');
         const shade = idx % 2 === 1
           ? { type: ShadingType.CLEAR, fill: LIGHT_GREY, color: 'auto' as const }
           : undefined;
         const cellOpts = {
-          margins: { top: 200, bottom: 200, left: 200, right: 200 },
+          margins: { top: 240, bottom: 240, left: 200, right: 200 },
           borders: greyBorders,
           shading: shade,
         };
         return new TableRow({
           children: [
-            new TableCell({
-              ...cellOpts,
-              children: [new Paragraph({ children: [new TextRun({ text: c.tempo || '-', bold: true, color: PURE_RED })] })],
-            }),
-            new TableCell({
-              ...cellOpts,
-              children: [new Paragraph({ children: [new TextRun({ text: `Cena ${c.numero}`, bold: true })] })],
-            }),
-            new TableCell({
-              ...cellOpts,
-              children: [new Paragraph({ children: [new TextRun(desc || '-')] })],
-            }),
+            new TableCell({ ...cellOpts, children: [new Paragraph({ children: [new TextRun(sceneCena(c) || '-')] })] }),
+            new TableCell({ ...cellOpts, children: [new Paragraph({ children: [new TextRun(sceneNarracao(c) || '-')] })] }),
           ],
         });
       });
@@ -329,64 +311,6 @@ const AgenteInstagramFacebook = () => {
         rows: [roteiroHeader, ...cenaRows],
       });
 
-      // Caixa da Legenda (cinza claro com borda vermelha à esquerda)
-      const legendaBox = new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: noBorders,
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({
-                width: { size: 100, type: WidthType.PERCENTAGE },
-                shading: { type: ShadingType.CLEAR, fill: LIGHT_GREY, color: 'auto' },
-                margins: { top: 300, bottom: 300, left: 400, right: 300 },
-                borders: {
-                  top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                  bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                  left: { style: BorderStyle.SINGLE, size: 30, color: PURE_RED },
-                  right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                },
-                children: legendaTxt
-                  ? legendaTxt.split('\n').map((line) => new Paragraph({ children: [new TextRun(line)] }))
-                  : [new Paragraph({ children: [new TextRun({ text: '(sem legenda)', italics: true, color: '999999' })] })],
-              }),
-            ],
-          }),
-        ],
-      });
-
-      // Caixa do Briefing da Arte (fundo rosa claro)
-      const briefingBox = new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: noBorders,
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({
-                width: { size: 100, type: WidthType.PERCENTAGE },
-                shading: { type: ShadingType.CLEAR, fill: PINK_BG, color: 'auto' },
-                margins: { top: 300, bottom: 300, left: 300, right: 300 },
-                borders: {
-                  top: { style: BorderStyle.SINGLE, size: 8, color: PINK_BORDER },
-                  bottom: { style: BorderStyle.SINGLE, size: 8, color: PINK_BORDER },
-                  left: { style: BorderStyle.SINGLE, size: 8, color: PINK_BORDER },
-                  right: { style: BorderStyle.SINGLE, size: 8, color: PINK_BORDER },
-                },
-                children: briefingArteTxt
-                  ? briefingArteTxt.split('\n').map((line) => new Paragraph({ children: [new TextRun(line)] }))
-                  : [new Paragraph({ children: [new TextRun({ text: '(sem briefing da arte)', italics: true, color: '999999' })] })],
-              }),
-            ],
-          }),
-        ],
-      });
-
-      const sectionTitle = (txt: string) =>
-        new Paragraph({
-          spacing: { before: 360, after: 240 },
-          children: [new TextRun({ text: txt, bold: true, size: 28, color: PURE_RED })],
-        });
-
       const doc = new Document({
         styles: { default: { document: { run: { font: 'Arial', size: 22 } } } },
         sections: [
@@ -394,23 +318,15 @@ const AgenteInstagramFacebook = () => {
             properties: {},
             children: [
               headerTable,
-              sectionTitle('Informações Gerais'),
-              infoGrid,
-              sectionTitle('Briefing'),
-              new Paragraph({ children: [new TextRun(post.description || '-')] }),
-              sectionTitle('Roteiro'),
+              new Paragraph({ children: [new TextRun('')] }),
+              new Paragraph({ children: [new TextRun('')] }),
               roteiroTable,
               ...(cenas.length === 0 && fallbackRoteiro
                 ? [
-                    new Paragraph({ children: [new TextRun({ text: '\nRoteiro (texto livre):', bold: true })] }),
+                    new Paragraph({ spacing: { before: 360 }, children: [new TextRun({ text: 'Roteiro (texto livre):', bold: true })] }),
                     ...fallbackRoteiro.split('\n').map((line) => new Paragraph({ children: [new TextRun(line)] })),
                   ]
                 : []),
-              sectionTitle('Legenda do Post'),
-              legendaBox,
-              sectionTitle('Briefing da Arte'),
-              briefingBox,
-              new Paragraph({ spacing: { before: 600 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Pure Pilates © 2026', color: '999999', size: 18 })] }),
             ],
           },
         ],
@@ -1426,21 +1342,19 @@ const AgenteInstagramFacebook = () => {
                           {cenas.length > 0 ? (
                             <div className="space-y-2">
                               <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Cenas ({cenas.length})</Label>
-                              <div className="overflow-x-auto rounded-md border border-purple-200">
+                              <div className="overflow-x-auto rounded-md border border-rose-200">
                                 <table className="w-full text-sm">
                                   <thead>
                                     <tr className="bg-[#c10230] text-white">
-                                      <th className="text-left px-3 py-2 font-semibold w-[18%]">Tempo</th>
-                                      <th className="text-left px-3 py-2 font-semibold w-[14%]">Cena</th>
-                                      <th className="text-left px-3 py-2 font-semibold">Descrição</th>
+                                      <th className="text-left px-3 py-2 font-semibold w-1/2">Cena</th>
+                                      <th className="text-left px-3 py-2 font-semibold w-1/2">Narração</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {cenas.map((c, idx) => (
-                                      <tr key={c.numero} className={idx % 2 === 0 ? 'bg-white' : 'bg-purple-50/30'}>
-                                        <td className="px-3 py-3 align-top font-bold text-[#c10230] whitespace-nowrap">{c.tempo || '-'}</td>
-                                        <td className="px-3 py-3 align-top font-medium">Cena {c.numero}</td>
-                                        <td className="px-3 py-3 align-top leading-relaxed">{sceneDescricao(c) || '-'}</td>
+                                      <tr key={c.numero} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                                        <td className="px-3 py-3 align-top leading-relaxed">{sceneCena(c) || '-'}</td>
+                                        <td className="px-3 py-3 align-top leading-relaxed">{sceneNarracao(c) || '-'}</td>
                                       </tr>
                                     ))}
                                   </tbody>

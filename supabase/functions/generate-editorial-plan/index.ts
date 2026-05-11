@@ -11,8 +11,8 @@ interface RequestBody {
 
 interface SceneEntry {
   numero: number
-  tempo: string
-  descricao: string
+  cena: string
+  narracao: string
 }
 
 interface GeneratedPost {
@@ -141,13 +141,13 @@ Para cada post, gere TODOS os campos em uma única passagem:
 - "content_type": "video" | "estatico" | "carrossel" — TikTok sempre é "video"; Instagram pode ser qualquer um
 - "legenda": legenda completa pronta para publicação (linguagem brasileira, próxima e técnica conforme contexto, 1-3 emojis no máximo, terminando com 5-10 hashtags relevantes incluindo #PurePilates e #PurePilatesBR; máximo 2200 caracteres)
 - "roteiro": APENAS quando content_type="video" — resumo do arco narrativo do vídeo em 2 a 4 linhas (NÃO é o roteiro cena-a-cena; isso vai em "cenas"). Para outros tipos retorne string vazia "".
-- "cenas": APENAS quando content_type="video" — array obrigatório de 3 a 8 objetos, cada um com a estrutura simples:
-  { "numero": 1, "tempo": "0-2s", "descricao": "..." }
+- "cenas": APENAS quando content_type="video" — array obrigatório de 3 a 8 objetos, com APENAS 2 campos de conteúdo:
+  { "numero": 1, "cena": "...", "narracao": "..." }
   Regras das cenas:
   * "numero": inteiro sequencial a partir de 1.
-  * "tempo": faixa simples em segundos, formato "X-Ys" (ex: "0-2s", "2-4s", "4-6s"). Reels curtos: total 8-15s; vídeos médios: 20-45s; vídeos longos: 50-60s. Cenas duram em média 2 a 8 segundos.
-  * "descricao": UMA descrição combinando o que a câmera mostra E o que acontece na cena (visual + on-screen text + ação). 1 a 2 frases, objetivas, em tom de roteiro de direção. Quando houver texto sobre a tela, indique entre aspas no fim. Exemplo: "Close em rosto relaxado, inspiração pelo nariz (expressão calma)." ou "Texto em tela: 'RESPIRA. MOVE. TRANSFORMA.' + logo Pure."
-  A última cena fecha com CTA claro (visual ou texto). Para content_type diferente de "video", retorne "cenas": [].
+  * "cena": a AÇÃO/visual da cena, descrita em poucas palavras (frase curta, objetiva, sem detalhe técnico de câmera). Ex: "A pessoa levanta do reformer", "Close no rosto sereno", "Instrutor olha pra câmera e sorri", "Texto em tela: 'RESPIRA. MOVE.'".
+  * "narracao": o que a pessoa FALA naquela cena (texto natural, na voz da marca, seguindo as regras inegociáveis). Se for cena muda (sem narração), use string vazia "".
+  Não usar campos "tempo", "fala", "textoTela" ou "imagem" — apenas "cena" e "narracao". A última cena fecha com CTA. Para content_type diferente de "video", retorne "cenas": [].
 - "texto_arte": APENAS quando content_type="estatico" ou "carrossel" — frases curtas que vão DENTRO da arte:
   * Estático: 1 a 5 frases impactantes separadas por \\n (5 a 12 palavras cada)
   * Carrossel: formato "Slide 1: ...\\nSlide 2: ...\\nSlide 3: ..." (3 a 8 slides)
@@ -156,36 +156,31 @@ Para cada post, gere TODOS os campos em uma única passagem:
 
 ## TEMPLATE DE ROTEIRO DE VÍDEO (use SEMPRE quando content_type = "video")
 
-O roteiro entregue é renderizado como um documento estruturado em seções: Header (título + caption), Informações Gerais (Data, Formato, Objetivo), Briefing, Roteiro (tabela 3 colunas), Legenda do Post, Briefing da Arte (Visual / Foco / Animações / Cores / Música / Mood). Os metadados de produção (CLIENTE = "Pure Pilates", PRODUTORA = "BONIARTE", DIREÇÃO = "ANDRÉ ÂNGELO", APRESENTAÇÃO = "Professor(a) / Porta voz Pure Pilates", OBSERVAÇÃO = "Vertical / horizontal", Tom = "Claro, acolhedor e direto") são fixos e adicionados pelo sistema; você NÃO inclui na resposta JSON.
-
-Estrutura da tabela "Roteiro" (3 colunas):
-| Tempo | Cena | Descrição |
-| 0-2s  | Cena 1 | [descricao] |
-| 2-4s  | Cena 2 | [descricao] |
-...
+O roteiro é renderizado como um documento com:
+1. Cabeçalho vermelho fixo "ROTEIROS" + grid 2 colunas com metadados de produção (Campanha CLIENTE: Estúdio, Nome do Arquivo, Observação Vertical e horizontal, Referência, Produtora BONIARTE, Apresentação Professor(a) / Porta voz Pure Pilates, Direção ANDRÉ ÂNGELO). Esses metadados são FIXOS e adicionados pelo sistema; você NÃO inclui na resposta JSON.
+2. Tabela com APENAS 2 colunas: **Cena** | **Narração**.
 
 Estrutura obrigatória de cada cena (objeto JSON):
-1. numero (inteiro sequencial a partir de 1)
-2. tempo (faixa simples em segundos, formato "X-Ys", ex: "0-2s", "8-10s")
-3. descricao (uma descrição direta combinando o que a câmera mostra, ação dos atores, e qualquer texto na tela; 1 a 2 frases, em tom de roteiro de direção)
+- numero (inteiro sequencial a partir de 1)
+- cena (descrição curta e objetiva da AÇÃO/visual da cena. Ex: "A pessoa levanta", "Close no rosto sereno", "Instrutor mostra exercício no reformer", "Texto em tela: 'RESPIRA. MOVE.'")
+- narracao (o que a pessoa fala. Se cena muda, string vazia "")
 
-Exemplo (Reel curto de 10s sobre respiração):
-{ "numero": 1, "tempo": "0-2s", "descricao": "Close em rosto relaxado, inspiração pelo nariz (expressão calma)." }
-{ "numero": 2, "tempo": "2-4s", "descricao": "Pessoa em posição de Pilates, expiração controlada pela boca." }
-{ "numero": 3, "tempo": "4-6s", "descricao": "Movimento fluido no reformer com sincronia respiratória visível." }
-{ "numero": 4, "tempo": "6-8s", "descricao": "Animação sutil mostrando fluxo de ar (inspiração/expiração)." }
-{ "numero": 5, "tempo": "8-10s", "descricao": "Texto em tela: 'RESPIRA. MOVE. TRANSFORMA.' + logo Pure." }
+Exemplo (Reel curto sobre respiração):
+{ "numero": 1, "cena": "Close em rosto relaxado, inspiração pelo nariz.", "narracao": "A respiração é o motor do método." }
+{ "numero": 2, "cena": "Pessoa em posição de Pilates, expiração pela boca.", "narracao": "Inspira pelo nariz, expira pela boca. Sem pressa." }
+{ "numero": 3, "cena": "Movimento fluido no reformer com sincronia respiratória.", "narracao": "Cada movimento sustentado por uma respiração consciente." }
+{ "numero": 4, "cena": "Instrutor olha pra câmera com expressão acolhedora.", "narracao": "Quando você respira certo, tudo muda." }
+{ "numero": 5, "cena": "Texto em tela: 'RESPIRA. MOVE. TRANSFORMA.' + logo Pure.", "narracao": "" }
 
 Regras:
-- 3 a 8 cenas por roteiro (Reels curtos = 3-5 cenas; vídeos médios = 5-8 cenas)
-- Duração total: 8-15s para Reel curto, 20-45s para médio, 50-60s só quando o conteúdo justificar
-- A última cena SEMPRE fecha com CTA (visual ou texto na tela). CTA típico: "Vem fazer uma aula experimental na Pure" ou logo Pure + chamada para ação.
-- Quando houver texto na tela, escreva entre aspas dentro da descrição. Ex: "Texto em tela: 'RESPIRA. MOVE.' + logo Pure."
+- 3 a 8 cenas por roteiro
+- A última cena fecha com CTA (visual em texto na tela ou narração final)
 - Regra R7 vale: 1 (uma) pessoa filmando por roteiro. Sem diálogos.
+- NÃO incluir "tempo", "textoTela", "fala" ou "imagem" como campos separados. Use apenas "cena" e "narracao".
 
 Para o BRIEFING DA ARTE (campo briefing_arte), estruture em 6 linhas com prefixos:
-"Visual: [descrição geral] | Foco: [o que enfatizar] | Animações: [tipo de animação ou estática] | Cores: [paleta Pure: tons neutros + vermelho #c10230] | Música: [tipo de trilha] | Mood: [sentimento desejado]"
-(separe os campos com quebra de linha "\\n" no JSON).
+"Visual: [descrição] | Foco: [o que enfatizar] | Animações: [tipo] | Cores: [paleta Pure: neutros + vermelho #c10230] | Música: [tipo de trilha] | Mood: [sentimento]"
+(separe com quebra de linha "\\n").
 
 ## FORMATO DE RESPOSTA (CRÍTICO)
 Responda EXCLUSIVAMENTE com JSON válido neste formato:

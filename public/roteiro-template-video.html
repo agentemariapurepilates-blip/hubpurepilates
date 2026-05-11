@@ -1,132 +1,78 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Roteiro - Pure Pilates</title>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roteiro</title>
   <style>
     *{ margin:0; padding:0; box-sizing:border-box; }
-    body{ font-family: Arial, Helvetica, sans-serif; background:#f4f4f4; color:#222; padding:40px; }
-    .container{ max-width:1100px; margin:0 auto; background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.08); }
+    body{ font-family: Arial, Helvetica, sans-serif; background:#f4f4f4; padding:40px; color:#222; }
+    .container{ max-width:1400px; margin:0 auto; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,0.08); }
     .header{ background:#c10230; color:#fff; padding:32px; }
-    .header h1{ font-size:32px; margin-bottom:10px; }
-    .header p{ opacity:0.9; line-height:1.6; }
-    .section{ padding:32px; border-bottom:1px solid #ececec; }
-    .section:last-child{ border-bottom:none; }
-    .section-title{ font-size:22px; color:#c10230; margin-bottom:20px; font-weight:bold; }
-    .info-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:20px; }
-    .info-card{ background:#fafafa; border:1px solid #eee; border-radius:12px; padding:20px; }
-    .info-card h3{ font-size:14px; color:#777; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px; }
-    .info-card p{ font-size:16px; font-weight:600; }
-    table{ width:100%; border-collapse:collapse; margin-top:10px; }
-    th{ background:#c10230; color:#fff; text-align:left; padding:16px; font-size:14px; }
-    td{ padding:18px 16px; border-bottom:1px solid #eee; vertical-align:top; line-height:1.6; }
+    .header-title{ font-size:30px; font-weight:bold; margin-bottom:30px; }
+    .header-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:24px; }
+    .header-item{ min-height:60px; }
+    .header-label{ font-size:11px; text-transform:uppercase; letter-spacing:1px; opacity:0.75; margin-bottom:8px; }
+    .header-value{ font-size:16px; font-weight:700; line-height:1.5; }
+    .table-wrapper{ padding:30px; }
+    table{ width:100%; border-collapse:collapse; }
+    th{ background:#c10230; color:#fff; text-align:left; padding:16px; font-size:13px; text-transform:uppercase; letter-spacing:0.5px; }
+    td{ padding:18px 16px; border-bottom:1px solid #ececec; vertical-align:top; height:90px; }
     tr:nth-child(even){ background:#fafafa; }
-    .time{ font-weight:bold; color:#c10230; white-space:nowrap; }
-    .caption{ background:#fafafa; border-left:5px solid #c10230; padding:24px; border-radius:10px; line-height:1.8; font-size:16px; }
-    .designer-box{ background:#fff7f9; border:1px solid #ffd4df; padding:24px; border-radius:12px; line-height:1.8; }
-    .footer{ padding:24px 32px; background:#fafafa; color:#777; font-size:14px; text-align:center; }
   </style>
 </head>
-
 <body>
-
   <div class="container">
-
     <div class="header">
-      <h1>Dica Rápida: Respiração no Pilates</h1>
-      <p>Pure Pilates · Agente Instagram e Facebook</p>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Informações Gerais</div>
-      <div class="info-grid">
-        <div class="info-card">
-          <h3>Data de publicação</h3>
-          <p>12 de maio de 2026</p>
+      <div class="header-title">ROTEIROS</div>
+      <div class="header-grid">
+        <div class="header-item">
+          <div class="header-label">Campanha</div>
+          <div class="header-value">CLIENTE: Estúdio</div>
         </div>
-        <div class="info-card">
-          <h3>Formato</h3>
-          <p>Vídeo / Reels</p>
+        <div class="header-item">
+          <div class="header-label">Nome do Arquivo</div>
+          <div class="header-value">[Redes sociais]_Estúdio_NomeDoRoteiro_VH</div>
         </div>
-        <div class="info-card">
-          <h3>Objetivo</h3>
-          <p>Conteúdo educativo curto</p>
+        <div class="header-item">
+          <div class="header-label">Observação</div>
+          <div class="header-value">Vertical e horizontal</div>
+        </div>
+        <div class="header-item">
+          <div class="header-label">Referência</div>
+          <div class="header-value">Descrição do tema do roteiro</div>
+        </div>
+        <div class="header-item">
+          <div class="header-label">Produtora</div>
+          <div class="header-value">BONIARTE</div>
+        </div>
+        <div class="header-item">
+          <div class="header-label">Apresentação</div>
+          <div class="header-value">Professor(a) / Porta voz Pure Pilates</div>
+        </div>
+        <div class="header-item">
+          <div class="header-label">Direção</div>
+          <div class="header-value">ANDRÉ ÂNGELO</div>
         </div>
       </div>
     </div>
-
-    <div class="section">
-      <div class="section-title">Briefing</div>
-      <p style="line-height:1.8;">Conteúdo educativo curto sobre a importância da respiração no Pilates e como isso muda o seu movimento.</p>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Roteiro</div>
+    <div class="table-wrapper">
       <table>
         <thead>
           <tr>
-            <th>Tempo</th>
             <th>Cena</th>
-            <th>Descrição</th>
+            <th>Narração</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td class="time">0-2s</td>
-            <td>Cena 1</td>
-            <td>Close em rosto relaxado, inspiração pelo nariz (expressão calma).</td>
-          </tr>
-          <tr>
-            <td class="time">2-4s</td>
-            <td>Cena 2</td>
-            <td>Pessoa em posição de Pilates, expiração controlada pela boca.</td>
-          </tr>
-          <tr>
-            <td class="time">4-6s</td>
-            <td>Cena 3</td>
-            <td>Movimento fluido no reformer com sincronia respiratória visível.</td>
-          </tr>
-          <tr>
-            <td class="time">6-8s</td>
-            <td>Cena 4</td>
-            <td>Animação sutil mostrando fluxo de ar (inspiração/expiração).</td>
-          </tr>
-          <tr>
-            <td class="time">8-10s</td>
-            <td>Cena 5</td>
-            <td>Texto em tela: "RESPIRA. MOVE. TRANSFORMA." + logo Pure.</td>
-          </tr>
+          <tr><td></td><td></td></tr>
+          <tr><td></td><td></td></tr>
+          <tr><td></td><td></td></tr>
+          <tr><td></td><td></td></tr>
+          <tr><td></td><td></td></tr>
         </tbody>
       </table>
     </div>
-
-    <div class="section">
-      <div class="section-title">Legenda do Post</div>
-      <div class="caption">
-        Respira certo = se move certo.<br><br>
-        No Pilates, a respiração não é detalhe, é tudo. Inspire pelo nariz, expire pela boca: isso muda sua força, sua estabilidade, sua presença.<br><br>
-        Quer sentir a diferença? Vem fazer uma aula experimental na Pure e descobre como respirar bem transforma tudo.<br><br>
-        #PurePilates #PurePilatesBR #DicaDeMovimento #Respiração #PilatesParaTodos
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Briefing da Arte</div>
-      <div class="designer-box">
-        <strong>Visual:</strong> Vídeo educativo com paleta Pure.<br><br>
-        <strong>Foco:</strong> Expressões serenas e movimentos sincronizados.<br><br>
-        <strong>Animações:</strong> Sutis, representando respiração.<br><br>
-        <strong>Cores:</strong> Tons neutros com destaque em vermelho #c10230.<br><br>
-        <strong>Música:</strong> Instrumental com ritmo calmo, mas consistente.<br><br>
-        <strong>Mood:</strong> Educativo, inspirador e prático.
-      </div>
-    </div>
-
-    <div class="footer">Pure Pilates © 2026</div>
-
   </div>
-
 </body>
 </html>
