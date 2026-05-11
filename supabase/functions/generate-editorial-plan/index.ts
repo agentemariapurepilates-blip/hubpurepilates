@@ -9,6 +9,14 @@ interface RequestBody {
   editorialGuide?: string
 }
 
+interface SceneEntry {
+  numero: number
+  tempo: string
+  fala: string
+  textoTela: string
+  imagem: string
+}
+
 interface GeneratedPost {
   date: string
   network: string
@@ -19,22 +27,30 @@ interface GeneratedPost {
   roteiro?: string
   texto_arte?: string
   briefing_arte?: string
+  cenas?: SceneEntry[]
 }
 
-const SYSTEM_PROMPT = `Você é um especialista sênior em planejamento editorial de redes sociais para a marca Pure Pilates (rede de estúdios de Pilates no Brasil).
+const SYSTEM_PROMPT = `Você é um especialista sênior em planejamento editorial de redes sociais para a marca Pure Pilates (rede de estúdios de Pilates no Brasil). Siga o GUIA EDITORIAL OFICIAL fornecido no system prompt como fonte primária de tom, públicos, pilares e cadência. Em qualquer conflito, o Guia Editorial prevalece sobre este briefing.
 
 ## SOBRE A MARCA
 - Posicionamento: "A melhor hora do seu dia". Pilates como ritual de cuidado pessoal.
-- Linguagem: brasileira, próxima, encorajadora, calorosa — nunca clínica, distante ou agressiva.
 - Paleta: vermelho institucional #c10230, neutros (off-white, cinza grafite).
 - Hashtags institucionais obrigatórias em todas as legendas: #PurePilates #PurePilatesBR
 
+## REGRAS INEGOCIÁVEIS DE ESCRITA (valem para legenda, roteiro, cenas, textos da arte, briefings)
+1. **Sem travessões.** Não usar travessão ("—") em hipótese alguma. Substituir por ponto, vírgula, dois-pontos ou interpunto ("·").
+2. **Sem comparações redutoras.** Não usar "não é sobre X, é sobre Y", "não é X, é Y", "menos isso, mais aquilo". Em vez de negar para afirmar, afirmar com profundidade.
+3. **Sempre "aula experimental".** Nunca "aula grátis", "gratuita", "free". Nunca mencionar preços, valores, descontos ou promoções.
+4. **Sem frases incompletas ou vazias.** Construir com profundidade e especificidade. Evitar perguntas vagas como "você ainda acha que é fraco?" (fraco como?). Preferir "você ainda acha que o Pilates não é intenso?".
+5. **Linguagem um para um.** Tratamento por "você" (a pessoa do outro lado da tela). Quando a marca falar em primeira pessoa, "nós". Manter formalidade quando o conteúdo for técnico (Saber Pilates, anatomia, princípios); leveza coloquial em lifestyle e cultura.
+6. **Sem promessas estéticas agressivas.** Sem "antes e depois", "queima de gordura", "barriga chapada/sequinha", comparação de corpo, "resultado rápido", "exercício leve/suave".
+
 ## REGRAS DE CONTEÚDO (sempre aplicar)
 1. Distribuição: espalhar postagens ao longo do mês inteiro, sem concentrar em poucos dias.
-2. Datas comemorativas: INCLUIR OBRIGATORIAMENTE as datas sazonais relevantes do mês no Brasil — feriados nacionais, datas comerciais (Dia das Mães em maio, Dia dos Namorados em junho, Dia dos Pais em agosto, Black Friday em novembro, Natal em dezembro), datas de saúde (Setembro Amarelo, Outubro Rosa, Novembro Azul) e datas relacionadas ao universo Pilates/saúde/bem-estar.
-3. Mix de conteúdo: variar entre educativo sobre Pilates, depoimentos/social proof, promocional sutil, datas comemorativas/sazonais, bastidores, dicas de saúde/postura, motivacional.
-4. TikTok: sempre vídeo curto (Reels/Shorts) — desafios, transformações, dicas rápidas, antes/depois.
-5. Instagram: variado — posts estáticos, carrosséis, Reels, depoimentos.
+2. Datas comemorativas: INCLUIR OBRIGATORIAMENTE as datas sazonais relevantes do mês no Brasil — feriados nacionais, datas comerciais, datas de saúde (Setembro Amarelo, Outubro Rosa, Novembro Azul) e datas do universo Pilates/saúde.
+3. Mix de conteúdo: variar entre educativo, depoimentos/social proof, datas comemorativas/sazonais, bastidores, dicas de postura, motivacional. Seguir os 5 pilares do Guia Editorial: A Melhor Hora · Cultura Pilates · Saber Pilates · Começa Agora · Você Traz, Você Ganha.
+4. #DesafioDaSemana lança aos DOMINGOS e encerra às SEXTAS. Use isso na cadência do Instagram.
+5. TikTok: sempre vídeo curto. Instagram: variar entre estático, carrossel e Reels.
 
 ## FORMATO DE CADA POSTAGEM
 Para cada post, gere TODOS os campos em uma única passagem:
@@ -44,22 +60,41 @@ Para cada post, gere TODOS os campos em uma única passagem:
 - "title": título curto (até 60 caracteres)
 - "description": briefing da postagem (2-4 linhas; mencione explicitamente quando for sazonal/comemorativo)
 - "content_type": "video" | "estatico" | "carrossel" — TikTok sempre é "video"; Instagram pode ser qualquer um
-- "legenda": legenda completa pronta para publicação (linguagem brasileira próxima e calorosa, 1-3 emojis no máximo, terminando com 5-10 hashtags relevantes incluindo #PurePilates e #PurePilatesBR; máximo 2200 caracteres)
-- "roteiro": APENAS quando content_type="video" — roteiro cena-a-cena. Formato: "Cena 1 (0-3s): ação visual + fala\\nCena 2 (3-7s): ..." Para outros tipos retorne string vazia "".
+- "legenda": legenda completa pronta para publicação (linguagem brasileira, próxima e técnica conforme contexto, 1-3 emojis no máximo, terminando com 5-10 hashtags relevantes incluindo #PurePilates e #PurePilatesBR; máximo 2200 caracteres)
+- "roteiro": APENAS quando content_type="video" — resumo do arco narrativo do vídeo em 2 a 4 linhas (NÃO é o roteiro cena-a-cena; isso vai em "cenas"). Para outros tipos retorne string vazia "".
+- "cenas": APENAS quando content_type="video" — array obrigatório de 5 a 8 objetos, cada um com a estrutura:
+  { "numero": 1, "tempo": "0:00 a 0:07", "fala": "...", "textoTela": "...", "imagem": "..." }
+  Regras das cenas:
+  * "numero": inteiro sequencial a partir de 1.
+  * "tempo": faixa em formato "0:XX a 0:YY" (segundos). Cenas duram em média 7 a 12s; cena de abertura pode ser 5-7s; total entre 50s e 60s.
+  * "fala": o que o instrutor fala em voz natural, 1 a 3 frases por cena, seguindo as regras inegociáveis.
+  * "textoTela": texto curto que aparece na tela (legível em 1-2 segundos, sem ponto final, sem travessões). Não duplica a fala literalmente — sintetiza a ideia-chave.
+  * "imagem": descrição visual da cena (enquadramento, ação, expressão, equipamento, gesto). 1 a 2 frases objetivas, em tom de roteiro de direção.
+  A última cena fecha com CTA claro. Para content_type diferente de "video", retorne "cenas": [].
 - "texto_arte": APENAS quando content_type="estatico" ou "carrossel" — frases curtas que vão DENTRO da arte:
   * Estático: 1 a 5 frases impactantes separadas por \\n (5 a 12 palavras cada)
   * Carrossel: formato "Slide 1: ...\\nSlide 2: ...\\nSlide 3: ..." (3 a 8 slides)
   * Para vídeo retorne string vazia ""
-- "briefing_arte": instruções para o designer — referência visual, paleta de cores Pure (vermelho #c10230, neutros), composição, mood, elementos. Para vídeos descreva a estética. 2 a 4 frases.
+- "briefing_arte": instruções para o designer — referência visual, paleta de cores Pure (vermelho #c10230, neutros), composição, mood, elementos. Para vídeos descreva a estética geral (figurino, locação, ângulos). 2 a 4 frases.
 
-## REGRAS DE TOM (vale para legenda, roteiro, textos da arte e briefings)
-- Linguagem brasileira, próxima, encorajadora — nunca clínica.
-- Sem promessas estéticas agressivas. Sem comparações de corpo. Sem termos como "queima de gordura" ou "barriga chapada".
-- Foco em bem-estar, postura, equilíbrio, qualidade de vida e ritual de cuidado.
+## TEMPLATE FIXO DE ROTEIRO DE VÍDEO (use SEMPRE como base quando content_type = "video")
+Cabeçalho do roteiro (fixo, não muda nunca): CLIENTE = "Estúdio"; OBSERVAÇÃO = "Vertical e horizontal"; PRODUTORA = "BONIARTE"; APRESENTAÇÃO = "Professor(a) / Porta voz Pure Pilates"; DIREÇÃO = "ANDRÉ ÂNGELO"; Tom = "Claro, acolhedor e direto"; Formato = "Vertical e horizontal". Esses metadados ficam no DOCX gerado a partir da resposta; você NÃO precisa incluí-los na resposta JSON.
+
+Estrutura obrigatória de cada cena (a ordem dos blocos importa):
+1. numero (inteiro sequencial)
+2. tempo (faixa "0:XX a 0:YY")
+3. fala (1 a 3 frases, voz do instrutor, em "você"/"nós", seguindo regras inegociáveis)
+4. textoTela (frase curta legível em 1-2s, sem ponto final, sem travessões, sintetiza a ideia-chave da cena, NÃO duplica a fala)
+5. imagem (descrição visual em tom de roteiro de direção: enquadramento, ação, expressão, equipamento, gesto. 1-2 frases objetivas)
+
+Exemplo de uma cena no formato esperado:
+{ "numero": 1, "tempo": "0:00 a 0:07", "fala": "Cliente Pure, a gente pensou em você. Sabe quando você indica a Pure para alguém porque gosta da experiência e quer que essa pessoa também se cuide? Agora isso pode virar um presente para você.", "textoTela": "Cliente Pure, a gente pensou em você", "imagem": "Professor ao lado do Barrel, olhando direto para a câmera, com postura acolhedora." }
+
+Regras: 5 a 8 cenas por roteiro; cenas duram 7-12s em média (abertura pode ser 5-7s); total 50-60s; a última cena fecha com CTA claro.
 
 ## FORMATO DE RESPOSTA (CRÍTICO)
 Responda EXCLUSIVAMENTE com JSON válido neste formato:
-{"posts": [{"date": "...", "network": "...", "title": "...", "description": "...", "content_type": "...", "legenda": "...", "roteiro": "...", "texto_arte": "...", "briefing_arte": "..."}]}
+{"posts": [{"date": "...", "network": "...", "title": "...", "description": "...", "content_type": "...", "legenda": "...", "roteiro": "...", "cenas": [...], "texto_arte": "...", "briefing_arte": "..."}]}
 
 Sem texto antes ou depois. Sem markdown. Sem comentários. Sem code fences.`
 
@@ -510,6 +545,19 @@ function stripCodeFences(text: string): string {
     .trim()
 }
 
+interface FieldFeedbackEntry {
+  status?: 'approved' | 'rejected'
+  motivo?: string
+  at?: string
+}
+
+interface FieldFeedback {
+  legenda?: FieldFeedbackEntry
+  roteiro?: FieldFeedbackEntry
+  texto_arte?: FieldFeedbackEntry
+  briefing_arte?: FieldFeedbackEntry
+}
+
 interface MemoryRow {
   title: string | null
   network: string | null
@@ -517,9 +565,18 @@ interface MemoryRow {
   legenda: string | null
   roteiro: string | null
   texto_arte: string | null
+  briefing_arte: string | null
   feedback_motivo: string | null
-  versao_editada: { legenda?: string; roteiro?: string; texto_arte?: string } | null
-  refinements: Array<{ prompt: string; after?: { legenda?: string | null; roteiro?: string | null; texto_arte?: string | null }; at: string }> | null
+  field_feedback: FieldFeedback | null
+  versao_editada: { legenda?: string; roteiro?: string; texto_arte?: string; briefing_arte?: string } | null
+  refinements: Array<{ prompt: string; after?: { legenda?: string | null; roteiro?: string | null; texto_arte?: string | null; briefing_arte?: string | null }; at: string }> | null
+}
+
+const fieldLabels: Record<keyof FieldFeedback, string> = {
+  legenda: 'Legenda',
+  roteiro: 'Roteiro / Cenas do vídeo',
+  texto_arte: 'Texto na arte',
+  briefing_arte: 'Briefing da arte',
 }
 
 // deno-lint-ignore no-explicit-any
@@ -545,10 +602,20 @@ async function buildMemoryBlock(supabaseClient: any, userId: string): Promise<st
       .order('updated_at', { ascending: false })
       .limit(8)
 
+    // Reprovações por CAMPO (granular): posts com field_feedback contendo status='rejected'
+    // em algum dos campos. Limitamos a 30 posts pra agrupar depois por campo.
+    const { data: fieldRejectedRows } = await supabaseClient
+      .from('editorial_posts')
+      .select('title, network, content_type, legenda, roteiro, texto_arte, briefing_arte, field_feedback')
+      .eq('user_id', userId)
+      .not('field_feedback', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(30)
+
     // Edições manuais (deltas IA -> versão final): últimas 6.
     const { data: edited } = await supabaseClient
       .from('editorial_posts')
-      .select('title, network, content_type, legenda, roteiro, texto_arte, versao_editada')
+      .select('title, network, content_type, legenda, roteiro, texto_arte, briefing_arte, versao_editada')
       .eq('user_id', userId)
       .not('versao_editada', 'is', null)
       .order('updated_at', { ascending: false })
@@ -578,13 +645,43 @@ async function buildMemoryBlock(supabaseClient: any, userId: string): Promise<st
 
     if (Array.isArray(rejected) && rejected.length > 0) {
       const items = (rejected as MemoryRow[]).map((r, i) => {
-        const parts = [`### Reprovado ${i + 1} — ${r.network ?? '?'} (${r.content_type ?? 'n/a'})`]
+        const parts = [`### Reprovado ${i + 1} · ${r.network ?? '?'} (${r.content_type ?? 'n/a'})`]
         if (r.title) parts.push(`Título: ${r.title}`)
         if (r.legenda) parts.push(`Legenda original (que foi reprovada):\n${r.legenda}`)
         parts.push(`MOTIVO DA REPROVAÇÃO: ${r.feedback_motivo}`)
         return parts.join('\n')
       })
-      sections.push(`## ❌ EXEMPLOS REPROVADOS (NÃO repita esses padrões — leia o motivo)\n\n${items.join('\n\n---\n\n')}`)
+      sections.push(`## ❌ EXEMPLOS REPROVADOS NO POST INTEIRO (NÃO repita esses padrões, leia o motivo)\n\n${items.join('\n\n---\n\n')}`)
+    }
+
+    // Reprovações granulares por campo: agrupa por campo.
+    if (Array.isArray(fieldRejectedRows) && fieldRejectedRows.length > 0) {
+      const grouped: Record<keyof FieldFeedback, Array<{ row: MemoryRow; motivo: string }>> = {
+        legenda: [], roteiro: [], texto_arte: [], briefing_arte: [],
+      }
+      for (const row of fieldRejectedRows as MemoryRow[]) {
+        const ff = row.field_feedback
+        if (!ff) continue
+        for (const key of ['legenda', 'roteiro', 'texto_arte', 'briefing_arte'] as Array<keyof FieldFeedback>) {
+          const entry = ff[key]
+          if (entry?.status === 'rejected' && entry.motivo) {
+            grouped[key].push({ row, motivo: entry.motivo })
+          }
+        }
+      }
+      for (const key of ['legenda', 'roteiro', 'texto_arte', 'briefing_arte'] as Array<keyof FieldFeedback>) {
+        const bucket = grouped[key].slice(0, 6)
+        if (bucket.length === 0) continue
+        const items = bucket.map((b, i) => {
+          const parts = [`### Reprovado ${i + 1} · ${b.row.network ?? '?'} (${b.row.content_type ?? 'n/a'})`]
+          if (b.row.title) parts.push(`Post: ${b.row.title}`)
+          const fieldContent = b.row[key as 'legenda' | 'roteiro' | 'texto_arte' | 'briefing_arte']
+          if (fieldContent) parts.push(`Conteúdo reprovado:\n${fieldContent}`)
+          parts.push(`MOTIVO: ${b.motivo}`)
+          return parts.join('\n')
+        })
+        sections.push(`## ❌ CAMPO REPROVADO · ${fieldLabels[key]} (NÃO repita esses padrões em ${fieldLabels[key]})\n\n${items.join('\n\n---\n\n')}`)
+      }
     }
 
     if (Array.isArray(edited) && edited.length > 0) {
@@ -603,9 +700,13 @@ async function buildMemoryBlock(supabaseClient: any, userId: string): Promise<st
           parts.push(`Texto arte IA:\n${r.texto_arte}`)
           parts.push(`Texto arte VERSÃO FINAL:\n${r.versao_editada.texto_arte}`)
         }
+        if (r.briefing_arte && r.versao_editada?.briefing_arte) {
+          parts.push(`Briefing arte IA:\n${r.briefing_arte}`)
+          parts.push(`Briefing arte VERSÃO FINAL:\n${r.versao_editada.briefing_arte}`)
+        }
         return parts.join('\n')
       })
-      sections.push(`## ✏️ EDIÇÕES MANUAIS (delta IA → versão final — aprenda o ajuste)\n\n${items.join('\n\n---\n\n')}`)
+      sections.push(`## ✏️ EDIÇÕES MANUAIS (delta IA para versão final, aprenda o ajuste)\n\n${items.join('\n\n---\n\n')}`)
     }
 
     // Refinações por prompt — peso ALTO porque é feedback direto da Renata em linguagem natural

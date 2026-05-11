@@ -4,6 +4,16 @@ import { getCorsHeaders } from '../_shared/cors.ts'
 interface RequestBody {
   post_id: string
   prompt: string
+  // Quando informado, instrui a IA a refinar APENAS este campo, mantendo os demais.
+  field?: 'legenda' | 'roteiro' | 'texto_arte' | 'briefing_arte'
+}
+
+interface SceneEntry {
+  numero: number
+  tempo: string
+  fala: string
+  textoTela: string
+  imagem: string
 }
 
 interface PostRow {
@@ -17,8 +27,9 @@ interface PostRow {
   roteiro: string | null
   texto_arte: string | null
   briefing_arte: string | null
+  cenas: SceneEntry[] | null
   versao_editada: { legenda?: string; roteiro?: string; texto_arte?: string } | null
-  refinements: Array<{ prompt: string; before: Record<string, string | null>; after: Record<string, string | null>; at: string }> | null
+  refinements: Array<{ prompt: string; before: Record<string, unknown>; after: Record<string, unknown>; at: string }> | null
 }
 
 const REFINE_SYSTEM_PROMPT = `Você é o especialista de conteúdo da marca Pure Pilates (rede de estúdios de Pilates no Brasil).
@@ -30,24 +41,32 @@ REGRAS DE ESCOPO:
 - Se ela pediu "reescreva tudo", reescreva todos os campos.
 - Se ela pediu pra MUDAR O TIPO DE CONTEÚDO (ex: "muda de roteiro pra carrossel", "transforma em estático", "deixa virar vídeo"):
   * ATUALIZE o campo "content_type" para o novo valor: "video" | "estatico" | "carrossel".
-  * Se virou "video": gere "roteiro" e devolva "texto_arte" como string vazia "".
-  * Se virou "carrossel" ou "estatico": gere "texto_arte" apropriado e devolva "roteiro" como string vazia "".
+  * Se virou "video": gere "roteiro" (resumo do arco em 2-4 linhas) E "cenas" (5 a 8 cenas estruturadas); devolva "texto_arte" como string vazia "".
+  * Se virou "carrossel" ou "estatico": gere "texto_arte" apropriado e devolva "roteiro" e "cenas" como vazios ("" e []).
   * Atualize "briefing_arte" pra refletir o novo formato.
   * Adapte a legenda se fizer sentido pro novo formato.
 - NUNCA mude content_type se a Renata não pediu explicitamente.
 
-REGRAS DE TOM:
-- Linguagem brasileira, próxima, encorajadora — tom Pure ("A melhor hora do seu dia").
-- Sem promessas estéticas agressivas. Sem comparações de corpo.
-- Hashtags: sempre inclui #PurePilates e #PurePilatesBR no final da legenda.
+REGRAS INEGOCIÁVEIS DE ESCRITA (valem para legenda, roteiro, cenas, texto_arte, briefings):
+1. Sem travessões ("—"). Usar ponto, vírgula, dois-pontos ou interpunto ("·").
+2. Sem comparações redutoras: nunca "não é sobre X, é sobre Y", "não é X, é Y", "menos isso, mais aquilo". Afirmar com profundidade.
+3. Sempre "aula experimental". Nunca "aula grátis", "gratuita", "free". Não mencionar valores, preços, descontos ou promoções.
+4. Sem frases incompletas ou vazias. Especificidade traz autoridade.
+5. Linguagem um para um: "você" para a pessoa, "nós" para a marca. Formalidade no técnico, leveza no lifestyle.
+6. Sem promessas estéticas agressivas: nada de "antes e depois", "queima de gordura", "barriga sequinha", "resultado rápido", comparação de corpo.
+
+TOM:
+- "A melhor hora do seu dia". Brasileira, acolhedora, técnica com leveza, autoral.
+- Hashtags: sempre #PurePilates e #PurePilatesBR no final da legenda.
 
 FORMATO DOS CAMPOS:
-- Roteiro de vídeo: "Cena 1 (0-3s): ação visual + fala\\nCena 2 (3-7s): ..."
-- Texto na arte estático: 1 a 5 frases curtas separadas por \\n (5-12 palavras cada)
-- Texto na arte carrossel: "Slide 1: ...\\nSlide 2: ...\\nSlide 3: ..." (3 a 8 slides)
+- "roteiro" (vídeo): resumo do arco narrativo em 2-4 linhas. NÃO é o roteiro cena-a-cena.
+- "cenas" (vídeo): array de 5 a 8 objetos { "numero": 1, "tempo": "0:00 a 0:07", "fala": "...", "textoTela": "...", "imagem": "..." }. Cenas duram 7-12s em média; total 50-60s. Última cena fecha com CTA.
+- "texto_arte" estático: 1 a 5 frases curtas separadas por \\n (5-12 palavras cada).
+- "texto_arte" carrossel: "Slide 1: ...\\nSlide 2: ...\\nSlide 3: ..." (3 a 8 slides).
 
-FORMATO DE RESPOSTA: JSON puro com estes campos (sempre devolva TODOS, usando "" quando não aplicável):
-{"title": "...", "description": "...", "content_type": "video|estatico|carrossel", "legenda": "...", "roteiro": "...", "texto_arte": "...", "briefing_arte": "..."}
+FORMATO DE RESPOSTA: JSON puro com estes campos (sempre devolva TODOS, usando "" ou [] quando não aplicável):
+{"title": "...", "description": "...", "content_type": "video|estatico|carrossel", "legenda": "...", "roteiro": "...", "cenas": [...], "texto_arte": "...", "briefing_arte": "..."}
 
 Sem markdown, sem code fences, sem texto fora do JSON.`
 
@@ -91,7 +110,7 @@ Deno.serve(async (req) => {
     }
 
     const body = (await req.json()) as RequestBody
-    const { post_id, prompt } = body
+    const { post_id, prompt, field } = body
 
     if (!post_id || !prompt?.trim()) {
       return new Response(JSON.stringify({ error: 'post_id e prompt são obrigatórios' }), {
@@ -100,10 +119,19 @@ Deno.serve(async (req) => {
       })
     }
 
+    const validFieldScopes = new Set(['legenda', 'roteiro', 'texto_arte', 'briefing_arte'])
+    const fieldScope = field && validFieldScopes.has(field) ? field : null
+    const fieldScopeLabel: Record<string, string> = {
+      legenda: 'a LEGENDA',
+      roteiro: 'o ROTEIRO e as CENAS do vídeo',
+      texto_arte: 'o TEXTO NA ARTE',
+      briefing_arte: 'o BRIEFING DA ARTE (instruções para o designer)',
+    }
+
     // Carrega o post atual (RLS garante que é da Renata)
     const { data: postData, error: postErr } = await supabaseClient
       .from('editorial_posts')
-      .select('id, user_id, title, network, content_type, description, legenda, roteiro, texto_arte, briefing_arte, versao_editada, refinements')
+      .select('id, user_id, title, network, content_type, description, legenda, roteiro, texto_arte, briefing_arte, cenas, versao_editada, refinements')
       .eq('id', post_id)
       .single()
 
@@ -120,6 +148,10 @@ Deno.serve(async (req) => {
     const currentLegenda = post.versao_editada?.legenda ?? post.legenda ?? ''
     const currentRoteiro = post.versao_editada?.roteiro ?? post.roteiro ?? ''
     const currentTextoArte = post.versao_editada?.texto_arte ?? post.texto_arte ?? ''
+    const currentCenas: SceneEntry[] = Array.isArray(post.cenas) ? post.cenas : []
+    const cenasBlock = currentCenas.length > 0
+      ? `\n\nCenas atuais (estrutura JSON):\n${JSON.stringify(currentCenas, null, 2)}`
+      : ''
 
     // Histórico de refinações anteriores entra no contexto pra IA não repetir mesmas direções
     const previousRefinements = post.refinements ?? []
@@ -137,18 +169,18 @@ Briefing: ${post.description ?? '(sem briefing)'}
 Legenda atual:
 ${currentLegenda || '(vazio)'}
 
-Roteiro atual:
-${currentRoteiro || '(vazio — apenas para vídeo)'}
+Roteiro atual (resumo do arco):
+${currentRoteiro || '(vazio, apenas para vídeo)'}${cenasBlock}
 
 Texto na arte atual:
-${currentTextoArte || '(vazio — apenas para estático/carrossel)'}
+${currentTextoArte || '(vazio, apenas para estático/carrossel)'}
 
 Briefing da arte: ${post.briefing_arte ?? '(vazio)'}
 ${historyBlock}
 
 ## NOVA INSTRUÇÃO DA RENATA
 ${prompt.trim()}
-
+${fieldScope ? `\n## ESCOPO RESTRITO\nMude APENAS ${fieldScopeLabel[fieldScope]}. Mantenha TODOS os outros campos exatamente como estão. NÃO mude content_type. Devolva o JSON com todos os campos, mas com os não-escopados idênticos aos atuais.\n` : ''}
 Reescreva o post aplicando essa instrução. Devolva o JSON conforme o schema do system prompt — incluindo TODOS os campos relevantes pro tipo de conteúdo (mesmo os que não mudaram, devolva o valor atual).`
 
     const t0 = Date.now()
@@ -189,7 +221,7 @@ Reescreva o post aplicando essa instrução. Devolva o JSON conforme o schema do
     const text: string = textBlocks.length > 0 ? (textBlocks[textBlocks.length - 1].text ?? '') : ''
     const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
 
-    let refined: { title?: string; description?: string; content_type?: string; legenda?: string; roteiro?: string; texto_arte?: string; briefing_arte?: string }
+    let refined: { title?: string; description?: string; content_type?: string; legenda?: string; roteiro?: string; cenas?: SceneEntry[]; texto_arte?: string; briefing_arte?: string }
     try {
       refined = JSON.parse(cleaned)
     } catch (err) {
@@ -207,14 +239,18 @@ Reescreva o post aplicando essa instrução. Devolva o JSON conforme o schema do
       : (post.content_type ?? null)
     const typeChanged = newContentType !== post.content_type
 
-    // Quando muda pra video: roteiro deve estar preenchido, texto_arte vai pra null.
-    // Quando muda pra estatico/carrossel: texto_arte deve estar preenchido, roteiro vai pra null.
+    // Quando muda pra video: roteiro+cenas devem estar preenchidos, texto_arte vai pra null.
+    // Quando muda pra estatico/carrossel: texto_arte deve estar preenchido, roteiro+cenas vão pra null.
     let finalRoteiro = refined.roteiro && refined.roteiro.trim() ? refined.roteiro : post.roteiro
     let finalTextoArte = refined.texto_arte && refined.texto_arte.trim() ? refined.texto_arte : post.texto_arte
+    let finalCenas: SceneEntry[] | null = Array.isArray(refined.cenas) && refined.cenas.length > 0
+      ? refined.cenas
+      : currentCenas.length > 0 ? currentCenas : null
     if (newContentType === 'video') {
       finalTextoArte = null
     } else if (newContentType === 'estatico' || newContentType === 'carrossel') {
       finalRoteiro = null
+      finalCenas = null
     }
 
     // Monta o "before" e "after" pro histórico
@@ -223,6 +259,7 @@ Reescreva o post aplicando essa instrução. Devolva o JSON conforme o schema do
       content_type: post.content_type,
       legenda: currentLegenda || null,
       roteiro: currentRoteiro || null,
+      cenas: currentCenas.length > 0 ? currentCenas : null,
       texto_arte: currentTextoArte || null,
       briefing_arte: post.briefing_arte,
     }
@@ -231,6 +268,7 @@ Reescreva o post aplicando essa instrução. Devolva o JSON conforme o schema do
       content_type: newContentType,
       legenda: refined.legenda ?? null,
       roteiro: finalRoteiro,
+      cenas: finalCenas,
       texto_arte: finalTextoArte,
       briefing_arte: refined.briefing_arte ?? post.briefing_arte,
     }
@@ -244,13 +282,14 @@ Reescreva o post aplicando essa instrução. Devolva o JSON conforme o schema do
     }
 
     // Atualiza o post: sobrescreve campos, limpa versao_editada (ja refinada),
-    // e ajusta content_type + roteiro/texto_arte pra ficarem coerentes.
+    // e ajusta content_type + roteiro/texto_arte/cenas pra ficarem coerentes.
     const updates: Record<string, unknown> = {
       title: refined.title ?? post.title,
       description: refined.description ?? post.description,
       content_type: newContentType,
       legenda: refined.legenda ?? post.legenda,
       roteiro: finalRoteiro,
+      cenas: finalCenas,
       texto_arte: finalTextoArte,
       briefing_arte: refined.briefing_arte ?? post.briefing_arte,
       versao_editada: null,

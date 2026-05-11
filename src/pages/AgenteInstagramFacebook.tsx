@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CalendarDays, Play, Loader2, Instagram, Facebook, CheckCircle2, XCircle, Star, Clock, Download, Pencil, Save, X, Sparkles, Brain, MessageSquare } from 'lucide-react';
+import { CalendarDays, Play, Loader2, Instagram, Facebook, CheckCircle2, XCircle, Star, Clock, Download, Pencil, Save, X, Sparkles, Brain } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isToday, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,12 +22,36 @@ interface VersaoEditada {
   legenda?: string;
   roteiro?: string;
   texto_arte?: string;
+  briefing_arte?: string;
+}
+
+interface SceneEntry {
+  numero: number;
+  tempo: string;
+  fala: string;
+  textoTela: string;
+  imagem: string;
+}
+
+type FieldKey = 'legenda' | 'roteiro' | 'texto_arte' | 'briefing_arte';
+
+interface FieldFeedbackEntry {
+  status?: 'approved' | 'rejected';
+  motivo?: string;
+  at?: string;
+}
+
+interface FieldFeedback {
+  legenda?: FieldFeedbackEntry;
+  roteiro?: FieldFeedbackEntry;
+  texto_arte?: FieldFeedbackEntry;
+  briefing_arte?: FieldFeedbackEntry;
 }
 
 interface RefinementEntry {
   prompt: string;
-  before?: { title?: string | null; legenda?: string | null; roteiro?: string | null; texto_arte?: string | null; briefing_arte?: string | null };
-  after?: { title?: string | null; legenda?: string | null; roteiro?: string | null; texto_arte?: string | null; briefing_arte?: string | null };
+  before?: { title?: string | null; legenda?: string | null; roteiro?: string | null; cenas?: SceneEntry[] | null; texto_arte?: string | null; briefing_arte?: string | null };
+  after?: { title?: string | null; legenda?: string | null; roteiro?: string | null; cenas?: SceneEntry[] | null; texto_arte?: string | null; briefing_arte?: string | null };
   at: string;
 }
 
@@ -41,12 +65,21 @@ interface GeneratedContent {
   content_type?: 'video' | 'estatico' | 'carrossel' | null;
   legenda?: string | null;
   roteiro?: string | null;
+  cenas?: SceneEntry[] | null;
   texto_arte?: string | null;
   briefing_arte?: string | null;
   feedback_motivo?: string | null;
+  field_feedback?: FieldFeedback | null;
   versao_editada?: VersaoEditada | null;
   refinements?: RefinementEntry[] | null;
 }
+
+const FIELD_LABELS: Record<FieldKey, string> = {
+  legenda: 'Legenda',
+  roteiro: 'Roteiro e Cenas',
+  texto_arte: 'Texto na arte',
+  briefing_arte: 'Briefing da arte',
+};
 
 const AgenteInstagramFacebook = () => {
   const { user } = useAuth();
@@ -66,11 +99,15 @@ const AgenteInstagramFacebook = () => {
   const [downloadingDocx, setDownloadingDocx] = useState(false);
   const [rejectDialog, setRejectDialog] = useState<{ open: boolean; item: GeneratedContent | null; reason: string }>({ open: false, item: null, reason: '' });
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState<VersaoEditada>({ legenda: '', roteiro: '', texto_arte: '' });
+  const [editForm, setEditForm] = useState<VersaoEditada>({ legenda: '', roteiro: '', texto_arte: '', briefing_arte: '' });
   const [savingEdit, setSavingEdit] = useState(false);
   const [savingReject, setSavingReject] = useState(false);
-  const [refinePrompt, setRefinePrompt] = useState('');
-  const [refining, setRefining] = useState(false);
+  // Refinamento por campo: qual campo está sendo refinado e o prompt naquele campo.
+  const [refineFieldDialog, setRefineFieldDialog] = useState<{ open: boolean; field: FieldKey | null; prompt: string }>({ open: false, field: null, prompt: '' });
+  const [refiningField, setRefiningField] = useState<FieldKey | null>(null);
+  // Reprovação granular por campo.
+  const [rejectFieldDialog, setRejectFieldDialog] = useState<{ open: boolean; field: FieldKey | null; reason: string }>({ open: false, field: null, reason: '' });
+  const [savingRejectField, setSavingRejectField] = useState(false);
 
   const networkColors: Record<GeneratedContent['network'], string> = {
     'Instagram Studios': 'bg-pink-500 text-white',
@@ -131,56 +168,111 @@ const AgenteInstagramFacebook = () => {
     return new Date(Number(selectedYear), monthIndex, day).toISOString();
   };
 
-  // Dispara IA #2 (geração de roteiro/legenda/texto-arte) para os posts aprovados que sejam Instagram (Facebook é replicado).
-  // TikTok também é processado.
+  // Gera DOCX no formato template Pure Pilates (cabecalho fixo + cenas estruturadas).
+  // Quando o post tem `cenas`, usa o layout cena-a-cena oficial.
+  // Quando nao tem, faz fallback pro texto livre do roteiro.
   const downloadRoteiroDocx = async (post: GeneratedContent) => {
-    if (!post.roteiro) {
-      toast.error('Esse conteúdo não tem roteiro.');
+    const cenas = Array.isArray(post.cenas) ? post.cenas : [];
+    const fallbackRoteiro = post.versao_editada?.roteiro ?? post.roteiro ?? '';
+    if (cenas.length === 0 && !fallbackRoteiro) {
+      toast.error('Esse conteúdo ainda não tem roteiro.');
       return;
     }
     setDownloadingDocx(true);
     try {
       const dataFormatada = format(parseISO(post.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-      const lines = post.roteiro.split('\n');
+      const tituloRoteiro = post.title.toUpperCase();
+
+      // Calcula duracao total a partir das cenas (extrai segundos do "0:XX a 0:YY" da ultima cena).
+      const computeDuration = (): string => {
+        if (cenas.length === 0) return '50s a 60s';
+        const last = cenas[cenas.length - 1];
+        const match = last.tempo?.match(/(\d+):(\d+)\s*a\s*(\d+):(\d+)/);
+        if (!match) return '50s a 60s';
+        const totalEndSec = Number(match[3]) * 60 + Number(match[4]);
+        const firstMatch = cenas[0].tempo?.match(/(\d+):(\d+)\s*a/);
+        const startSec = firstMatch ? Number(firstMatch[1]) * 60 + Number(firstMatch[2]) : 0;
+        const duration = totalEndSec - startSec;
+        return `${duration}s`;
+      };
+
+      const headerMeta: Array<[string, string]> = [
+        ['Campanha CLIENTE', 'Estúdio'],
+        ['OBSERVAÇÃO', 'Vertical e horizontal'],
+        ['REFERÊNCIA', post.description || tituloRoteiro],
+        ['PRODUTORA', 'BONIARTE'],
+        ['APRESENTAÇÃO', 'Professor(a) / Porta voz Pure Pilates'],
+        ['DIREÇÃO', 'ANDRÉ ÂNGELO'],
+      ];
+
+      const infoBloco: Array<[string, string]> = [
+        ['Formato', 'Vertical e horizontal'],
+        ['Duração', computeDuration()],
+        ['Tom', 'Claro, acolhedor e direto'],
+        ['Público', 'Alunos e seguidores Pure Pilates'],
+        ['Data de publicação', dataFormatada],
+      ];
+
+      const para = (text: string, opts: { bold?: boolean; size?: number; color?: string; italics?: boolean; alignment?: typeof AlignmentType[keyof typeof AlignmentType] } = {}) =>
+        new Paragraph({
+          alignment: opts.alignment,
+          children: [new TextRun({ text, bold: opts.bold, size: opts.size, color: opts.color, italics: opts.italics })],
+        });
+
+      const labelValue = (label: string, value: string) =>
+        new Paragraph({ children: [new TextRun({ text: `${label}: `, bold: true }), new TextRun(value)] });
+
+      const cenaParagraphs = cenas.flatMap((c) => [
+        new Paragraph({ children: [new TextRun('')] }),
+        new Paragraph({
+          heading: HeadingLevel.HEADING_3,
+          children: [new TextRun({ text: `🎥 CENA ${c.numero}`, bold: true, color: 'C10230' })],
+        }),
+        labelValue('⏱ Tempo', c.tempo || '-'),
+        new Paragraph({ children: [new TextRun({ text: '🎙️ FALA: ', bold: true }), new TextRun(c.fala || '-')] }),
+        new Paragraph({ children: [new TextRun({ text: '📝 TEXTO NA TELA: ', bold: true }), new TextRun(c.textoTela || '-')] }),
+        new Paragraph({ children: [new TextRun({ text: '🖼️ IMAGEM: ', bold: true }), new TextRun(c.imagem || '-')] }),
+      ]);
+
+      const fallbackRoteiroParagraphs = cenas.length === 0
+        ? fallbackRoteiro.split('\n').map((line) => new Paragraph({ children: [new TextRun(line)] }))
+        : [];
+
       const doc = new Document({
-        styles: {
-          default: { document: { run: { font: 'Calibri', size: 22 } } },
-        },
+        styles: { default: { document: { run: { font: 'Calibri', size: 22 } } } },
         sections: [
           {
             properties: {},
             children: [
-              new Paragraph({
-                heading: HeadingLevel.HEADING_1,
-                alignment: AlignmentType.CENTER,
-                children: [new TextRun({ text: 'Roteiro de Vídeo', bold: true, size: 36, color: 'C10230' })],
-              }),
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [new TextRun({ text: 'Pure Pilates · Agente Instagram e Facebook', italics: true, color: '7d7c7c' })],
-              }),
+              para('ROTEIROS', { bold: true, size: 32, color: 'C10230', alignment: AlignmentType.CENTER }),
+              para(`🎬 ROTEIRO · ${tituloRoteiro}`, { bold: true, size: 28, alignment: AlignmentType.CENTER }),
+              para('Pure Pilates', { italics: true, color: '7D7C7C', alignment: AlignmentType.CENTER }),
               new Paragraph({ children: [new TextRun('')] }),
-              new Paragraph({ children: [new TextRun({ text: 'Título: ', bold: true }), new TextRun(post.title)] }),
-              new Paragraph({ children: [new TextRun({ text: 'Data de publicação: ', bold: true }), new TextRun(dataFormatada)] }),
-              new Paragraph({ children: [new TextRun({ text: 'Tipo: ', bold: true }), new TextRun(post.content_type ? contentTypeLabel[post.content_type] : '-')] }),
+              ...headerMeta.map(([k, v]) => labelValue(k, v)),
               new Paragraph({ children: [new TextRun('')] }),
-              new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'Briefing', bold: true })] }),
-              new Paragraph({ children: [new TextRun(post.description)] }),
+              ...infoBloco.map(([k, v]) => labelValue(k, v)),
               new Paragraph({ children: [new TextRun('')] }),
-              new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'Roteiro', bold: true })] }),
-              ...lines.map((line) => new Paragraph({ children: [new TextRun(line)] })),
-              new Paragraph({ children: [new TextRun('')] }),
-              ...(post.legenda
-                ? [
-                    new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'Legenda do post', bold: true })] }),
-                    new Paragraph({ children: [new TextRun(post.legenda)] }),
-                  ]
-                : []),
-              ...(post.briefing_arte
+              para('Roteiro · cena por cena', { bold: true, size: 26 }),
+              ...cenaParagraphs,
+              ...(fallbackRoteiroParagraphs.length > 0
                 ? [
                     new Paragraph({ children: [new TextRun('')] }),
-                    new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'Briefing da arte (designer)', bold: true })] }),
-                    new Paragraph({ children: [new TextRun(post.briefing_arte)] }),
+                    para('Roteiro (texto livre)', { bold: true, size: 24 }),
+                    ...fallbackRoteiroParagraphs,
+                  ]
+                : []),
+              new Paragraph({ children: [new TextRun('')] }),
+              ...(post.legenda || post.versao_editada?.legenda
+                ? [
+                    para('Legenda do post', { bold: true, size: 24 }),
+                    new Paragraph({ children: [new TextRun(post.versao_editada?.legenda ?? post.legenda ?? '')] }),
+                    new Paragraph({ children: [new TextRun('')] }),
+                  ]
+                : []),
+              ...(post.briefing_arte || post.versao_editada?.briefing_arte
+                ? [
+                    para('Briefing da arte (designer)', { bold: true, size: 24 }),
+                    new Paragraph({ children: [new TextRun(post.versao_editada?.briefing_arte ?? post.briefing_arte ?? '')] }),
                   ]
                 : []),
             ],
@@ -256,6 +348,7 @@ const AgenteInstagramFacebook = () => {
     if (editForm.legenda?.trim()) cleanEdit.legenda = editForm.legenda.trim();
     if (editForm.roteiro?.trim()) cleanEdit.roteiro = editForm.roteiro.trim();
     if (editForm.texto_arte?.trim()) cleanEdit.texto_arte = editForm.texto_arte.trim();
+    if (editForm.briefing_arte?.trim()) cleanEdit.briefing_arte = editForm.briefing_arte.trim();
     const id = expandedItem.id;
     setGeneratedContents((current) =>
       current.map((item) => (item.id === id ? { ...item, versao_editada: cleanEdit } : item)),
@@ -269,47 +362,38 @@ const AgenteInstagramFacebook = () => {
       toast.error('Não foi possível salvar a edição.');
       return;
     }
-    toast.success('Edição salva — a IA vai aprender com sua versão.');
+    toast.success('Edição salva. A IA vai aprender com sua versão.');
     setExpandedItem((current) => (current ? { ...current, versao_editada: cleanEdit } : current));
     setEditMode(false);
   };
 
-  const handleRefine = async () => {
-    if (!expandedItem) return;
-    const prompt = refinePrompt.trim();
+  // Refinar APENAS um campo via IA. Mantém o resto intocado.
+  const handleRefineField = async () => {
+    if (!expandedItem || !refineFieldDialog.field) return;
+    const field = refineFieldDialog.field;
+    const prompt = refineFieldDialog.prompt.trim();
     if (!prompt) {
-      toast.error('Escreve o que você quer ajustar.');
+      toast.error('Escreve o que você quer ajustar neste campo.');
       return;
     }
-    setRefining(true);
+    setRefiningField(field);
     try {
       const { data, error } = await supabase.functions.invoke('refine-editorial-post', {
-        body: { post_id: expandedItem.id, prompt },
+        body: { post_id: expandedItem.id, prompt, field },
       });
       if (error) throw error;
-      const refined = (data?.refined ?? {}) as { title?: string; description?: string; content_type?: string; legenda?: string; roteiro?: string; texto_arte?: string; briefing_arte?: string };
+      const refined = (data?.refined ?? {}) as { title?: string; description?: string; content_type?: string; legenda?: string; roteiro?: string; cenas?: SceneEntry[]; texto_arte?: string; briefing_arte?: string };
       const refinement = data?.refinement as RefinementEntry | undefined;
 
-      const validTypes = new Set(['video', 'estatico', 'carrossel']);
-      const newContentType = refined.content_type && validTypes.has(refined.content_type)
-        ? (refined.content_type as GeneratedContent['content_type'])
-        : expandedItem.content_type;
-
-      // Quando muda pra video: limpa texto_arte. Quando muda pra estatico/carrossel: limpa roteiro.
-      let finalRoteiro: string | null | undefined = refined.roteiro && refined.roteiro.trim() ? refined.roteiro : expandedItem.roteiro;
-      let finalTextoArte: string | null | undefined = refined.texto_arte && refined.texto_arte.trim() ? refined.texto_arte : expandedItem.texto_arte;
-      if (newContentType === 'video') finalTextoArte = null;
-      if (newContentType === 'estatico' || newContentType === 'carrossel') finalRoteiro = null;
-
+      // Como o escopo é restrito a um campo, NUNCA mudamos content_type localmente.
+      // Aplicamos apenas o campo refinado; demais ficam como estão.
       const updated: GeneratedContent = {
         ...expandedItem,
-        title: refined.title ?? expandedItem.title,
-        description: refined.description ?? expandedItem.description,
-        content_type: newContentType,
-        legenda: refined.legenda ?? expandedItem.legenda,
-        roteiro: finalRoteiro,
-        texto_arte: finalTextoArte,
-        briefing_arte: refined.briefing_arte ?? expandedItem.briefing_arte,
+        legenda: field === 'legenda' ? (refined.legenda ?? expandedItem.legenda) : expandedItem.legenda,
+        roteiro: field === 'roteiro' ? (refined.roteiro ?? expandedItem.roteiro) : expandedItem.roteiro,
+        cenas: field === 'roteiro' ? (Array.isArray(refined.cenas) ? refined.cenas : expandedItem.cenas) : expandedItem.cenas,
+        texto_arte: field === 'texto_arte' ? (refined.texto_arte ?? expandedItem.texto_arte) : expandedItem.texto_arte,
+        briefing_arte: field === 'briefing_arte' ? (refined.briefing_arte ?? expandedItem.briefing_arte) : expandedItem.briefing_arte,
         versao_editada: null,
         refinements: refinement
           ? [...(expandedItem.refinements ?? []), refinement]
@@ -318,14 +402,67 @@ const AgenteInstagramFacebook = () => {
 
       setGeneratedContents((current) => current.map((it) => (it.id === expandedItem.id ? updated : it)));
       setExpandedItem(updated);
-      setRefinePrompt('');
-      toast.success('IA reescreveu — confere aí.');
+      setRefineFieldDialog({ open: false, field: null, prompt: '' });
+      toast.success(`${FIELD_LABELS[field]} reescrito. Confere aí.`);
     } catch (err) {
-      console.error('Refine falhou:', err);
+      console.error('Refine field falhou:', err);
       toast.error('Não consegui reescrever. Tenta de novo daqui a pouco.');
     } finally {
-      setRefining(false);
+      setRefiningField(null);
     }
+  };
+
+  // Aprovar um campo específico (não muda status global do post).
+  const handleApproveField = async (field: FieldKey) => {
+    if (!expandedItem) return;
+    const newFeedback: FieldFeedback = {
+      ...(expandedItem.field_feedback ?? {}),
+      [field]: { status: 'approved', at: new Date().toISOString() },
+    };
+    setGeneratedContents((current) =>
+      current.map((item) => (item.id === expandedItem.id ? { ...item, field_feedback: newFeedback } : item)),
+    );
+    setExpandedItem((current) => (current ? { ...current, field_feedback: newFeedback } : current));
+    const { error } = await (supabase.from('editorial_posts' as never) as any)
+      .update({ field_feedback: newFeedback })
+      .eq('id', expandedItem.id);
+    if (error) {
+      console.error('Erro ao salvar aprovação do campo:', error);
+      toast.error('Não foi possível salvar.');
+    } else {
+      toast.success(`${FIELD_LABELS[field]} aprovado.`);
+    }
+  };
+
+  // Reprovar um campo específico, com motivo.
+  const handleRejectField = async () => {
+    if (!expandedItem || !rejectFieldDialog.field) return;
+    const motivo = rejectFieldDialog.reason.trim();
+    if (!motivo) {
+      toast.error('Conta o motivo, é o que ensina a IA.');
+      return;
+    }
+    setSavingRejectField(true);
+    const field = rejectFieldDialog.field;
+    const newFeedback: FieldFeedback = {
+      ...(expandedItem.field_feedback ?? {}),
+      [field]: { status: 'rejected', motivo, at: new Date().toISOString() },
+    };
+    setGeneratedContents((current) =>
+      current.map((item) => (item.id === expandedItem.id ? { ...item, field_feedback: newFeedback } : item)),
+    );
+    setExpandedItem((current) => (current ? { ...current, field_feedback: newFeedback } : current));
+    const { error } = await (supabase.from('editorial_posts' as never) as any)
+      .update({ field_feedback: newFeedback })
+      .eq('id', expandedItem.id);
+    setSavingRejectField(false);
+    if (error) {
+      console.error('Erro ao salvar reprovação do campo:', error);
+      toast.error('Não foi possível salvar.');
+      return;
+    }
+    toast.success(`${FIELD_LABELS[field]} reprovado. A IA vai usar isso na próxima geração.`);
+    setRejectFieldDialog({ open: false, field: null, reason: '' });
   };
 
   const startEditing = (item: GeneratedContent) => {
@@ -333,6 +470,7 @@ const AgenteInstagramFacebook = () => {
       legenda: item.versao_editada?.legenda ?? item.legenda ?? '',
       roteiro: item.versao_editada?.roteiro ?? item.roteiro ?? '',
       texto_arte: item.versao_editada?.texto_arte ?? item.texto_arte ?? '',
+      briefing_arte: item.versao_editada?.briefing_arte ?? item.briefing_arte ?? '',
     });
     setEditMode(true);
   };
@@ -388,9 +526,11 @@ const AgenteInstagramFacebook = () => {
         content_type?: string | null;
         legenda?: string | null;
         roteiro?: string | null;
+        cenas?: SceneEntry[] | null;
         texto_arte?: string | null;
         briefing_arte?: string | null;
         feedback_motivo?: string | null;
+        field_feedback?: FieldFeedback | null;
         versao_editada?: VersaoEditada | null;
         refinements?: RefinementEntry[] | null;
       }>;
@@ -408,9 +548,11 @@ const AgenteInstagramFacebook = () => {
             content_type: (p.content_type as GeneratedContent['content_type']) ?? null,
             legenda: p.legenda ?? null,
             roteiro: p.roteiro ?? null,
+            cenas: Array.isArray(p.cenas) ? p.cenas : null,
             texto_arte: p.texto_arte ?? null,
             briefing_arte: p.briefing_arte ?? null,
             feedback_motivo: p.feedback_motivo ?? null,
+            field_feedback: p.field_feedback ?? null,
             versao_editada: p.versao_editada ?? null,
             refinements: p.refinements ?? null,
           })),
@@ -510,6 +652,7 @@ const AgenteInstagramFacebook = () => {
       content_type: p.content_type ?? null,
       legenda: p.legenda ?? null,
       roteiro: p.roteiro ?? null,
+      cenas: Array.isArray(p.cenas) && p.cenas.length > 0 ? p.cenas : null,
       texto_arte: p.texto_arte ?? null,
       briefing_arte: p.briefing_arte ?? null,
     }));
@@ -524,7 +667,7 @@ const AgenteInstagramFacebook = () => {
       return posts;
     }
 
-    return ((data ?? []) as Array<{ id: string; post_date: string; network: string; title: string; description: string; status: GeneratedContent['status']; content_type?: string | null; legenda?: string | null; roteiro?: string | null; texto_arte?: string | null; briefing_arte?: string | null }>).map((row) => ({
+    return ((data ?? []) as Array<{ id: string; post_date: string; network: string; title: string; description: string; status: GeneratedContent['status']; content_type?: string | null; legenda?: string | null; roteiro?: string | null; cenas?: SceneEntry[] | null; texto_arte?: string | null; briefing_arte?: string | null }>).map((row) => ({
       id: row.id,
       date: row.post_date,
       network: row.network as GeneratedContent['network'],
@@ -534,13 +677,16 @@ const AgenteInstagramFacebook = () => {
       content_type: (row.content_type as GeneratedContent['content_type']) ?? null,
       legenda: row.legenda ?? null,
       roteiro: row.roteiro ?? null,
+      cenas: Array.isArray(row.cenas) ? row.cenas : null,
       texto_arte: row.texto_arte ?? null,
       briefing_arte: row.briefing_arte ?? null,
     }));
   };
 
   const fetchGuideText = async (): Promise<string> => {
-    const resp = await fetch('/guia-editorial-2026.html', { cache: 'force-cache' });
+    // Guia resumido focado em Instagram: muito menor que o multicanal (632KB),
+    // foi curado pela Renata com regras inegociaveis de escrita.
+    const resp = await fetch('/guia-editorial-instagram-resumido.html', { cache: 'force-cache' });
     if (!resp.ok) throw new Error('falha ao baixar guia');
     const html = await resp.text();
     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -620,7 +766,7 @@ const AgenteInstagramFacebook = () => {
 
       if (error) throw error;
 
-      const posts = (data?.posts ?? []) as Array<{ date: string; network: string; title: string; description: string; content_type?: string; legenda?: string; roteiro?: string; texto_arte?: string; briefing_arte?: string }>;
+      const posts = (data?.posts ?? []) as Array<{ date: string; network: string; title: string; description: string; content_type?: string; legenda?: string; roteiro?: string; cenas?: SceneEntry[]; texto_arte?: string; briefing_arte?: string }>;
       if (!posts.length) {
         throw new Error('Nenhum conteúdo retornado.');
       }
@@ -635,6 +781,7 @@ const AgenteInstagramFacebook = () => {
         content_type: (p.content_type as GeneratedContent['content_type']) ?? null,
         legenda: p.legenda ?? null,
         roteiro: p.roteiro ?? null,
+        cenas: Array.isArray(p.cenas) && p.cenas.length > 0 ? p.cenas : null,
         texto_arte: p.texto_arte ?? null,
         briefing_arte: p.briefing_arte ?? null,
       }));
@@ -988,201 +1135,349 @@ const AgenteInstagramFacebook = () => {
         )}
       </div>
 
-      <Dialog open={!!expandedItem} onOpenChange={(open) => { if (!open) { setExpandedItem(null); setEditMode(false); setRefinePrompt(''); } }}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          {expandedItem && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center gap-2 flex-wrap mb-2">
-                  {expandedItem.content_type && (
-                    <span className="rounded-full px-3 py-1 text-xs font-semibold bg-purple-500 text-white">
-                      {contentTypeLabel[expandedItem.content_type]}
+      <Dialog open={!!expandedItem} onOpenChange={(open) => { if (!open) { setExpandedItem(null); setEditMode(false); } }}>
+        <DialogContent className="max-w-3xl max-h-[88vh] overflow-y-auto">
+          {expandedItem && (() => {
+            const post = expandedItem;
+            const cenas: SceneEntry[] = Array.isArray(post.cenas) ? post.cenas : [];
+            const isVideo = post.content_type === 'video';
+            const isArt = post.content_type === 'estatico' || post.content_type === 'carrossel';
+
+            const renderFieldFooter = (field: FieldKey) => {
+              const feedback = post.field_feedback?.[field];
+              const isThisRefining = refiningField === field;
+              return (
+                <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-dashed">
+                  {feedback?.status === 'approved' && (
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Aprovado
                     </span>
                   )}
-                  <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-pink-500 text-white flex items-center gap-1">
-                    <Instagram className="h-3 w-3" /> Instagram
-                  </span>
-                  <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-sky-500 text-white flex items-center gap-1">
-                    <Facebook className="h-3 w-3" /> Facebook
-                  </span>
-                  {expandedItem.versao_editada && (
-                    <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-600 text-white flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" /> Editado por você
+                  {feedback?.status === 'rejected' && (
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-rose-100 text-rose-800 flex items-center gap-1"
+                      title={feedback.motivo}
+                    >
+                      <XCircle className="h-3 w-3" /> Reprovado
                     </span>
                   )}
-                  <span className="text-xs text-muted-foreground">
-                    {format(new Date(expandedItem.date), "dd/MM/yyyy")}
-                  </span>
-                </div>
-                <div className="flex items-start justify-between gap-3">
-                  <DialogTitle className="text-left text-xl">{expandedItem.title}</DialogTitle>
+                  <div className="flex-1" />
                   {!editMode && (
-                    <Button size="sm" variant="outline" onClick={() => startEditing(expandedItem)} className="gap-1.5 shrink-0">
-                      <Pencil className="h-3.5 w-3.5" /> Editar
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isThisRefining || refiningField !== null}
+                        onClick={() => setRefineFieldDialog({ open: true, field, prompt: '' })}
+                        className="gap-1.5"
+                      >
+                        {isThisRefining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                        Refinar com IA
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleApproveField(field)}
+                        className="gap-1.5 text-emerald-700 hover:text-emerald-800"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Aprovar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setRejectFieldDialog({ open: true, field, reason: feedback?.motivo ?? '' })}
+                        className="gap-1.5 text-rose-700 hover:text-rose-800"
+                      >
+                        <XCircle className="h-3.5 w-3.5" /> Reprovar
+                      </Button>
+                    </>
                   )}
                 </div>
-              </DialogHeader>
+              );
+            };
 
-              {/* Aviso quando estava reprovado */}
-              {expandedItem.feedback_motivo && (
-                <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs">
-                  <div className="font-semibold text-rose-700 mb-1">Motivo da reprovação anterior</div>
-                  <p className="text-rose-900 whitespace-pre-line">{expandedItem.feedback_motivo}</p>
-                </div>
-              )}
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    {post.content_type && (
+                      <span className="rounded-full px-3 py-1 text-xs font-semibold bg-purple-500 text-white">
+                        {contentTypeLabel[post.content_type]}
+                      </span>
+                    )}
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-pink-500 text-white flex items-center gap-1">
+                      <Instagram className="h-3 w-3" /> Instagram
+                    </span>
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-sky-500 text-white flex items-center gap-1">
+                      <Facebook className="h-3 w-3" /> Facebook
+                    </span>
+                    {post.versao_editada && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-600 text-white flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" /> Editado por você
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(post.date), 'dd/MM/yyyy')}
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <DialogTitle className="text-left text-xl">{post.title}</DialogTitle>
+                    {!editMode && (
+                      <Button size="sm" variant="outline" onClick={() => startEditing(post)} className="gap-1.5 shrink-0">
+                        <Pencil className="h-3.5 w-3.5" /> Editar manualmente
+                      </Button>
+                    )}
+                  </div>
+                </DialogHeader>
 
-              <div className="space-y-4 py-2">
-                <div>
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Briefing</Label>
-                  <p className="text-sm mt-1 whitespace-pre-line">{expandedItem.description}</p>
-                </div>
+                {/* Aviso de reprovação global anterior */}
+                {post.feedback_motivo && (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs">
+                    <div className="font-semibold text-rose-700 mb-1">Motivo da reprovação do post inteiro</div>
+                    <p className="text-rose-900 whitespace-pre-line">{post.feedback_motivo}</p>
+                  </div>
+                )}
 
-                {/* Roteiro (vídeo) */}
-                {expandedItem.content_type === 'video' && (
-                  <div className="rounded-lg border border-border bg-card p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-xs uppercase tracking-wider text-purple-700">Roteiro</Label>
-                      {!editMode && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => downloadRoteiroDocx(expandedItem)}
-                          disabled={downloadingDocx || !(expandedItem.versao_editada?.roteiro || expandedItem.roteiro)}
-                          className="gap-1.5"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          {downloadingDocx ? 'Gerando...' : 'Baixar .docx'}
-                        </Button>
+                <div className="space-y-4 py-2">
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Briefing</Label>
+                    <p className="text-sm mt-1 whitespace-pre-line">{post.description}</p>
+                  </div>
+
+                  {/* Roteiro + Cenas (vídeo) */}
+                  {isVideo && (
+                    <div className="rounded-lg border border-border bg-card p-4">
+                      <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+                        <Label className="text-xs uppercase tracking-wider text-purple-700">Roteiro e Cenas do vídeo</Label>
+                        {!editMode && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => downloadRoteiroDocx(post)}
+                            disabled={downloadingDocx || (cenas.length === 0 && !(post.versao_editada?.roteiro || post.roteiro))}
+                            className="gap-1.5"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            {downloadingDocx ? 'Gerando…' : 'Baixar .docx'}
+                          </Button>
+                        )}
+                      </div>
+
+                      {editMode ? (
+                        <div className="space-y-2">
+                          <Label className="text-[11px] text-muted-foreground">Resumo do arco narrativo (texto livre)</Label>
+                          <Textarea
+                            value={editForm.roteiro ?? ''}
+                            onChange={(e) => setEditForm((f) => ({ ...f, roteiro: e.target.value }))}
+                            rows={4}
+                            placeholder="Resumo em 2-4 linhas do arco do vídeo…"
+                          />
+                          <p className="text-[11px] text-muted-foreground italic">
+                            As cenas estruturadas são editadas via "Refinar com IA". Salvar aqui mantém o resumo manual.
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          {(post.versao_editada?.roteiro || post.roteiro) && (
+                            <div className="mb-3">
+                              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Arco narrativo</Label>
+                              <p className="text-sm whitespace-pre-line bg-muted/30 p-3 rounded mt-1">
+                                {post.versao_editada?.roteiro ?? post.roteiro}
+                              </p>
+                            </div>
+                          )}
+
+                          {cenas.length > 0 ? (
+                            <div className="space-y-3">
+                              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Cenas ({cenas.length})</Label>
+                              {cenas.map((c) => (
+                                <div key={c.numero} className="rounded-md border border-purple-200 bg-purple-50/30 p-3 text-sm space-y-1">
+                                  <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <span className="font-bold text-purple-800">🎥 CENA {c.numero}</span>
+                                    <span className="text-xs font-medium text-muted-foreground">⏱ {c.tempo}</span>
+                                  </div>
+                                  <p><span className="font-semibold">🎙️ FALA:</span> {c.fala}</p>
+                                  <p><span className="font-semibold">📝 TEXTO NA TELA:</span> {c.textoTela}</p>
+                                  <p className="text-muted-foreground"><span className="font-semibold text-foreground">🖼️ IMAGEM:</span> {c.imagem}</p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">Cenas ainda não geradas. Refine com IA pra criar.</p>
+                          )}
+                        </>
                       )}
+
+                      {renderFieldFooter('roteiro')}
                     </div>
-                    {editMode ? (
-                      <Textarea
-                        value={editForm.roteiro ?? ''}
-                        onChange={(e) => setEditForm((f) => ({ ...f, roteiro: e.target.value }))}
-                        rows={8}
-                        placeholder="Roteiro cena-a-cena…"
-                        className="font-mono text-xs"
-                      />
-                    ) : (expandedItem.versao_editada?.roteiro || expandedItem.roteiro) ? (
-                      <p className="text-sm whitespace-pre-line bg-muted/30 p-3 rounded">
-                        {expandedItem.versao_editada?.roteiro ?? expandedItem.roteiro}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic">Roteiro ainda não gerado.</p>
-                    )}
-                  </div>
-                )}
+                  )}
 
-                {/* Texto na arte (estático/carrossel) */}
-                {(expandedItem.content_type === 'estatico' || expandedItem.content_type === 'carrossel') && (
-                  <div className="rounded-lg border border-border bg-card p-4">
-                    <Label className="text-xs uppercase tracking-wider text-blue-700">Texto na arte</Label>
-                    {editMode ? (
-                      <Textarea
-                        value={editForm.texto_arte ?? ''}
-                        onChange={(e) => setEditForm((f) => ({ ...f, texto_arte: e.target.value }))}
-                        rows={6}
-                        placeholder="Frases que vão dentro da arte…"
-                        className="mt-2"
-                      />
-                    ) : (expandedItem.versao_editada?.texto_arte || expandedItem.texto_arte) ? (
-                      <p className="text-sm whitespace-pre-line mt-2 bg-muted/30 p-3 rounded font-medium">
-                        {expandedItem.versao_editada?.texto_arte ?? expandedItem.texto_arte}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic mt-1">Texto da arte não definido.</p>
-                    )}
-                  </div>
-                )}
+                  {/* Texto na arte (estático/carrossel) */}
+                  {isArt && (
+                    <div className="rounded-lg border border-border bg-card p-4">
+                      <Label className="text-xs uppercase tracking-wider text-blue-700">Texto na arte</Label>
+                      {editMode ? (
+                        <Textarea
+                          value={editForm.texto_arte ?? ''}
+                          onChange={(e) => setEditForm((f) => ({ ...f, texto_arte: e.target.value }))}
+                          rows={6}
+                          placeholder="Frases que vão dentro da arte…"
+                          className="mt-2"
+                        />
+                      ) : (post.versao_editada?.texto_arte || post.texto_arte) ? (
+                        <p className="text-sm whitespace-pre-line mt-2 bg-muted/30 p-3 rounded font-medium">
+                          {post.versao_editada?.texto_arte ?? post.texto_arte}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic mt-1">Texto da arte não definido.</p>
+                      )}
+                      {renderFieldFooter('texto_arte')}
+                    </div>
+                  )}
 
-                {/* Briefing para o designer da arte */}
-                {expandedItem.briefing_arte && (
+                  {/* Briefing da arte (sempre presente como campo editável) */}
                   <div className="rounded-lg border border-border bg-card p-4">
                     <Label className="text-xs uppercase tracking-wider text-amber-700">Briefing da arte (para o designer)</Label>
-                    <p className="text-sm whitespace-pre-line mt-2 text-muted-foreground">{expandedItem.briefing_arte}</p>
+                    {editMode ? (
+                      <Textarea
+                        value={editForm.briefing_arte ?? ''}
+                        onChange={(e) => setEditForm((f) => ({ ...f, briefing_arte: e.target.value }))}
+                        rows={5}
+                        placeholder="Instruções pro designer: referência visual, paleta, mood, elementos…"
+                        className="mt-2"
+                      />
+                    ) : (post.versao_editada?.briefing_arte || post.briefing_arte) ? (
+                      <p className="text-sm whitespace-pre-line mt-2 text-muted-foreground bg-muted/20 p-3 rounded">
+                        {post.versao_editada?.briefing_arte ?? post.briefing_arte}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic mt-1">Briefing da arte não definido.</p>
+                    )}
+                    {renderFieldFooter('briefing_arte')}
                   </div>
-                )}
 
-                {/* Legenda */}
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <Label className="text-xs uppercase tracking-wider text-pink-700">Legenda do post</Label>
-                  {editMode ? (
-                    <Textarea
-                      value={editForm.legenda ?? ''}
-                      onChange={(e) => setEditForm((f) => ({ ...f, legenda: e.target.value }))}
-                      rows={8}
-                      placeholder="Legenda completa…"
-                      className="mt-2"
-                    />
-                  ) : (expandedItem.versao_editada?.legenda || expandedItem.legenda) ? (
-                    <p className="text-sm whitespace-pre-line mt-2 bg-muted/30 p-3 rounded">
-                      {expandedItem.versao_editada?.legenda ?? expandedItem.legenda}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic mt-1">Legenda não definida.</p>
-                  )}
-                </div>
-
-                {/* Chat: Editar com novo prompt para o agente */}
-                {!editMode && (
-                  <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-4 space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-primary flex items-center gap-1.5">
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      Editar com novo prompt para o agente
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Conta o que mudar — a IA reescreve este post mantendo o resto. Tudo fica salvo na memória.
-                    </p>
-                    <Textarea
-                      value={refinePrompt}
-                      onChange={(e) => setRefinePrompt(e.target.value)}
-                      rows={3}
-                      placeholder='Ex: "deixa mais emocional", "tira a hashtag de emagrecimento", "muda o roteiro pra começar com pergunta", "torna a CTA mais direta"'
-                      disabled={refining}
-                    />
-                    <div className="flex justify-end">
-                      <Button size="sm" onClick={handleRefine} disabled={refining || !refinePrompt.trim()} className="gap-1.5">
-                        {refining ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                        {refining ? 'Reescrevendo…' : 'Reescrever com IA'}
-                      </Button>
-                    </div>
+                  {/* Legenda */}
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <Label className="text-xs uppercase tracking-wider text-pink-700">Legenda do post</Label>
+                    {editMode ? (
+                      <Textarea
+                        value={editForm.legenda ?? ''}
+                        onChange={(e) => setEditForm((f) => ({ ...f, legenda: e.target.value }))}
+                        rows={8}
+                        placeholder="Legenda completa…"
+                        className="mt-2"
+                      />
+                    ) : (post.versao_editada?.legenda || post.legenda) ? (
+                      <p className="text-sm whitespace-pre-line mt-2 bg-muted/30 p-3 rounded">
+                        {post.versao_editada?.legenda ?? post.legenda}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic mt-1">Legenda não definida.</p>
+                    )}
+                    {renderFieldFooter('legenda')}
                   </div>
-                )}
 
-                <div>
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status atual</Label>
-                  <p className="text-sm font-medium mt-1">{statusLabels[expandedItem.status]}</p>
-                </div>
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status atual do post</Label>
+                    <p className="text-sm font-medium mt-1">{statusLabels[post.status]}</p>
+                  </div>
 
-                <div className="flex flex-wrap gap-2 pt-3 border-t">
-                  {editMode ? (
-                    <>
-                      <Button size="sm" onClick={handleSaveEdit} disabled={savingEdit} className="gap-1.5">
-                        {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        Salvar edição
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditMode(false)} className="gap-1.5">
-                        <X className="h-4 w-4" /> Cancelar
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button size="sm" onClick={() => { handleUpdateStatus(expandedItem.id, 'approved'); setExpandedItem(null); }} className="gap-1.5">
-                        <CheckCircle2 className="h-4 w-4" /> Aprovar
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => setRejectDialog({ open: true, item: expandedItem, reason: expandedItem.feedback_motivo ?? '' })} className="gap-1.5">
-                        <XCircle className="h-4 w-4" /> Reprovar
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => { handleUpdateStatus(expandedItem.id, 'favorite'); setExpandedItem(null); }} className="gap-1.5">
-                        <Star className="h-4 w-4" /> Favorito
-                      </Button>
-                    </>
-                  )}
+                  <div className="flex flex-wrap gap-2 pt-3 border-t">
+                    {editMode ? (
+                      <>
+                        <Button size="sm" onClick={handleSaveEdit} disabled={savingEdit} className="gap-1.5">
+                          {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                          Salvar edição manual
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditMode(false)} className="gap-1.5">
+                          <X className="h-4 w-4" /> Cancelar
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button size="sm" onClick={() => { handleUpdateStatus(post.id, 'approved'); setExpandedItem(null); }} className="gap-1.5">
+                          <CheckCircle2 className="h-4 w-4" /> Aprovar post inteiro
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => setRejectDialog({ open: true, item: post, reason: post.feedback_motivo ?? '' })} className="gap-1.5">
+                          <XCircle className="h-4 w-4" /> Reprovar post inteiro
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { handleUpdateStatus(post.id, 'favorite'); setExpandedItem(null); }} className="gap-1.5">
+                          <Star className="h-4 w-4" /> Favorito
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: prompt de refinamento por campo */}
+      <Dialog open={refineFieldDialog.open} onOpenChange={(open) => { if (!open) setRefineFieldDialog({ open: false, field: null, prompt: '' }); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Refinar {refineFieldDialog.field ? FIELD_LABELS[refineFieldDialog.field].toLowerCase() : 'campo'} com IA
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Conta o ajuste que você quer só neste campo. Os outros campos do post ficam intactos.
+            </p>
+            <Textarea
+              value={refineFieldDialog.prompt}
+              onChange={(e) => setRefineFieldDialog((d) => ({ ...d, prompt: e.target.value }))}
+              rows={4}
+              placeholder='Ex: "tira o tom de venda", "menos clínico, mais ritual", "começa pelo benefício"'
+              autoFocus
+              disabled={refiningField !== null}
+            />
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" size="sm" onClick={() => setRefineFieldDialog({ open: false, field: null, prompt: '' })} disabled={refiningField !== null}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={handleRefineField} disabled={refiningField !== null || !refineFieldDialog.prompt.trim()} className="gap-1.5">
+                {refiningField !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {refiningField !== null ? 'Reescrevendo…' : 'Refinar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: motivo de reprovação por campo */}
+      <Dialog open={rejectFieldDialog.open} onOpenChange={(open) => { if (!open) setRejectFieldDialog({ open: false, field: null, reason: '' }); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Por que está reprovando {rejectFieldDialog.field ? FIELD_LABELS[rejectFieldDialog.field].toLowerCase() : 'este campo'}?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              O motivo vai pra memória da IA e ensina ela a não repetir esse padrão NESTE campo específico. Quanto mais específico, melhor.
+            </p>
+            <Textarea
+              value={rejectFieldDialog.reason}
+              onChange={(e) => setRejectFieldDialog((d) => ({ ...d, reason: e.target.value }))}
+              rows={5}
+              placeholder='Ex: "Briefing genérico, não pediu paleta Pure" ou "Legenda com travessão e tom de spa"'
+              autoFocus
+              disabled={savingRejectField}
+            />
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" size="sm" onClick={() => setRejectFieldDialog({ open: false, field: null, reason: '' })} disabled={savingRejectField}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" size="sm" onClick={handleRejectField} disabled={savingRejectField || !rejectFieldDialog.reason.trim()} className="gap-1.5">
+                {savingRejectField ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                Reprovar campo
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

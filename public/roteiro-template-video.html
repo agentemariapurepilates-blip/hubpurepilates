@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Template de Roteiro de Vídeo · Pure Pilates</title>
+</head>
+<body>
+
+<h1>Template de Roteiro de Vídeo</h1>
+<p>Toda vez que o agente sugerir um conteúdo do tipo <strong>vídeo</strong> (Reels, vídeo curto, etc.), o roteiro DEVE seguir esta estrutura. Cabeçalho fixo, cenas estruturadas. Sem variação.</p>
+
+<h2>Cabeçalho fixo (não muda)</h2>
+<ul>
+<li><strong>CLIENTE:</strong> Estúdio</li>
+<li><strong>OBSERVAÇÃO:</strong> Vertical e horizontal</li>
+<li><strong>PRODUTORA:</strong> BONIARTE</li>
+<li><strong>APRESENTAÇÃO:</strong> Professor(a) / Porta voz Pure Pilates</li>
+<li><strong>DIREÇÃO:</strong> ANDRÉ ÂNGELO</li>
+<li><strong>Tom:</strong> Claro, acolhedor e direto</li>
+<li><strong>Formato:</strong> Vertical e horizontal</li>
+</ul>
+
+<h2>Variáveis por roteiro</h2>
+<ul>
+<li><strong>Título:</strong> nome do roteiro (ex.: "🎬 ROTEIRO – INDIQUE PILATES")</li>
+<li><strong>Linha de marca:</strong> "Pure Pilates | [descrição do programa/tema]"</li>
+<li><strong>Duração:</strong> faixa em segundos (ex.: "50s a 60s")</li>
+<li><strong>Público:</strong> a quem o roteiro se dirige (ex.: "Alunos Pure Pilates")</li>
+<li><strong>REFERÊNCIA:</strong> 1 frase descrevendo o tema do vídeo</li>
+</ul>
+
+<h2>Estrutura de cada cena</h2>
+<p>O roteiro é composto por <strong>cenas numeradas em sequência</strong>. Cada cena tem exatamente 5 blocos, nesta ordem:</p>
+<ol>
+<li><strong>🎥 CENA [número]</strong></li>
+<li><strong>⏱ Tempo:</strong> faixa em formato 0:XX a 0:YY (ex.: 0:00 a 0:07)</li>
+<li><strong>🎙️ FALA:</strong> o que o instrutor fala em voz, em linguagem natural e na voz da marca. Pode ter 1 a 3 frases por cena.</li>
+<li><strong>📝 TEXTO NA TELA:</strong> texto curto que aparece visualmente. Frases breves, em destaque. Não duplica a fala literalmente — sintetiza a ideia-chave.</li>
+<li><strong>🖼️ IMAGEM:</strong> descrição visual da cena (enquadramento, ação, expressão do apresentador, equipamento, gesto). 1 a 2 frases.</li>
+</ol>
+
+<h2>Regras de roteirização</h2>
+<ul>
+<li>Total de 5 a 8 cenas por roteiro, salvo casos especiais.</li>
+<li>Duração média por cena: 7 a 12 segundos. Cena de abertura pode ser mais curta (5-7s).</li>
+<li>A última cena fecha com CTA claro e a ação esperada do espectador.</li>
+<li>O TEXTO NA TELA deve ser legível em 1 a 2 segundos. Frases curtas, sem ponto final, sem travessões.</li>
+<li>A FALA segue todas as regras do guia editorial: voz acolhedora-técnica, "você"/"nós", sem comparações redutoras, sem frases incompletas, sem travessões, sem menção a preços ou aula grátis.</li>
+<li>A IMAGEM descreve o que a câmera mostra, em tom de roteiro de direção (objetivo, sem adjetivos floridos).</li>
+</ul>
+
+<h2>Exemplo de cena (referência)</h2>
+<pre>
+🎥 CENA 1
+⏱ Tempo: 0:00 a 0:07
+🎙️ FALA: Cliente Pure, a gente pensou em você. Sabe quando você indica a Pure para alguém porque gosta da experiência e quer que essa pessoa também se cuide? Agora isso pode virar um presente para você.
+📝 TEXTO NA TELA: Cliente Pure, a gente pensou em você
+🖼️ IMAGEM: Professor ao lado do Barrel, olhando direto para a câmera, com postura acolhedora.
+</pre>
+
+<h2>Formato de saída (JSON)</h2>
+<p>O agente deve retornar o roteiro estruturado no campo <code>cenas</code> de cada post de vídeo:</p>
+<pre>
+"cenas": [
+  {
+    "numero": 1,
+    "tempo": "0:00 a 0:07",
+    "fala": "Cliente Pure, a gente pensou em você...",
+    "textoTela": "Cliente Pure, a gente pensou em você",
+    "imagem": "Professor ao lado do Barrel, olhando direto para a câmera, com postura acolhedora."
+  },
+  { "numero": 2, "tempo": "0:07 a 0:14", "fala": "...", "textoTela": "...", "imagem": "..." }
+]
+</pre>
+
+</body>
+</html>
