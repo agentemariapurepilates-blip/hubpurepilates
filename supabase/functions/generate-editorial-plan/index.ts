@@ -107,17 +107,24 @@ Esta é a cadência DEFAULT por dia da semana. Use ela RIGOROSAMENTE, exceto qua
 
 | Dia da semana | Conteúdo padrão | content_type |
 |---|---|---|
-| **Domingo** | #DesafioDaSemana LANÇAMENTO (princípio + exercício em equipamento) | video |
+| **Domingo** | **#DesafioDaSemana (única peça do Desafio na semana)** | video |
 | Segunda | (sem feed; só Stories) NÃO gerar post de feed neste dia, exceto comemorativa | — |
 | Terça | Saber Pilates (educacional) | carrossel |
 | Quarta | A Melhor Hora (lifestyle, estúdio) | video |
 | Quinta | Cultura Pilates ou UGC | carrossel |
-| **Sexta** | #DesafioDaSemana ENCERRAMENTO (prova social, curadoria) | video |
+| Sexta | A Melhor Hora ou bastidor | video |
 | Sábado | Começa Agora (aula experimental, link na bio) | estatico |
+
+## REGRAS ABSOLUTAS DO #DesafioDaSemana
+1. **APENAS aos DOMINGOS.** Nunca em segunda, terça, quarta, quinta, sexta ou sábado. UMA ÚNICA peça por semana, sempre no domingo.
+2. **Não fazer "encerramento" na sexta nem em outro dia.** O Desafio é UM post semanal, só.
+3. **Sempre com o PROFESSOR como único apresentador.** O professor propõe o desafio para a rede de alunos. Sem aluno aparecendo falando, sem dupla, sem segunda pessoa. Aluno pode aparecer FAZENDO o exercício mas em silêncio; quem fala é só o professor.
+4. **Conteúdo do Desafio:** o professor apresenta um princípio do método (postura, respiração, controle, centro, fluidez ou precisão) e um exercício-âncora em equipamento (Reformer / Barrel / Cadillac / Chair, com rotação fixa entre os 4 ao longo das semanas do mês).
+5. Se o domingo coincidir com uma data comemorativa, priorize a comemorativa nesse domingo e pule o Desafio dessa semana.
 
 **REGRAS DE PRIORIDADE QUANDO COMEMORATIVA CAIR EM DIA DE CADÊNCIA:**
 - A comemorativa SEMPRE fica na data ISO exata fornecida no bloco "DATAS COMEMORATIVAS".
-- Se a comemorativa cai no domingo (slot do Desafio), você tem 2 opções: (a) pular o lançamento do Desafio nessa semana, ou (b) fazer 2 posts no domingo (comemorativa + Desafio). NÃO mover a comemorativa para outro dia.
+- Se a comemorativa cai no domingo, pule o Desafio dessa semana e poste só a comemorativa.
 - Datas comemorativas usam EXATAMENTE a data ISO listada. NUNCA inventar data próxima.
 
 # SOBRE A MARCA
@@ -126,10 +133,25 @@ Esta é a cadência DEFAULT por dia da semana. Use ela RIGOROSAMENTE, exceto qua
 - Hashtags institucionais obrigatórias em todas as legendas: #PurePilates #PurePilatesBR
 - 5 pilares de conteúdo (siga a distribuição): A Melhor Hora · Cultura Pilates · Saber Pilates · Começa Agora · Você Traz, Você Ganha.
 
+# PESQUISA NA WEB (use SEMPRE que tiver dúvida)
+
+Você tem acesso à ferramenta `web_search`. Use ela **proativamente** sempre que precisar de informação atualizada, factual ou cultural pra fazer um conteúdo mais profundo. Não invente. Não chuta.
+
+Use web_search OBRIGATORIAMENTE para:
+- Validar datas comemorativas que NÃO estão no bloco "DATAS COMEMORATIVAS DESTA JANELA" antes de mencioná-las
+- Confirmar fatos sobre o método Pilates (Joseph Pilates, princípios, equipamentos, história)
+- Buscar referências culturais atuais que vão no conteúdo (filmes, séries, músicas, trends)
+- Buscar dados de saúde (% da população com dor lombar, etc.) quando o conteúdo precisar de número
+- Tirar qualquer dúvida sobre o que está escrevendo
+
+A regra é simples: prefira pesquisar a inventar. Conteúdo raso é o maior inimigo da marca. Pesquise pra ir fundo. Faça quantas buscas precisar (até o limite do `max_uses`).
+
 # REGRAS COMPLEMENTARES
 1. TikTok: sempre vídeo curto (content_type = "video").
 2. Sempre incluir TODAS as datas comemorativas fornecidas no bloco "DATAS COMEMORATIVAS" com a data ISO exata.
-3. A Renata pode usar o campo "INSTRUÇÕES ESPECÍFICAS DESTE MÊS" para guiar tema, mood ou foco. Você aplica essas instruções DENTRO das regras R1 a R6 e da cadência acima. Se as instruções da Renata violarem alguma regra absoluta, ignore essa parte e siga a regra.
+3. Para QUALQUER outra data ou fato que não esteja explicitamente no bloco do sistema, use web_search. Nunca invente data nem dado.
+4. A Renata pode usar o campo "INSTRUÇÕES ESPECÍFICAS DESTE MÊS" para guiar tema, mood ou foco. Você aplica essas instruções DENTRO das regras R1 a R7 e da cadência acima. Se as instruções da Renata violarem alguma regra absoluta, ignore essa parte e siga a regra.
+5. CENAS de vídeo: cada cena DEVE ter "cena" (ação visual) e "narracao" (fala do professor) preenchidos com conteúdo substantivo. Nunca deixar campo vazio (única exceção: "narracao": "" quando a cena é silenciosa/só texto na tela). Cena sem conteúdo é falha grave.
 
 ## FORMATO DE CADA POSTAGEM
 Para cada post, gere TODOS os campos em uma única passagem:
@@ -330,7 +352,7 @@ Responda agora com o JSON completo seguindo exatamente o formato definido no sys
           system: systemBlocks,
           // Web search server-side: Claude decide quando buscar (max 2 buscas por chunk).
           // Útil pra trends atuais, referências culturais, datas que não estão no calendário fixo.
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 }],
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 8 }],
           messages: [
             { role: 'user', content: userMessage },
           ],

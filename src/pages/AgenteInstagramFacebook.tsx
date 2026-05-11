@@ -860,8 +860,11 @@ const AgenteInstagramFacebook = () => {
   const startDayOfWeek = monthStart ? monthStart.getDay() : 0;
   const paddingDays = Array.from({ length: startDayOfWeek }, () => null);
 
+  // Facebook e replicado do Instagram, escondemos do calendario pra evitar duplicidade.
   const getItemsForDay = (date: Date) =>
-    generatedContents.filter((item) => isSameDay(date, new Date(item.date)));
+    generatedContents.filter(
+      (item) => item.network === 'Instagram Studios' && isSameDay(date, new Date(item.date)),
+    );
 
   return (
     <MainLayout>
@@ -1252,17 +1255,14 @@ const AgenteInstagramFacebook = () => {
               <>
                 <DialogHeader>
                   <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <span className="rounded-full px-3 py-1 text-xs font-semibold bg-pink-500 text-white flex items-center gap-1">
+                      <Instagram className="h-3 w-3" /> Instagram
+                    </span>
                     {post.content_type && (
                       <span className="rounded-full px-3 py-1 text-xs font-semibold bg-purple-500 text-white">
                         {contentTypeLabel[post.content_type]}
                       </span>
                     )}
-                    <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-pink-500 text-white flex items-center gap-1">
-                      <Instagram className="h-3 w-3" /> Instagram
-                    </span>
-                    <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-sky-500 text-white flex items-center gap-1">
-                      <Facebook className="h-3 w-3" /> Facebook
-                    </span>
                     {post.versao_editada && (
                       <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-600 text-white flex items-center gap-1">
                         <Sparkles className="h-3 w-3" /> Editado por você
