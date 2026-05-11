@@ -28,10 +28,18 @@ interface VersaoEditada {
 interface SceneEntry {
   numero: number;
   tempo: string;
-  fala: string;
-  textoTela: string;
-  imagem: string;
+  descricao?: string;
+  // Legacy (dados antigos antes da simplificacao do schema)
+  fala?: string;
+  textoTela?: string;
+  imagem?: string;
 }
+
+const sceneDescricao = (c: SceneEntry): string => {
+  if (c.descricao && c.descricao.trim()) return c.descricao.trim();
+  const partes = [c.imagem, c.fala && `Fala: ${c.fala}`, c.textoTela && `Texto na tela: ${c.textoTela}`].filter(Boolean) as string[];
+  return partes.join(' · ');
+};
 
 type FieldKey = 'legenda' | 'roteiro' | 'texto_arte' | 'briefing_arte';
 
@@ -168,9 +176,8 @@ const AgenteInstagramFacebook = () => {
     return new Date(Number(selectedYear), monthIndex, day).toISOString();
   };
 
-  // Gera DOCX no formato template Pure Pilates (cabecalho fixo + cenas estruturadas).
-  // Quando o post tem `cenas`, usa o layout cena-a-cena oficial.
-  // Quando nao tem, faz fallback pro texto livre do roteiro.
+  // Gera DOCX no estilo do template HTML da Pure: header vermelho, secoes
+  // (Info Gerais, Briefing, Roteiro 3-col, Legenda, Briefing da Arte).
   const downloadRoteiroDocx = async (post: GeneratedContent) => {
     const cenas = Array.isArray(post.cenas) ? post.cenas : [];
     const fallbackRoteiro = post.versao_editada?.roteiro ?? post.roteiro ?? '';
@@ -181,37 +188,9 @@ const AgenteInstagramFacebook = () => {
     setDownloadingDocx(true);
     try {
       const dataFormatada = format(parseISO(post.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-      const tituloRoteiro = post.title.toUpperCase();
-
-      // Calcula duracao total a partir das cenas (extrai segundos do "0:XX a 0:YY" da ultima cena).
-      const computeDuration = (): string => {
-        if (cenas.length === 0) return '50s a 60s';
-        const last = cenas[cenas.length - 1];
-        const match = last.tempo?.match(/(\d+):(\d+)\s*a\s*(\d+):(\d+)/);
-        if (!match) return '50s a 60s';
-        const totalEndSec = Number(match[3]) * 60 + Number(match[4]);
-        const firstMatch = cenas[0].tempo?.match(/(\d+):(\d+)\s*a/);
-        const startSec = firstMatch ? Number(firstMatch[1]) * 60 + Number(firstMatch[2]) : 0;
-        const duration = totalEndSec - startSec;
-        return `${duration}s`;
-      };
-
-      const headerMeta: Array<[string, string]> = [
-        ['Campanha CLIENTE', 'Estúdio'],
-        ['OBSERVAÇÃO', 'Vertical e horizontal'],
-        ['REFERÊNCIA', post.description || tituloRoteiro],
-        ['PRODUTORA', 'BONIARTE'],
-        ['APRESENTAÇÃO', 'Professor(a) / Porta voz Pure Pilates'],
-        ['DIREÇÃO', 'ANDRÉ ÂNGELO'],
-      ];
-
-      const infoBloco: Array<[string, string]> = [
-        ['Formato', 'Vertical e horizontal'],
-        ['Duração', computeDuration()],
-        ['Tom', 'Claro, acolhedor e direto'],
-        ['Público', 'Alunos e seguidores Pure Pilates'],
-        ['Data de publicação', dataFormatada],
-      ];
+      const legendaTxt = post.versao_editada?.legenda ?? post.legenda ?? '';
+      const briefingArteTxt = post.versao_editada?.briefing_arte ?? post.briefing_arte ?? '';
+      const formatoLabel = post.content_type === 'video' ? 'Vídeo / Reels' : post.content_type === 'carrossel' ? 'Carrossel' : 'Estático';
 
       const para = (text: string, opts: { bold?: boolean; size?: number; color?: string; italics?: boolean; alignment?: typeof AlignmentType[keyof typeof AlignmentType] } = {}) =>
         new Paragraph({
@@ -219,113 +198,219 @@ const AgenteInstagramFacebook = () => {
           children: [new TextRun({ text, bold: opts.bold, size: opts.size, color: opts.color, italics: opts.italics })],
         });
 
-      const labelValue = (label: string, value: string) =>
-        new Paragraph({ children: [new TextRun({ text: `${label}: `, bold: true }), new TextRun(value)] });
+      const PURE_RED = 'C10230';
+      const LIGHT_GREY = 'FAFAFA';
+      const BORDER_GREY = 'EEEEEE';
+      const PINK_BORDER = 'FFD4DF';
+      const PINK_BG = 'FFF7F9';
 
-      const purpleBorders = {
-        top: { style: BorderStyle.SINGLE, size: 4, color: 'B794F4' },
-        bottom: { style: BorderStyle.SINGLE, size: 4, color: 'B794F4' },
-        left: { style: BorderStyle.SINGLE, size: 4, color: 'B794F4' },
-        right: { style: BorderStyle.SINGLE, size: 4, color: 'B794F4' },
-      };
+      const noBorders = {
+        top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        insideVertical: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+      } as const;
 
-      const buildCenaTable = (c: SceneEntry) =>
-        new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
-          rows: [
-            // Header row: cena + tempo (spanning both columns)
-            new TableRow({
-              tableHeader: true,
-              children: [
-                new TableCell({
-                  width: { size: 100, type: WidthType.PERCENTAGE },
-                  columnSpan: 2,
-                  shading: { type: ShadingType.CLEAR, fill: 'F5EFFE', color: 'auto' },
-                  borders: purpleBorders,
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({ text: `🎥 CENA ${c.numero}`, bold: true, color: '6B21A8' }),
-                        new TextRun({ text: `    ⏱ ${c.tempo || '-'}`, color: '7D7C7C' }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-            // Content row: image left, narração right
-            new TableRow({
-              children: [
-                new TableCell({
-                  width: { size: 42, type: WidthType.PERCENTAGE },
-                  borders: purpleBorders,
-                  children: [
-                    new Paragraph({ children: [new TextRun({ text: '🖼️ IMAGEM', bold: true, size: 18, color: '6B21A8' })] }),
-                    new Paragraph({ children: [new TextRun(c.imagem || '-')] }),
-                  ],
-                }),
-                new TableCell({
-                  width: { size: 58, type: WidthType.PERCENTAGE },
-                  borders: purpleBorders,
-                  children: [
-                    new Paragraph({ children: [new TextRun({ text: '🎙️ NARRAÇÃO', bold: true, size: 18, color: '6B21A8' })] }),
-                    new Paragraph({ children: [new TextRun(c.fala || '-')] }),
-                    new Paragraph({ children: [new TextRun('')] }),
-                    new Paragraph({ children: [new TextRun({ text: '📝 TEXTO NA TELA', bold: true, size: 18, color: '6B21A8' })] }),
-                    new Paragraph({ children: [new TextRun({ text: c.textoTela || '-', bold: true })] }),
-                  ],
-                }),
-              ],
-            }),
+      const greyBorders = {
+        top: { style: BorderStyle.SINGLE, size: 4, color: BORDER_GREY },
+        bottom: { style: BorderStyle.SINGLE, size: 4, color: BORDER_GREY },
+        left: { style: BorderStyle.SINGLE, size: 4, color: BORDER_GREY },
+        right: { style: BorderStyle.SINGLE, size: 4, color: BORDER_GREY },
+      } as const;
+
+      // Header vermelho com titulo + caption
+      const headerTable = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: noBorders,
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                shading: { type: ShadingType.CLEAR, fill: PURE_RED, color: 'auto' },
+                margins: { top: 400, bottom: 400, left: 500, right: 500 },
+                children: [
+                  new Paragraph({ children: [new TextRun({ text: post.title, bold: true, size: 36, color: 'FFFFFF' })] }),
+                  new Paragraph({ children: [new TextRun({ text: 'Pure Pilates · Agente Instagram e Facebook', color: 'FFFFFF' })] }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      // Card "Informações Gerais" — table com 3 cells horizontais
+      const infoCard = (titulo: string, valor: string) =>
+        new TableCell({
+          width: { size: 33, type: WidthType.PERCENTAGE },
+          shading: { type: ShadingType.CLEAR, fill: LIGHT_GREY, color: 'auto' },
+          margins: { top: 200, bottom: 200, left: 250, right: 250 },
+          borders: greyBorders,
+          children: [
+            new Paragraph({ children: [new TextRun({ text: titulo.toUpperCase(), bold: true, size: 16, color: '777777' })] }),
+            new Paragraph({ children: [new TextRun({ text: valor, bold: true, size: 22 })] }),
           ],
         });
 
-      const cenaTables = cenas.flatMap((c) => [
-        new Paragraph({ children: [new TextRun('')] }),
-        buildCenaTable(c),
-      ]);
+      const infoGrid = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: noBorders,
+        rows: [
+          new TableRow({
+            children: [
+              infoCard('Data de publicação', dataFormatada),
+              infoCard('Formato', formatoLabel),
+              infoCard('Objetivo', post.description.slice(0, 60) || 'Conteúdo Pure'),
+            ],
+          }),
+        ],
+      });
 
-      const fallbackRoteiroParagraphs = cenas.length === 0
-        ? fallbackRoteiro.split('\n').map((line) => new Paragraph({ children: [new TextRun(line)] }))
-        : [];
+      // Tabela do Roteiro (Tempo | Cena | Descrição)
+      const roteiroHeader = new TableRow({
+        tableHeader: true,
+        children: [
+          new TableCell({
+            width: { size: 18, type: WidthType.PERCENTAGE },
+            shading: { type: ShadingType.CLEAR, fill: PURE_RED, color: 'auto' },
+            margins: { top: 200, bottom: 200, left: 200, right: 200 },
+            children: [new Paragraph({ children: [new TextRun({ text: 'Tempo', bold: true, color: 'FFFFFF' })] })],
+          }),
+          new TableCell({
+            width: { size: 14, type: WidthType.PERCENTAGE },
+            shading: { type: ShadingType.CLEAR, fill: PURE_RED, color: 'auto' },
+            margins: { top: 200, bottom: 200, left: 200, right: 200 },
+            children: [new Paragraph({ children: [new TextRun({ text: 'Cena', bold: true, color: 'FFFFFF' })] })],
+          }),
+          new TableCell({
+            width: { size: 68, type: WidthType.PERCENTAGE },
+            shading: { type: ShadingType.CLEAR, fill: PURE_RED, color: 'auto' },
+            margins: { top: 200, bottom: 200, left: 200, right: 200 },
+            children: [new Paragraph({ children: [new TextRun({ text: 'Descrição', bold: true, color: 'FFFFFF' })] })],
+          }),
+        ],
+      });
+
+      const cenaRows = cenas.map((c, idx) => {
+        const desc =
+          c.descricao && c.descricao.trim()
+            ? c.descricao.trim()
+            : [c.imagem, c.fala && `Fala: ${c.fala}`, c.textoTela && `Texto na tela: ${c.textoTela}`].filter(Boolean).join(' · ');
+        const shade = idx % 2 === 1
+          ? { type: ShadingType.CLEAR, fill: LIGHT_GREY, color: 'auto' as const }
+          : undefined;
+        const cellOpts = {
+          margins: { top: 200, bottom: 200, left: 200, right: 200 },
+          borders: greyBorders,
+          shading: shade,
+        };
+        return new TableRow({
+          children: [
+            new TableCell({
+              ...cellOpts,
+              children: [new Paragraph({ children: [new TextRun({ text: c.tempo || '-', bold: true, color: PURE_RED })] })],
+            }),
+            new TableCell({
+              ...cellOpts,
+              children: [new Paragraph({ children: [new TextRun({ text: `Cena ${c.numero}`, bold: true })] })],
+            }),
+            new TableCell({
+              ...cellOpts,
+              children: [new Paragraph({ children: [new TextRun(desc || '-')] })],
+            }),
+          ],
+        });
+      });
+
+      const roteiroTable = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [roteiroHeader, ...cenaRows],
+      });
+
+      // Caixa da Legenda (cinza claro com borda vermelha à esquerda)
+      const legendaBox = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: noBorders,
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                shading: { type: ShadingType.CLEAR, fill: LIGHT_GREY, color: 'auto' },
+                margins: { top: 300, bottom: 300, left: 400, right: 300 },
+                borders: {
+                  top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                  bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                  left: { style: BorderStyle.SINGLE, size: 30, color: PURE_RED },
+                  right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                },
+                children: legendaTxt
+                  ? legendaTxt.split('\n').map((line) => new Paragraph({ children: [new TextRun(line)] }))
+                  : [new Paragraph({ children: [new TextRun({ text: '(sem legenda)', italics: true, color: '999999' })] })],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      // Caixa do Briefing da Arte (fundo rosa claro)
+      const briefingBox = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: noBorders,
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                shading: { type: ShadingType.CLEAR, fill: PINK_BG, color: 'auto' },
+                margins: { top: 300, bottom: 300, left: 300, right: 300 },
+                borders: {
+                  top: { style: BorderStyle.SINGLE, size: 8, color: PINK_BORDER },
+                  bottom: { style: BorderStyle.SINGLE, size: 8, color: PINK_BORDER },
+                  left: { style: BorderStyle.SINGLE, size: 8, color: PINK_BORDER },
+                  right: { style: BorderStyle.SINGLE, size: 8, color: PINK_BORDER },
+                },
+                children: briefingArteTxt
+                  ? briefingArteTxt.split('\n').map((line) => new Paragraph({ children: [new TextRun(line)] }))
+                  : [new Paragraph({ children: [new TextRun({ text: '(sem briefing da arte)', italics: true, color: '999999' })] })],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const sectionTitle = (txt: string) =>
+        new Paragraph({
+          spacing: { before: 360, after: 240 },
+          children: [new TextRun({ text: txt, bold: true, size: 28, color: PURE_RED })],
+        });
 
       const doc = new Document({
-        styles: { default: { document: { run: { font: 'Calibri', size: 22 } } } },
+        styles: { default: { document: { run: { font: 'Arial', size: 22 } } } },
         sections: [
           {
             properties: {},
             children: [
-              para('ROTEIROS', { bold: true, size: 32, color: 'C10230', alignment: AlignmentType.CENTER }),
-              para(`🎬 ROTEIRO · ${tituloRoteiro}`, { bold: true, size: 28, alignment: AlignmentType.CENTER }),
-              para('Pure Pilates', { italics: true, color: '7D7C7C', alignment: AlignmentType.CENTER }),
-              new Paragraph({ children: [new TextRun('')] }),
-              ...headerMeta.map(([k, v]) => labelValue(k, v)),
-              new Paragraph({ children: [new TextRun('')] }),
-              ...infoBloco.map(([k, v]) => labelValue(k, v)),
-              new Paragraph({ children: [new TextRun('')] }),
-              para('Roteiro · cena por cena', { bold: true, size: 26 }),
-              ...cenaTables,
-              ...(fallbackRoteiroParagraphs.length > 0
+              headerTable,
+              sectionTitle('Informações Gerais'),
+              infoGrid,
+              sectionTitle('Briefing'),
+              new Paragraph({ children: [new TextRun(post.description || '-')] }),
+              sectionTitle('Roteiro'),
+              roteiroTable,
+              ...(cenas.length === 0 && fallbackRoteiro
                 ? [
-                    new Paragraph({ children: [new TextRun('')] }),
-                    para('Roteiro (texto livre)', { bold: true, size: 24 }),
-                    ...fallbackRoteiroParagraphs,
+                    new Paragraph({ children: [new TextRun({ text: '\nRoteiro (texto livre):', bold: true })] }),
+                    ...fallbackRoteiro.split('\n').map((line) => new Paragraph({ children: [new TextRun(line)] })),
                   ]
                 : []),
-              new Paragraph({ children: [new TextRun('')] }),
-              ...(post.legenda || post.versao_editada?.legenda
-                ? [
-                    para('Legenda do post', { bold: true, size: 24 }),
-                    new Paragraph({ children: [new TextRun(post.versao_editada?.legenda ?? post.legenda ?? '')] }),
-                    new Paragraph({ children: [new TextRun('')] }),
-                  ]
-                : []),
-              ...(post.briefing_arte || post.versao_editada?.briefing_arte
-                ? [
-                    para('Briefing da arte (designer)', { bold: true, size: 24 }),
-                    new Paragraph({ children: [new TextRun(post.versao_editada?.briefing_arte ?? post.briefing_arte ?? '')] }),
-                  ]
-                : []),
+              sectionTitle('Legenda do Post'),
+              legendaBox,
+              sectionTitle('Briefing da Arte'),
+              briefingBox,
+              new Paragraph({ spacing: { before: 600 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Pure Pilates © 2026', color: '999999', size: 18 })] }),
             ],
           },
         ],
@@ -1339,32 +1424,28 @@ const AgenteInstagramFacebook = () => {
                           )}
 
                           {cenas.length > 0 ? (
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                               <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Cenas ({cenas.length})</Label>
-                              {cenas.map((c) => (
-                                <div key={c.numero} className="rounded-md border border-purple-200 bg-purple-50/30 overflow-hidden text-sm">
-                                  <div className="flex items-center justify-between bg-purple-100/60 px-3 py-2 gap-2 flex-wrap border-b border-purple-200">
-                                    <span className="font-bold text-purple-800">🎥 CENA {c.numero}</span>
-                                    <span className="text-xs font-medium text-muted-foreground">⏱ {c.tempo}</span>
-                                  </div>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-purple-200">
-                                    <div className="p-3">
-                                      <Label className="text-[10px] uppercase tracking-wider text-purple-700">🖼️ Imagem</Label>
-                                      <p className="mt-1">{c.imagem}</p>
-                                    </div>
-                                    <div className="p-3 space-y-3">
-                                      <div>
-                                        <Label className="text-[10px] uppercase tracking-wider text-purple-700">🎙️ Narração</Label>
-                                        <p className="mt-1">{c.fala}</p>
-                                      </div>
-                                      <div>
-                                        <Label className="text-[10px] uppercase tracking-wider text-purple-700">📝 Texto na tela</Label>
-                                        <p className="mt-1 font-medium">{c.textoTela}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
+                              <div className="overflow-x-auto rounded-md border border-purple-200">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="bg-[#c10230] text-white">
+                                      <th className="text-left px-3 py-2 font-semibold w-[18%]">Tempo</th>
+                                      <th className="text-left px-3 py-2 font-semibold w-[14%]">Cena</th>
+                                      <th className="text-left px-3 py-2 font-semibold">Descrição</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {cenas.map((c, idx) => (
+                                      <tr key={c.numero} className={idx % 2 === 0 ? 'bg-white' : 'bg-purple-50/30'}>
+                                        <td className="px-3 py-3 align-top font-bold text-[#c10230] whitespace-nowrap">{c.tempo || '-'}</td>
+                                        <td className="px-3 py-3 align-top font-medium">Cena {c.numero}</td>
+                                        <td className="px-3 py-3 align-top leading-relaxed">{sceneDescricao(c) || '-'}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
                             </div>
                           ) : (
                             <p className="text-xs text-muted-foreground italic">Cenas ainda não geradas. Refine com IA pra criar.</p>
