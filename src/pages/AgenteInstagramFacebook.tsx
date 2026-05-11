@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType } from 'docx';
 
 interface VersaoEditada {
   legenda?: string;
@@ -222,16 +222,67 @@ const AgenteInstagramFacebook = () => {
       const labelValue = (label: string, value: string) =>
         new Paragraph({ children: [new TextRun({ text: `${label}: `, bold: true }), new TextRun(value)] });
 
-      const cenaParagraphs = cenas.flatMap((c) => [
+      const purpleBorders = {
+        top: { style: BorderStyle.SINGLE, size: 4, color: 'B794F4' },
+        bottom: { style: BorderStyle.SINGLE, size: 4, color: 'B794F4' },
+        left: { style: BorderStyle.SINGLE, size: 4, color: 'B794F4' },
+        right: { style: BorderStyle.SINGLE, size: 4, color: 'B794F4' },
+      };
+
+      const buildCenaTable = (c: SceneEntry) =>
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: [
+            // Header row: cena + tempo (spanning both columns)
+            new TableRow({
+              tableHeader: true,
+              children: [
+                new TableCell({
+                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  columnSpan: 2,
+                  shading: { type: ShadingType.CLEAR, fill: 'F5EFFE', color: 'auto' },
+                  borders: purpleBorders,
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({ text: `🎥 CENA ${c.numero}`, bold: true, color: '6B21A8' }),
+                        new TextRun({ text: `    ⏱ ${c.tempo || '-'}`, color: '7D7C7C' }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            // Content row: image left, narração right
+            new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 42, type: WidthType.PERCENTAGE },
+                  borders: purpleBorders,
+                  children: [
+                    new Paragraph({ children: [new TextRun({ text: '🖼️ IMAGEM', bold: true, size: 18, color: '6B21A8' })] }),
+                    new Paragraph({ children: [new TextRun(c.imagem || '-')] }),
+                  ],
+                }),
+                new TableCell({
+                  width: { size: 58, type: WidthType.PERCENTAGE },
+                  borders: purpleBorders,
+                  children: [
+                    new Paragraph({ children: [new TextRun({ text: '🎙️ NARRAÇÃO', bold: true, size: 18, color: '6B21A8' })] }),
+                    new Paragraph({ children: [new TextRun(c.fala || '-')] }),
+                    new Paragraph({ children: [new TextRun('')] }),
+                    new Paragraph({ children: [new TextRun({ text: '📝 TEXTO NA TELA', bold: true, size: 18, color: '6B21A8' })] }),
+                    new Paragraph({ children: [new TextRun({ text: c.textoTela || '-', bold: true })] }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        });
+
+      const cenaTables = cenas.flatMap((c) => [
         new Paragraph({ children: [new TextRun('')] }),
-        new Paragraph({
-          heading: HeadingLevel.HEADING_3,
-          children: [new TextRun({ text: `🎥 CENA ${c.numero}`, bold: true, color: 'C10230' })],
-        }),
-        labelValue('⏱ Tempo', c.tempo || '-'),
-        new Paragraph({ children: [new TextRun({ text: '🎙️ FALA: ', bold: true }), new TextRun(c.fala || '-')] }),
-        new Paragraph({ children: [new TextRun({ text: '📝 TEXTO NA TELA: ', bold: true }), new TextRun(c.textoTela || '-')] }),
-        new Paragraph({ children: [new TextRun({ text: '🖼️ IMAGEM: ', bold: true }), new TextRun(c.imagem || '-')] }),
+        buildCenaTable(c),
       ]);
 
       const fallbackRoteiroParagraphs = cenas.length === 0
@@ -253,7 +304,7 @@ const AgenteInstagramFacebook = () => {
               ...infoBloco.map(([k, v]) => labelValue(k, v)),
               new Paragraph({ children: [new TextRun('')] }),
               para('Roteiro · cena por cena', { bold: true, size: 26 }),
-              ...cenaParagraphs,
+              ...cenaTables,
               ...(fallbackRoteiroParagraphs.length > 0
                 ? [
                     new Paragraph({ children: [new TextRun('')] }),
@@ -1291,14 +1342,27 @@ const AgenteInstagramFacebook = () => {
                             <div className="space-y-3">
                               <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Cenas ({cenas.length})</Label>
                               {cenas.map((c) => (
-                                <div key={c.numero} className="rounded-md border border-purple-200 bg-purple-50/30 p-3 text-sm space-y-1">
-                                  <div className="flex items-center justify-between flex-wrap gap-2">
+                                <div key={c.numero} className="rounded-md border border-purple-200 bg-purple-50/30 overflow-hidden text-sm">
+                                  <div className="flex items-center justify-between bg-purple-100/60 px-3 py-2 gap-2 flex-wrap border-b border-purple-200">
                                     <span className="font-bold text-purple-800">🎥 CENA {c.numero}</span>
                                     <span className="text-xs font-medium text-muted-foreground">⏱ {c.tempo}</span>
                                   </div>
-                                  <p><span className="font-semibold">🎙️ FALA:</span> {c.fala}</p>
-                                  <p><span className="font-semibold">📝 TEXTO NA TELA:</span> {c.textoTela}</p>
-                                  <p className="text-muted-foreground"><span className="font-semibold text-foreground">🖼️ IMAGEM:</span> {c.imagem}</p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-purple-200">
+                                    <div className="p-3">
+                                      <Label className="text-[10px] uppercase tracking-wider text-purple-700">🖼️ Imagem</Label>
+                                      <p className="mt-1">{c.imagem}</p>
+                                    </div>
+                                    <div className="p-3 space-y-3">
+                                      <div>
+                                        <Label className="text-[10px] uppercase tracking-wider text-purple-700">🎙️ Narração</Label>
+                                        <p className="mt-1">{c.fala}</p>
+                                      </div>
+                                      <div>
+                                        <Label className="text-[10px] uppercase tracking-wider text-purple-700">📝 Texto na tela</Label>
+                                        <p className="mt-1 font-medium">{c.textoTela}</p>
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                               ))}
                             </div>

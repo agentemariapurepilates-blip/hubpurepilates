@@ -93,6 +93,16 @@ Proibido: "antes e depois", "queima de gordura", "barriga chapada/sequinha", com
 ## R6 · Linguagem um para um
 Sempre "você" para a pessoa, "nós" quando a marca fala em 1ª pessoa. Formalidade no técnico (Saber Pilates, anatomia); leveza em lifestyle.
 
+## R7 · Roteiro de vídeo SEMPRE com 1 (uma) pessoa falando
+O estúdio grava com UMA pessoa por vez. Roteiros NUNCA podem ter diálogos, conversas, troca de turnos ou múltiplos personagens falando. Todas as cenas têm o MESMO apresentador (instrutor ou porta-voz Pure) falando em primeira pessoa para a câmera.
+- ❌ ERRADO: "Instrutor 1: pergunta · Instrutor 2: responde"
+- ❌ ERRADO: "Aluna: depoimento · Instrutor: comentário"
+- ❌ ERRADO: cenas com 2 ou mais pessoas falando alternadamente
+- ✅ CERTO: 1 apresentador (instrutor) falando em todas as cenas
+- ✅ CERTO: aluno pode APARECER fazendo movimento, mas sem fala (apresentador narra)
+- ✅ CERTO: depoimento em vídeo = só o aluno fala em todas as cenas (sem cortar pro instrutor)
+Exceção rara: somente quando a Renata pedir EXPLICITAMENTE um roteiro de dupla.
+
 # CADÊNCIA SEMANAL OBRIGATÓRIA do Instagram
 
 Esta é a cadência DEFAULT por dia da semana. Use ela RIGOROSAMENTE, exceto quando um post comemorativo (com data ISO fornecida) precisar do slot. Comemorativa SEMPRE prevalece na data exata.
