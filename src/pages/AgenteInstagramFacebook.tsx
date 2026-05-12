@@ -101,7 +101,6 @@ const AgenteInstagramFacebook = () => {
   const [instructions, setInstructions] = useState('');
   const [generatedContents, setGeneratedContents] = useState<GeneratedContent[]>([]);
   const [resultMonth, setResultMonth] = useState<Date | null>(null);
-  const [aiEnabled, setAiEnabled] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [expandedItem, setExpandedItem] = useState<GeneratedContent | null>(null);
@@ -753,26 +752,6 @@ const AgenteInstagramFacebook = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, generatedContents.length]);
 
-  const generateMockContent = (): GeneratedContent[] => {
-    const monthIndex = months.indexOf(selectedMonth);
-    const baseDates = [3, 6, 9, 12, 16, 19, 22, 25, 28];
-    return fixedNetworks.flatMap((network, index) =>
-      baseDates.slice(0, 3).map((day, offset) => ({
-        id: `${network}-${day}-${offset}`,
-        date: new Date(Number(selectedYear), monthIndex, Math.min(day + index * 2, 28)).toISOString(),
-        network: network as GeneratedContent['network'],
-        title: `${network} - Conteúdo ${offset + 1}`,
-        description: `Agenda ${selectedMonth} ${selectedYear} para ${network}. Instruções: ${instructions || 'Sem instruções adicionais.'}`,
-        status: 'pending' as const,
-        content_type: (offset === 0 ? 'video' : offset === 1 ? 'estatico' : 'carrossel') as GeneratedContent['content_type'],
-        legenda: 'Legenda de exemplo no modo demo. Ative o motor de IA para textos reais.',
-        roteiro: offset === 0 ? 'Roteiro de exemplo no modo demo.' : '',
-        texto_arte: offset !== 0 ? 'Texto na arte (demo)' : '',
-        briefing_arte: 'Briefing da arte (demo).',
-      })),
-    );
-  };
-
   const persistPosts = async (posts: GeneratedContent[]) => {
     if (!user) return [];
     // Apaga posts existentes do mês/ano (apenas IG/FB) antes de inserir os novos
@@ -867,14 +846,6 @@ const AgenteInstagramFacebook = () => {
 
     const monthIndex = months.indexOf(selectedMonth);
 
-    if (!aiEnabled) {
-      const mock = generateMockContent();
-      const saved = await persistPosts(mock);
-      setGeneratedContents(saved);
-      setResultMonth(new Date(Number(selectedYear), monthIndex, 1));
-      return;
-    }
-
     setGenerating(true);
     try {
       const guideParts: string[] = [];
@@ -932,14 +903,10 @@ const AgenteInstagramFacebook = () => {
       const saved = await persistPosts(generated);
       setGeneratedContents(saved);
       setResultMonth(new Date(Number(selectedYear), monthIndex, 1));
-      toast.success(`${posts.length} postagens geradas com roteiros, legendas e textos prontos.`);
+      toast.success(`${posts.length} temas gerados. Aprove cada tema pra gerar o conteúdo completo.`);
     } catch (err) {
       console.error(err);
-      toast.error('Não foi possível gerar pela IA. Usando exemplo.');
-      const mock = generateMockContent();
-      const saved = await persistPosts(mock);
-      setGeneratedContents(saved);
-      setResultMonth(new Date(Number(selectedYear), monthIndex, 1));
+      toast.error('Falha ao gerar temas. Verifica sua conexão e tenta de novo.');
     } finally {
       setGenerating(false);
     }
@@ -974,27 +941,6 @@ const AgenteInstagramFacebook = () => {
               Memória do Agente
             </Button>
           </Link>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-slate-50 p-4 mb-6 text-sm text-slate-700">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <p className="font-semibold">Motor de IA para geração de conteúdo</p>
-              <p className="text-muted-foreground">
-                {aiEnabled
-                  ? 'A IA vai gerar um plano editorial real para o mês selecionado.'
-                  : 'Modo demonstração — conteúdos de exemplo, sem custo de IA.'}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${aiEnabled ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-900'}`}>
-                {aiEnabled ? 'IA Ativa' : 'Modo Demo'}
-              </span>
-              <Button size="sm" variant={aiEnabled ? 'secondary' : 'outline'} onClick={() => setAiEnabled(!aiEnabled)}>
-                {aiEnabled ? 'Desligar IA' : 'Ligar IA'}
-              </Button>
-            </div>
-          </div>
         </div>
 
         <Card>
