@@ -352,7 +352,7 @@ Responda agora com o JSON completo seguindo exatamente o formato definido no sys
           system: systemBlocks,
           // Web search server-side: Claude decide quando buscar (max 2 buscas por chunk).
           // Útil pra trends atuais, referências culturais, datas que não estão no calendário fixo.
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 8 }],
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
           messages: [
             { role: 'user', content: userMessage },
           ],
