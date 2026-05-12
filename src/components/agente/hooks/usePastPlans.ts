@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { PastPlan, MONTHS } from '../types';
+import { PastPlan, MONTHS, GeneratedContent } from '../types';
 import { selectPlanSummaries } from '../services/postsRepository';
 
 /**
- * Carrega a lista de planos editoriais salvos do usuario (group by mes+ano).
- * Refresca sempre que o `refreshKey` muda — passe algo que mude quando voce
- * adicionar/remover posts (ex: generatedContents.length) para forcar reload.
+ * Carrega a lista de planos editoriais salvos do usuario filtrados pelo
+ * conjunto de networks do agente (IG/FB ou TikTok).
+ * Refresca sempre que o `refreshKey` muda.
  */
-export function usePastPlans(userId: string | undefined, refreshKey: unknown): { pastPlans: PastPlan[] } {
+export function usePastPlans(
+  userId: string | undefined,
+  networks: GeneratedContent['network'][],
+  refreshKey: unknown,
+): { pastPlans: PastPlan[] } {
   const [pastPlans, setPastPlans] = useState<PastPlan[]>([]);
 
   useEffect(() => {
@@ -17,7 +21,7 @@ export function usePastPlans(userId: string | undefined, refreshKey: unknown): {
 
     (async () => {
       try {
-        const summaries = await selectPlanSummaries(supabase, userId);
+        const summaries = await selectPlanSummaries(supabase, userId, networks);
         if (cancelled) return;
         const ordered = summaries.sort((a, b) => {
           if (a.year !== b.year) return Number(b.year) - Number(a.year);
@@ -31,7 +35,7 @@ export function usePastPlans(userId: string | undefined, refreshKey: unknown): {
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, refreshKey]);
+  }, [userId, refreshKey, networks.join(',')]);
 
   return { pastPlans };
 }

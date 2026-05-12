@@ -15,21 +15,26 @@ import {
 interface EditorialCalendarProps {
   resultMonth: Date;
   generatedContents: GeneratedContent[];
+  /** Rede principal exibida no grid (Facebook e replicado e fica escondido). */
+  primaryNetwork: GeneratedContent['network'];
+  /** Redes listadas na legenda acima do grid. */
+  legendNetworks: GeneratedContent['network'][];
   onItemClick: (item: GeneratedContent) => void;
   onApproveAll: () => void;
 }
 
-export function EditorialCalendar({ resultMonth, generatedContents, onItemClick, onApproveAll }: EditorialCalendarProps) {
+export function EditorialCalendar({ resultMonth, generatedContents, primaryNetwork, legendNetworks, onItemClick, onApproveAll }: EditorialCalendarProps) {
   const monthStart = startOfMonth(resultMonth);
   const monthEnd = endOfMonth(resultMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const startDayOfWeek = monthStart.getDay();
   const paddingDays = Array.from({ length: startDayOfWeek }, () => null);
 
-  // Facebook e replicado do Instagram, escondemos do calendario.
+  // Facebook (replicado do Instagram) fica escondido do calendario; mostramos
+  // apenas a rede principal de cada agente.
   const getItemsForDay = (date: Date) =>
     generatedContents.filter(
-      (item) => item.network === 'Instagram Studios' && isSameDay(date, new Date(item.date)),
+      (item) => item.network === primaryNetwork && isSameDay(date, new Date(item.date)),
     );
 
   const approvedCount = generatedContents.filter((c) => c.status === 'approved').length;
@@ -55,7 +60,7 @@ export function EditorialCalendar({ resultMonth, generatedContents, onItemClick,
 
       {/* Legenda das redes */}
       <div className="flex flex-wrap gap-3 sm:gap-4">
-        {(Object.keys(networkLegendColors) as GeneratedContent['network'][]).map((network) => {
+        {legendNetworks.map((network) => {
           const Icon = networkIcons[network];
           return (
             <div key={network} className="flex items-center gap-1.5">

@@ -1,18 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
-import { Button } from '@/components/ui/button';
-import { CalendarDays, Brain } from 'lucide-react';
+import { Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
   VersaoEditada, FieldKey, FieldFeedback, GeneratedContent,
   FIELD_LABELS,
-  MONTHS as months, FIXED_NETWORKS as fixedNetworks,
+  MONTHS as months, NETWORKS_TIKTOK,
 } from '@/components/agente/types';
 import { downloadRoteiroDocx as buildAndDownloadRoteiroDocx } from '@/components/agente/lib/docx';
-import { fetchGuideText } from '@/components/agente/lib/guide';
+import { fetchGuideText, GUIDE_URLS } from '@/components/agente/lib/guide';
 import { extractPdfText } from '@/components/agente/lib/pdf';
 import {
   selectMonthPosts, replaceMonthPosts,
@@ -29,7 +27,11 @@ import { PlanConfigCard } from '@/components/agente/PlanConfigCard';
 import { PastPlansCard } from '@/components/agente/PastPlansCard';
 import { PostDialog } from '@/components/agente/PostDialog';
 
-const AgenteInstagramFacebook = () => {
+// Agente TikTok: clone do agente Instagram/Facebook, mas:
+// - network fixo 'Tik Tok' (sem replicacao de Facebook)
+// - guia editorial proprio (guia-editorial-tiktok-resumido.html)
+// - usa todos os mesmos componentes / hooks / services do agente IG.
+const AgenteTikTok = () => {
   const { user } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState('2026');
@@ -47,12 +49,14 @@ const AgenteInstagramFacebook = () => {
   const [editForm, setEditForm] = useState<VersaoEditada>({ legenda: '', roteiro: '', texto_arte: '', briefing_arte: '' });
   const [savingEdit, setSavingEdit] = useState(false);
   const [savingReject, setSavingReject] = useState(false);
-  // Refinamento por campo: qual campo está sendo refinado e o prompt naquele campo.
   const [refineFieldDialog, setRefineFieldDialog] = useState<{ open: boolean; field: FieldKey | null; prompt: string }>({ open: false, field: null, prompt: '' });
   const [refiningField, setRefiningField] = useState<FieldKey | null>(null);
-  // Reprovação granular por campo.
   const [rejectFieldDialog, setRejectFieldDialog] = useState<{ open: boolean; field: FieldKey | null; reason: string }>({ open: false, field: null, reason: '' });
   const [savingRejectField, setSavingRejectField] = useState(false);
+  const [generatingContent, setGeneratingContent] = useState(false);
+  const [refineThemePrompt, setRefineThemePrompt] = useState('');
+  const [refineThemeOpen, setRefineThemeOpen] = useState(false);
+  const [refiningTheme, setRefiningTheme] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -62,7 +66,6 @@ const AgenteInstagramFacebook = () => {
     }
   };
 
-  // Wrapper fino: lib pura constroi+baixa o DOCX, aqui so gerenciamos loading state.
   const downloadRoteiroDocx = async (post: GeneratedContent) => {
     setDownloadingDocx(true);
     try {
@@ -79,44 +82,26 @@ const AgenteInstagramFacebook = () => {
     }
   };
 
-
   const handleUpdateStatus = async (id: string, status: GeneratedContent['status']) => {
-    setGeneratedContents((current) =>
-      current.map((item) => (item.id === id ? { ...item, status } : item)),
-    );
-    try {
-      await updatePostStatus(supabase, id, status);
-    } catch (err) {
-      console.error('Erro ao salvar status:', err);
-      toast.error('Não foi possível salvar a alteração.');
-    }
+    setGeneratedContents((current) => current.map((item) => (item.id === id ? { ...item, status } : item)));
+    try { await updatePostStatus(supabase, id, status); }
+    catch (err) { console.error('Erro ao salvar status:', err); toast.error('Não foi possível salvar a alteração.'); }
   };
 
   const handleSaveReject = async () => {
     if (!rejectDialog.item) return;
-    if (!rejectDialog.reason.trim()) {
-      toast.error('Conta rapidinho por que está reprovando — esse motivo vai ensinar a IA.');
-      return;
-    }
+    if (!rejectDialog.reason.trim()) { toast.error('Conta rapidinho por que está reprovando — esse motivo vai ensinar a IA.'); return; }
     setSavingReject(true);
     const id = rejectDialog.item.id;
     const reason = rejectDialog.reason.trim();
-    setGeneratedContents((current) =>
-      current.map((item) =>
-        item.id === id ? { ...item, status: 'rejected', feedback_motivo: reason } : item,
-      ),
-    );
+    setGeneratedContents((current) => current.map((item) => item.id === id ? { ...item, status: 'rejected', feedback_motivo: reason } : item));
     try {
       await rejectPostWithReason(supabase, id, reason);
       toast.success('Reprovação salva — a IA vai usar isso na próxima geração.');
       setRejectDialog({ open: false, item: null, reason: '' });
       setExpandedItem(null);
-    } catch (err) {
-      console.error('Erro ao salvar reprovação:', err);
-      toast.error('Não foi possível salvar.');
-    } finally {
-      setSavingReject(false);
-    }
+    } catch (err) { console.error('Erro ao salvar reprovação:', err); toast.error('Não foi possível salvar.'); }
+    finally { setSavingReject(false); }
   };
 
   const handleSaveEdit = async () => {
@@ -128,35 +113,23 @@ const AgenteInstagramFacebook = () => {
     if (editForm.texto_arte?.trim()) cleanEdit.texto_arte = editForm.texto_arte.trim();
     if (editForm.briefing_arte?.trim()) cleanEdit.briefing_arte = editForm.briefing_arte.trim();
     const id = expandedItem.id;
-    setGeneratedContents((current) =>
-      current.map((item) => (item.id === id ? { ...item, versao_editada: cleanEdit } : item)),
-    );
+    setGeneratedContents((current) => current.map((item) => item.id === id ? { ...item, versao_editada: cleanEdit } : item));
     try {
       await updatePostVersaoEditada(supabase, id, cleanEdit);
       toast.success('Edição salva. A IA vai aprender com sua versão.');
-      setExpandedItem((current) => (current ? { ...current, versao_editada: cleanEdit } : current));
+      setExpandedItem((current) => current ? { ...current, versao_editada: cleanEdit } : current);
       setEditMode(false);
-    } catch (err) {
-      console.error('Erro ao salvar edição:', err);
-      toast.error('Não foi possível salvar a edição.');
-    } finally {
-      setSavingEdit(false);
-    }
+    } catch (err) { console.error('Erro ao salvar edição:', err); toast.error('Não foi possível salvar a edição.'); }
+    finally { setSavingEdit(false); }
   };
 
-  const [generatingContent, setGeneratingContent] = useState(false);
-
-  // Aprovar tema: dispara a geracao do conteudo completo desse post.
   const handleApproveTheme = async () => {
     if (!expandedItem) return;
     setGeneratingContent(true);
     try {
-      // Reuso do fetchGuideText pra enviar o guia ao endpoint de content.
       let guideText = '';
-      try { guideText = await fetchGuideText(); } catch { /* sem guia, segue */ }
-
+      try { guideText = await fetchGuideText(GUIDE_URLS.tiktok); } catch { /* sem guia, segue */ }
       const content = await invokeGeneratePostContent(supabase, expandedItem.id, guideText || undefined);
-
       const updated: GeneratedContent = {
         ...expandedItem,
         legenda: content.legenda ?? null,
@@ -165,22 +138,12 @@ const AgenteInstagramFacebook = () => {
         texto_arte: content.texto_arte ?? null,
         briefing_arte: content.briefing_arte ?? null,
       };
-      setGeneratedContents((current) => current.map((it) => (it.id === expandedItem.id ? updated : it)));
+      setGeneratedContents((current) => current.map((it) => it.id === expandedItem.id ? updated : it));
       setExpandedItem(updated);
       toast.success('Conteúdo gerado a partir do tema aprovado.');
-    } catch (err) {
-      console.error('Approve theme failed:', err);
-      toast.error('Falha ao gerar o conteúdo. Tenta de novo.');
-    } finally {
-      setGeneratingContent(false);
-    }
+    } catch (err) { console.error('Approve theme failed:', err); toast.error('Falha ao gerar o conteúdo. Tenta de novo.'); }
+    finally { setGeneratingContent(false); }
   };
-
-  // Refazer com IA (tema): re-gera title + description mantendo data + content_type.
-  // Reuso refine-editorial-post sem field scope: ele reescreve com instrucao "regenere o tema".
-  const [refineThemePrompt, setRefineThemePrompt] = useState('');
-  const [refineThemeOpen, setRefineThemeOpen] = useState(false);
-  const [refiningTheme, setRefiningTheme] = useState(false);
 
   const handleRefineTheme = async () => {
     if (!expandedItem) return;
@@ -196,34 +159,23 @@ const AgenteInstagramFacebook = () => {
         title: refined.title ?? expandedItem.title,
         description: refined.description ?? expandedItem.description,
       };
-      setGeneratedContents((current) => current.map((it) => (it.id === expandedItem.id ? updated : it)));
+      setGeneratedContents((current) => current.map((it) => it.id === expandedItem.id ? updated : it));
       setExpandedItem(updated);
       setRefineThemeOpen(false);
       setRefineThemePrompt('');
       toast.success('Tema refeito.');
-    } catch (err) {
-      console.error('Refine theme failed:', err);
-      toast.error('Falha ao refazer o tema.');
-    } finally {
-      setRefiningTheme(false);
-    }
+    } catch (err) { console.error('Refine theme failed:', err); toast.error('Falha ao refazer o tema.'); }
+    finally { setRefiningTheme(false); }
   };
 
-  // Refinar APENAS um campo via IA. Mantém o resto intocado.
   const handleRefineField = async () => {
     if (!expandedItem || !refineFieldDialog.field) return;
     const field = refineFieldDialog.field;
     const prompt = refineFieldDialog.prompt.trim();
-    if (!prompt) {
-      toast.error('Escreve o que você quer ajustar neste campo.');
-      return;
-    }
+    if (!prompt) { toast.error('Escreve o que você quer ajustar neste campo.'); return; }
     setRefiningField(field);
     try {
       const { refined, refinement } = await invokeRefineEditorialPost(supabase, expandedItem.id, prompt, field);
-
-      // Como o escopo é restrito a um campo, NUNCA mudamos content_type localmente.
-      // Aplicamos apenas o campo refinado; demais ficam como estão.
       const updated: GeneratedContent = {
         ...expandedItem,
         legenda: field === 'legenda' ? (refined.legenda ?? expandedItem.legenda) : expandedItem.legenda,
@@ -232,71 +184,48 @@ const AgenteInstagramFacebook = () => {
         texto_arte: field === 'texto_arte' ? (refined.texto_arte ?? expandedItem.texto_arte) : expandedItem.texto_arte,
         briefing_arte: field === 'briefing_arte' ? (refined.briefing_arte ?? expandedItem.briefing_arte) : expandedItem.briefing_arte,
         versao_editada: null,
-        refinements: refinement
-          ? [...(expandedItem.refinements ?? []), refinement]
-          : expandedItem.refinements,
+        refinements: refinement ? [...(expandedItem.refinements ?? []), refinement] : expandedItem.refinements,
       };
-
-      setGeneratedContents((current) => current.map((it) => (it.id === expandedItem.id ? updated : it)));
+      setGeneratedContents((current) => current.map((it) => it.id === expandedItem.id ? updated : it));
       setExpandedItem(updated);
       setRefineFieldDialog({ open: false, field: null, prompt: '' });
       toast.success(`${FIELD_LABELS[field]} reescrito. Confere aí.`);
-    } catch (err) {
-      console.error('Refine field falhou:', err);
-      toast.error('Não consegui reescrever. Tenta de novo daqui a pouco.');
-    } finally {
-      setRefiningField(null);
-    }
+    } catch (err) { console.error('Refine field falhou:', err); toast.error('Não consegui reescrever. Tenta de novo daqui a pouco.'); }
+    finally { setRefiningField(null); }
   };
 
-  // Aprovar um campo específico (não muda status global do post).
   const handleApproveField = async (field: FieldKey) => {
     if (!expandedItem) return;
     const newFeedback: FieldFeedback = {
       ...(expandedItem.field_feedback ?? {}),
       [field]: { status: 'approved', at: new Date().toISOString() },
     };
-    setGeneratedContents((current) =>
-      current.map((item) => (item.id === expandedItem.id ? { ...item, field_feedback: newFeedback } : item)),
-    );
-    setExpandedItem((current) => (current ? { ...current, field_feedback: newFeedback } : current));
+    setGeneratedContents((current) => current.map((item) => item.id === expandedItem.id ? { ...item, field_feedback: newFeedback } : item));
+    setExpandedItem((current) => current ? { ...current, field_feedback: newFeedback } : current);
     try {
       await updatePostFieldFeedback(supabase, expandedItem.id, newFeedback);
       toast.success(`${FIELD_LABELS[field]} aprovado.`);
-    } catch (err) {
-      console.error('Erro ao salvar aprovação do campo:', err);
-      toast.error('Não foi possível salvar.');
-    }
+    } catch (err) { console.error('Erro ao salvar aprovação do campo:', err); toast.error('Não foi possível salvar.'); }
   };
 
-  // Reprovar um campo específico, com motivo.
   const handleRejectField = async () => {
     if (!expandedItem || !rejectFieldDialog.field) return;
     const motivo = rejectFieldDialog.reason.trim();
-    if (!motivo) {
-      toast.error('Conta o motivo, é o que ensina a IA.');
-      return;
-    }
+    if (!motivo) { toast.error('Conta o motivo, é o que ensina a IA.'); return; }
     setSavingRejectField(true);
     const field = rejectFieldDialog.field;
     const newFeedback: FieldFeedback = {
       ...(expandedItem.field_feedback ?? {}),
       [field]: { status: 'rejected', motivo, at: new Date().toISOString() },
     };
-    setGeneratedContents((current) =>
-      current.map((item) => (item.id === expandedItem.id ? { ...item, field_feedback: newFeedback } : item)),
-    );
-    setExpandedItem((current) => (current ? { ...current, field_feedback: newFeedback } : current));
+    setGeneratedContents((current) => current.map((item) => item.id === expandedItem.id ? { ...item, field_feedback: newFeedback } : item));
+    setExpandedItem((current) => current ? { ...current, field_feedback: newFeedback } : current);
     try {
       await updatePostFieldFeedback(supabase, expandedItem.id, newFeedback);
       toast.success(`${FIELD_LABELS[field]} reprovado. A IA vai usar isso na próxima geração.`);
       setRejectFieldDialog({ open: false, field: null, reason: '' });
-    } catch (err) {
-      console.error('Erro ao salvar reprovação do campo:', err);
-      toast.error('Não foi possível salvar.');
-    } finally {
-      setSavingRejectField(false);
-    }
+    } catch (err) { console.error('Erro ao salvar reprovação do campo:', err); toast.error('Não foi possível salvar.'); }
+    finally { setSavingRejectField(false); }
   };
 
   const startEditing = (item: GeneratedContent) => {
@@ -312,26 +241,16 @@ const AgenteInstagramFacebook = () => {
   const handleApproveAll = async () => {
     if (!user) return;
     const pendingIds = generatedContents.filter((c) => c.status === 'pending').map((c) => c.id);
-    if (pendingIds.length === 0) {
-      toast.info('Não há postagens pendentes.');
-      return;
-    }
-    setGeneratedContents((current) =>
-      current.map((item) => (item.status === 'pending' ? { ...item, status: 'approved' } : item)),
-    );
-    try {
-      await bulkApprovePosts(supabase, pendingIds);
-      toast.success(`${pendingIds.length} postagens aprovadas.`);
-    } catch (err) {
-      console.error('Erro ao aprovar tudo:', err);
-      toast.error('Falha ao salvar aprovação em massa.');
-    }
+    if (pendingIds.length === 0) { toast.info('Não há postagens pendentes.'); return; }
+    setGeneratedContents((current) => current.map((item) => item.status === 'pending' ? { ...item, status: 'approved' } : item));
+    try { await bulkApprovePosts(supabase, pendingIds); toast.success(`${pendingIds.length} postagens aprovadas.`); }
+    catch (err) { console.error('Erro ao aprovar tudo:', err); toast.error('Falha ao salvar aprovação em massa.'); }
   };
 
   const loadPostsForMonth = async (month: string, year: string) => {
     if (!user || !month || !year) return;
     try {
-      const posts = await selectMonthPosts(supabase, user.id, month, year);
+      const posts = await selectMonthPosts(supabase, user.id, month, year, NETWORKS_TIKTOK);
       if (posts.length > 0) {
         const monthIndex = months.indexOf(month);
         setGeneratedContents(posts);
@@ -340,70 +259,50 @@ const AgenteInstagramFacebook = () => {
         setGeneratedContents([]);
         setResultMonth(null);
       }
-    } catch (err) {
-      console.error('Erro ao carregar posts:', err);
-    }
+    } catch (err) { console.error('Erro ao carregar posts:', err); }
   };
 
   useEffect(() => {
-    if (selectedMonth && selectedYear) {
-      loadPostsForMonth(selectedMonth, selectedYear);
-    }
+    if (selectedMonth && selectedYear) loadPostsForMonth(selectedMonth, selectedYear);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMonth, selectedYear, user?.id]);
 
-  // Lista de planos editoriais salvos (refresca quando o nro de posts muda).
-  const { pastPlans } = usePastPlans(user?.id, fixedNetworks, generatedContents.length);
+  const { pastPlans } = usePastPlans(user?.id, NETWORKS_TIKTOK, generatedContents.length);
 
   const persistPosts = async (posts: GeneratedContent[]) => {
     if (!user) return [];
-    try {
-      return await replaceMonthPosts(supabase, user.id, selectedMonth, selectedYear, posts);
-    } catch (err) {
-      console.error('Erro ao salvar plano:', err);
-      toast.error('Plano gerado mas falhou ao salvar.');
-      return posts;
-    }
+    try { return await replaceMonthPosts(supabase, user.id, selectedMonth, selectedYear, posts, NETWORKS_TIKTOK); }
+    catch (err) { console.error('Erro ao salvar plano:', err); toast.error('Plano gerado mas falhou ao salvar.'); return posts; }
   };
 
   const handleGenerate = async () => {
-    if (!selectedMonth) {
-      toast.error('Selecione o mês.');
-      return;
-    }
-
+    if (!selectedMonth) { toast.error('Selecione o mês.'); return; }
     const monthIndex = months.indexOf(selectedMonth);
-
     setGenerating(true);
     try {
       const guideParts: string[] = [];
       if (useGuide2026) {
-        try {
-          guideParts.push(await fetchGuideText());
-        } catch (err) {
-          console.error('Falha ao carregar guia editorial:', err);
-          toast.error('Não consegui carregar o Guia Editorial — vou gerar sem ele.');
-        }
+        try { guideParts.push(await fetchGuideText(GUIDE_URLS.tiktok)); }
+        catch (err) { console.error('Falha ao carregar guia editorial:', err); toast.error('Não consegui carregar o Guia Editorial — vou gerar sem ele.'); }
       }
       if (usePdf && uploadedFile) {
         try {
           const pdfText = await extractPdfText(uploadedFile);
           if (pdfText) guideParts.push(`### GUIA ADICIONAL (PDF — ${uploadedFile.name})\n\n${pdfText}`);
-        } catch (err) {
-          console.error('Falha ao extrair PDF:', err);
-          toast.error(`Não consegui ler o PDF "${uploadedFile.name}". Vou gerar sem ele.`);
-        }
+        } catch (err) { console.error('Falha ao extrair PDF:', err); toast.error(`Não consegui ler o PDF "${uploadedFile.name}". Vou gerar sem ele.`); }
       }
       const guideText = guideParts.join('\n\n---\n\n');
 
       const posts = await invokeGenerateEditorialPlan(supabase, {
         month: selectedMonth,
         year: selectedYear,
-        networks: fixedNetworks,
+        networks: NETWORKS_TIKTOK,
         instructions: instructions || undefined,
         editorialGuide: guideText || undefined,
       });
 
+      // TikTok é sempre vídeo, mas a edge function ja garante isso. Aqui só
+      // mapeamos o que vier.
       const generated: GeneratedContent[] = posts.map((p, idx) => ({
         id: `${p.network}-${idx}`,
         date: p.date,
@@ -411,7 +310,7 @@ const AgenteInstagramFacebook = () => {
         title: p.title,
         description: p.description,
         status: 'pending',
-        content_type: (p.content_type as GeneratedContent['content_type']) ?? null,
+        content_type: 'video' as const,
         legenda: p.legenda ?? null,
         roteiro: p.roteiro ?? null,
         cenas: Array.isArray(p.cenas) && p.cenas.length > 0 ? p.cenas : null,
@@ -423,12 +322,8 @@ const AgenteInstagramFacebook = () => {
       setGeneratedContents(saved);
       setResultMonth(new Date(Number(selectedYear), monthIndex, 1));
       toast.success(`${posts.length} temas gerados. Aprove cada tema pra gerar o conteúdo completo.`);
-    } catch (err) {
-      console.error(err);
-      toast.error('Falha ao gerar temas. Verifica sua conexão e tenta de novo.');
-    } finally {
-      setGenerating(false);
-    }
+    } catch (err) { console.error(err); toast.error('Falha ao gerar temas. Verifica sua conexão e tenta de novo.'); }
+    finally { setGenerating(false); }
   };
 
   return (
@@ -436,18 +331,12 @@ const AgenteInstagramFacebook = () => {
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-start justify-between gap-3 mb-6 flex-wrap">
           <div className="flex items-center gap-3">
-            <CalendarDays className="h-8 w-8 text-primary" />
+            <Video className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold">Agente Instagram e Facebook</h1>
-              <p className="text-muted-foreground">Planeja o mês inteiro de Instagram + Facebook e gera roteiros, legendas, textos da arte e briefings de design — tudo de uma vez.</p>
+              <h1 className="text-3xl font-bold">Agente TikTok</h1>
+              <p className="text-muted-foreground">Planeja o mês de TikTok com vídeos verticais, hooks fortes, sounds e formato cru. Gera tema, e depois conteúdo completo por aprovação.</p>
             </div>
           </div>
-          <Link to="/agente-instagram-facebook/memoria">
-            <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
-              <Brain className="h-4 w-4" />
-              Memória do Agente
-            </Button>
-          </Link>
         </div>
 
         <PlanConfigCard
@@ -470,8 +359,8 @@ const AgenteInstagramFacebook = () => {
             <EditorialCalendar
               resultMonth={resultMonth}
               generatedContents={generatedContents}
-              primaryNetwork="Instagram Studios"
-              legendNetworks={fixedNetworks}
+              primaryNetwork="Tik Tok"
+              legendNetworks={NETWORKS_TIKTOK}
               onItemClick={setExpandedItem}
               onApproveAll={handleApproveAll}
             />
@@ -552,4 +441,4 @@ const AgenteInstagramFacebook = () => {
   );
 };
 
-export default AgenteInstagramFacebook;
+export default AgenteTikTok;

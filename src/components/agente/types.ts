@@ -1,4 +1,4 @@
-import { Instagram, Facebook, Clock, CheckCircle2, XCircle, Star } from 'lucide-react';
+import { Instagram, Facebook, Video, Clock, CheckCircle2, XCircle, Star } from 'lucide-react';
 
 // ============================================================================
 // Tipos compartilhados pelo agente Instagram + Facebook (gerador editorial).
@@ -49,7 +49,7 @@ export interface GeneratedContent {
   id: string;
   date: string;
   title: string;
-  network: 'Instagram Studios' | 'Facebook Studios';
+  network: 'Instagram Studios' | 'Facebook Studios' | 'Tik Tok';
   description: string;
   status: 'pending' | 'approved' | 'rejected' | 'favorite';
   content_type?: 'video' | 'estatico' | 'carrossel' | null;
@@ -100,16 +100,19 @@ export const FIELD_LABELS: Record<FieldKey, string> = {
 export const networkColors: Record<GeneratedContent['network'], string> = {
   'Instagram Studios': 'bg-pink-500 text-white',
   'Facebook Studios': 'bg-sky-500 text-white',
+  'Tik Tok': 'bg-black text-white',
 };
 
 export const networkLegendColors: Record<GeneratedContent['network'], string> = {
   'Instagram Studios': 'bg-pink-500',
   'Facebook Studios': 'bg-sky-500',
+  'Tik Tok': 'bg-black',
 };
 
 export const networkIcons: Record<GeneratedContent['network'], typeof Instagram> = {
   'Instagram Studios': Instagram,
   'Facebook Studios': Facebook,
+  'Tik Tok': Video,
 };
 
 export const contentTypeLabel: Record<NonNullable<GeneratedContent['content_type']>, string> = {
@@ -161,5 +164,11 @@ export const MONTHS = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-// Sempre Instagram + Facebook (Facebook e replicado do IG pela edge function).
-export const FIXED_NETWORKS = ['Instagram Studios', 'Facebook Studios'];
+// Conjunto de redes que cada agente persiste/le. IG agent gerencia IG + FB
+// (Facebook e replicado automaticamente pela edge function). TikTok agent
+// gerencia so o canal proprio. Cada page passa o conjunto certo aos services.
+export const NETWORKS_IG: GeneratedContent['network'][] = ['Instagram Studios', 'Facebook Studios'];
+export const NETWORKS_TIKTOK: GeneratedContent['network'][] = ['Tik Tok'];
+
+// Mantido por back-compat com codigo legado que importa FIXED_NETWORKS.
+export const FIXED_NETWORKS = NETWORKS_IG;

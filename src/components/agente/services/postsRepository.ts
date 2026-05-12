@@ -7,9 +7,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   GeneratedContent, SceneEntry, FieldFeedback, RefinementEntry, VersaoEditada, PastPlan,
+  NETWORKS_IG,
 } from '../types';
 
-const FIXED_NETWORKS = ['Instagram Studios', 'Facebook Studios'];
+// Default mantido por back-compat: agente IG usa esses canais.
+// Cada caller pode passar um array proprio (ex: TikTok agent passa ['Tik Tok']).
+const DEFAULT_NETWORKS = NETWORKS_IG;
 
 // O cliente Supabase do projeto e tipado pelo schema, mas usamos `as any` aqui
 // pois editorial_posts ainda nao foi adicionada aos tipos gerados.
@@ -60,6 +63,7 @@ function rowToContent(row: PostRow): GeneratedContent {
 
 export async function selectMonthPosts(
   supabase: SB, userId: string, month: string, year: string,
+  networks: GeneratedContent['network'][] = DEFAULT_NETWORKS,
 ): Promise<GeneratedContent[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('editorial_posts' as never) as any)
@@ -67,18 +71,21 @@ export async function selectMonthPosts(
     .eq('user_id', userId)
     .eq('month', month)
     .eq('year', year)
-    .in('network', FIXED_NETWORKS)
+    .in('network', networks)
     .order('post_date', { ascending: true });
   if (error) throw error;
   return ((data ?? []) as PostRow[]).map(rowToContent);
 }
 
-export async function selectPlanSummaries(supabase: SB, userId: string): Promise<PastPlan[]> {
+export async function selectPlanSummaries(
+  supabase: SB, userId: string,
+  networks: GeneratedContent['network'][] = DEFAULT_NETWORKS,
+): Promise<PastPlan[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('editorial_posts' as never) as any)
     .select('month, year, status')
     .eq('user_id', userId)
-    .in('network', FIXED_NETWORKS);
+    .in('network', networks);
   if (error) throw error;
   const rows = (data ?? []) as Array<{ month: string; year: string; status: string }>;
   const grouped = new Map<string, PastPlan>();
@@ -94,6 +101,7 @@ export async function selectPlanSummaries(supabase: SB, userId: string): Promise
 
 export async function replaceMonthPosts(
   supabase: SB, userId: string, month: string, year: string, posts: GeneratedContent[],
+  networks: GeneratedContent['network'][] = DEFAULT_NETWORKS,
 ): Promise<GeneratedContent[]> {
   // Apaga existentes IG/FB do mes antes de inserir os novos.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -102,7 +110,7 @@ export async function replaceMonthPosts(
     .eq('user_id', userId)
     .eq('month', month)
     .eq('year', year)
-    .in('network', FIXED_NETWORKS);
+    .in('network', networks);
 
   const rows = posts.map((p) => ({
     user_id: userId,
