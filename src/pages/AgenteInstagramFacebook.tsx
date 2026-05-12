@@ -419,6 +419,83 @@ const AgenteInstagramFacebook = () => {
     setEditMode(false);
   };
 
+  // Estagio "tema": post foi gerado so com tema (titulo + content_type + briefing curto),
+  // sem legenda/roteiro/cenas/texto_arte/briefing_arte. Detectamos pela ausencia de legenda.
+  const isThemeStage = (p: GeneratedContent | null): boolean => !!p && !p.legenda;
+
+  const [generatingContent, setGeneratingContent] = useState(false);
+
+  // Aprovar tema: dispara a geracao do conteudo completo desse post.
+  const handleApproveTheme = async () => {
+    if (!expandedItem) return;
+    setGeneratingContent(true);
+    try {
+      // Reuso do fetchGuideText pra enviar o guia ao endpoint de content.
+      let guideText = '';
+      try { guideText = await fetchGuideText(); } catch { /* sem guia, segue */ }
+
+      const { data, error } = await supabase.functions.invoke('generate-post-content', {
+        body: { post_id: expandedItem.id, editorialGuide: guideText || undefined },
+      });
+      if (error) throw error;
+      const content = (data?.content ?? {}) as { legenda?: string | null; roteiro?: string | null; cenas?: SceneEntry[] | null; texto_arte?: string | null; briefing_arte?: string | null };
+
+      const updated: GeneratedContent = {
+        ...expandedItem,
+        legenda: content.legenda ?? null,
+        roteiro: content.roteiro ?? null,
+        cenas: Array.isArray(content.cenas) ? content.cenas : null,
+        texto_arte: content.texto_arte ?? null,
+        briefing_arte: content.briefing_arte ?? null,
+      };
+      setGeneratedContents((current) => current.map((it) => (it.id === expandedItem.id ? updated : it)));
+      setExpandedItem(updated);
+      toast.success('Conteúdo gerado a partir do tema aprovado.');
+    } catch (err) {
+      console.error('Approve theme failed:', err);
+      toast.error('Falha ao gerar o conteúdo. Tenta de novo.');
+    } finally {
+      setGeneratingContent(false);
+    }
+  };
+
+  // Refazer com IA (tema): re-gera title + description mantendo data + content_type.
+  // Reuso refine-editorial-post sem field scope: ele reescreve com instrucao "regenere o tema".
+  const [refineThemePrompt, setRefineThemePrompt] = useState('');
+  const [refineThemeOpen, setRefineThemeOpen] = useState(false);
+  const [refiningTheme, setRefiningTheme] = useState(false);
+
+  const handleRefineTheme = async () => {
+    if (!expandedItem) return;
+    const userHint = refineThemePrompt.trim();
+    setRefiningTheme(true);
+    try {
+      const promptBase = userHint
+        ? `Regere o TEMA deste post (apenas titulo e briefing/description). Mantenha a data e o content_type. Ajuste: ${userHint}`
+        : `Regere o TEMA deste post (apenas titulo e briefing/description) para algo mais forte e alinhado ao guia. Mantenha a data e o content_type.`;
+      const { data, error } = await supabase.functions.invoke('refine-editorial-post', {
+        body: { post_id: expandedItem.id, prompt: promptBase },
+      });
+      if (error) throw error;
+      const refined = (data?.refined ?? {}) as { title?: string; description?: string };
+      const updated: GeneratedContent = {
+        ...expandedItem,
+        title: refined.title ?? expandedItem.title,
+        description: refined.description ?? expandedItem.description,
+      };
+      setGeneratedContents((current) => current.map((it) => (it.id === expandedItem.id ? updated : it)));
+      setExpandedItem(updated);
+      setRefineThemeOpen(false);
+      setRefineThemePrompt('');
+      toast.success('Tema regerado.');
+    } catch (err) {
+      console.error('Refine theme failed:', err);
+      toast.error('Falha ao regerar o tema.');
+    } finally {
+      setRefiningTheme(false);
+    }
+  };
+
   // Refinar APENAS um campo via IA. Mantém o resto intocado.
   const handleRefineField = async () => {
     if (!expandedItem || !refineFieldDialog.field) return;
@@ -1292,12 +1369,34 @@ const AgenteInstagramFacebook = () => {
 
                 <div className="space-y-4 py-2">
                   <div>
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Briefing</Label>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Briefing do tema</Label>
                     <p className="text-sm mt-1 whitespace-pre-line">{post.description}</p>
                   </div>
 
-                  {/* Roteiro + Cenas (vídeo) */}
-                  {isVideo && (
+                  {/* MODO TEMA: post foi gerado so com tema. Mostra os 3 botoes de revisao */}
+                  {isThemeStage(post) && (
+                    <div className="rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/60 p-5 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-500 text-white">TEMA</span>
+                        <p className="text-sm font-medium text-amber-900">Esse post é só um tema. Aprove para gerar legenda, roteiro e briefings.</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" onClick={handleApproveTheme} disabled={generatingContent} className="gap-1.5">
+                          {generatingContent ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                          {generatingContent ? 'Gerando conteúdo…' : 'Aprovar tema'}
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => setRejectDialog({ open: true, item: post, reason: post.feedback_motivo ?? '' })} disabled={generatingContent} className="gap-1.5">
+                          <XCircle className="h-4 w-4" /> Reprovar tema
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setRefineThemeOpen(true)} disabled={generatingContent} className="gap-1.5">
+                          <Sparkles className="h-4 w-4" /> Refazer com IA
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* MODO CONTEUDO: campos editaveis e botões por campo. Visivel quando o tema ja foi aprovado/gerado */}
+                  {!isThemeStage(post) && isVideo && (
                     <div className="rounded-lg border border-border bg-card p-4">
                       <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
                         <Label className="text-xs uppercase tracking-wider text-purple-700">Roteiro e Cenas do vídeo</Label>
@@ -1372,7 +1471,7 @@ const AgenteInstagramFacebook = () => {
                   )}
 
                   {/* Texto na arte (estático/carrossel) */}
-                  {isArt && (
+                  {!isThemeStage(post) && isArt && (
                     <div className="rounded-lg border border-border bg-card p-4">
                       <Label className="text-xs uppercase tracking-wider text-blue-700">Texto na arte</Label>
                       {editMode ? (
@@ -1394,7 +1493,8 @@ const AgenteInstagramFacebook = () => {
                     </div>
                   )}
 
-                  {/* Briefing da arte (sempre presente como campo editável) */}
+                  {/* Briefing da arte (sempre presente como campo editável, exceto modo tema) */}
+                  {!isThemeStage(post) && (
                   <div className="rounded-lg border border-border bg-card p-4">
                     <Label className="text-xs uppercase tracking-wider text-amber-700">Briefing da arte (para o designer)</Label>
                     {editMode ? (
@@ -1414,8 +1514,10 @@ const AgenteInstagramFacebook = () => {
                     )}
                     {renderFieldFooter('briefing_arte')}
                   </div>
+                  )}
 
                   {/* Legenda */}
+                  {!isThemeStage(post) && (
                   <div className="rounded-lg border border-border bg-card p-4">
                     <Label className="text-xs uppercase tracking-wider text-pink-700">Legenda do post</Label>
                     {editMode ? (
@@ -1435,12 +1537,15 @@ const AgenteInstagramFacebook = () => {
                     )}
                     {renderFieldFooter('legenda')}
                   </div>
+                  )}
 
                   <div>
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status atual do post</Label>
                     <p className="text-sm font-medium mt-1">{statusLabels[post.status]}</p>
                   </div>
 
+                  {/* Botoes globais (Aprovar/Reprovar/Favorito inteiro) so quando o conteudo ja existe */}
+                  {!isThemeStage(post) && (
                   <div className="flex flex-wrap gap-2 pt-3 border-t">
                     {editMode ? (
                       <>
@@ -1466,10 +1571,45 @@ const AgenteInstagramFacebook = () => {
                       </>
                     )}
                   </div>
+                  )}
                 </div>
               </>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Refazer tema com IA */}
+      <Dialog open={refineThemeOpen} onOpenChange={(open) => { if (!open) { setRefineThemeOpen(false); setRefineThemePrompt(''); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Refazer tema com IA
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Sem ajuste = a IA regera título e briefing buscando algo mais forte. Com ajuste = guia a IA pra ir nessa direção. A data e o tipo (vídeo/carrossel/estático) são mantidos.
+            </p>
+            <Textarea
+              value={refineThemePrompt}
+              onChange={(e) => setRefineThemePrompt(e.target.value)}
+              rows={3}
+              placeholder='Ex: "mais sobre respiração", "menos comemorativo", "foca em iniciantes"'
+              autoFocus
+              disabled={refiningTheme}
+            />
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" size="sm" onClick={() => { setRefineThemeOpen(false); setRefineThemePrompt(''); }} disabled={refiningTheme}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={handleRefineTheme} disabled={refiningTheme} className="gap-1.5">
+                {refiningTheme ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {refiningTheme ? 'Refazendo…' : 'Refazer tema'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
