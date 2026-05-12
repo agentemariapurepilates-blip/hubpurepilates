@@ -6,9 +6,9 @@ import { cn } from '@/lib/utils';
 import {
   GeneratedContent,
   isThemeStage,
-  networkColors, networkLegendColors, networkIcons,
+  networkLegendColors, networkIcons,
   contentTypeLabel, contentTypeShort, contentTypeBadgeColor,
-  statusIcons, statusLabels,
+  statusIcons, statusLabels, statusButtonColor,
   WEEK_DAYS, WEEK_DAYS_SHORT,
 } from './types';
 
@@ -114,8 +114,8 @@ export function EditorialCalendar({ resultMonth, generatedContents, onItemClick,
                           title={`${item.title} — ${item.content_type ? contentTypeLabel[item.content_type] + ' — ' : ''}${statusLabels[item.status]}${isTheme ? ' (tema)' : ''}`}
                           className={cn(
                             'w-full text-[10px] sm:text-xs p-1 sm:p-1.5 rounded font-medium flex items-center gap-0.5 sm:gap-1 cursor-pointer hover:opacity-80 transition-opacity text-left',
-                            networkColors[item.network],
-                            item.status === 'rejected' && 'opacity-50 line-through',
+                            statusButtonColor[item.status],
+                            item.status === 'rejected' && 'opacity-60 line-through',
                           )}
                         >
                           <NetworkIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />

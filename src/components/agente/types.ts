@@ -144,6 +144,15 @@ export const statusLabels: Record<GeneratedContent['status'], string> = {
   favorite: 'Favorito',
 };
 
+// Cor do botao do post no calendario, baseada no status (e nao mais na rede,
+// ja que so mostramos Instagram). Visualmente o usuario ve verde/amarelo/vermelho.
+export const statusButtonColor: Record<GeneratedContent['status'], string> = {
+  pending: 'bg-amber-400 text-amber-950',
+  approved: 'bg-emerald-500 text-white',
+  rejected: 'bg-rose-500 text-white',
+  favorite: 'bg-purple-500 text-white',
+};
+
 export const WEEK_DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 export const WEEK_DAYS_SHORT = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 

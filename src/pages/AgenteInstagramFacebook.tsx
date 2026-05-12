@@ -188,8 +188,8 @@ const AgenteInstagramFacebook = () => {
     setRefiningTheme(true);
     try {
       const promptBase = userHint
-        ? `Regere o TEMA deste post (apenas titulo e briefing/description). Mantenha a data e o content_type. Ajuste: ${userHint}`
-        : `Regere o TEMA deste post (apenas titulo e briefing/description) para algo mais forte e alinhado ao guia. Mantenha a data e o content_type.`;
+        ? `Refaça o TEMA deste post (apenas titulo e briefing/description). Mantenha a data e o content_type. Ajuste: ${userHint}`
+        : `Refaça o TEMA deste post (apenas titulo e briefing/description) para algo mais forte e alinhado ao guia. Mantenha a data e o content_type.`;
       const { refined } = await invokeRefineEditorialPost(supabase, expandedItem.id, promptBase);
       const updated: GeneratedContent = {
         ...expandedItem,
@@ -200,10 +200,10 @@ const AgenteInstagramFacebook = () => {
       setExpandedItem(updated);
       setRefineThemeOpen(false);
       setRefineThemePrompt('');
-      toast.success('Tema regerado.');
+      toast.success('Tema refeito.');
     } catch (err) {
       console.error('Refine theme failed:', err);
-      toast.error('Falha ao regerar o tema.');
+      toast.error('Falha ao refazer o tema.');
     } finally {
       setRefiningTheme(false);
     }
