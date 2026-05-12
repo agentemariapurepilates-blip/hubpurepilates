@@ -203,11 +203,11 @@ Responda agora com o JSON completo seguindo exatamente o formato definido no sys
         },
         body: JSON.stringify({
           model: 'claude-haiku-4-5',
-          max_tokens: 12000,
+          max_tokens: 8000,
           system: systemBlocks,
-          // Web search server-side: Claude decide quando buscar (max 2 buscas por chunk).
-          // Útil pra trends atuais, referências culturais, datas que não estão no calendário fixo.
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+          // Web search server-side: 1 uso por chunk pra evitar timeout dos 150s do Supabase.
+          // Cada web search adiciona 5-15s; varios usos puxam o tempo total alem do limite.
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 1 }],
           messages: [
             { role: 'user', content: userMessage },
           ],
