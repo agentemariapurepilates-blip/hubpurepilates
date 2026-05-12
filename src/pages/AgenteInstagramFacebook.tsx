@@ -140,6 +140,20 @@ const AgenteInstagramFacebook = () => {
     carrossel: 'Carrossel',
   };
 
+  // Versao curta da tag de tipo de conteudo pra caber nas celulas do calendario.
+  const contentTypeShort: Record<NonNullable<GeneratedContent['content_type']>, string> = {
+    video: 'Vídeo',
+    estatico: 'Estát.',
+    carrossel: 'Carr.',
+  };
+
+  // Cor da tag de content_type no calendario (sobre fundo claro).
+  const contentTypeBadgeColor: Record<NonNullable<GeneratedContent['content_type']>, string> = {
+    video: 'bg-purple-600 text-white',
+    estatico: 'bg-amber-600 text-white',
+    carrossel: 'bg-sky-600 text-white',
+  };
+
   const statusIcons: Record<GeneratedContent['status'], typeof Clock> = {
     pending: Clock,
     approved: CheckCircle2,
@@ -1185,12 +1199,13 @@ const AgenteInstagramFacebook = () => {
                               {items.map((item) => {
                                 const NetworkIcon = networkIcons[item.network];
                                 const StatusIcon = statusIcons[item.status];
+                                const isTheme = isThemeStage(item);
                                 return (
                                   <button
                                     key={item.id}
                                     type="button"
                                     onClick={() => setExpandedItem(item)}
-                                    title={`${item.title} — ${statusLabels[item.status]}`}
+                                    title={`${item.title} — ${item.content_type ? contentTypeLabel[item.content_type] + ' — ' : ''}${statusLabels[item.status]}${isTheme ? ' (tema)' : ''}`}
                                     className={cn(
                                       'w-full text-[10px] sm:text-xs p-1 sm:p-1.5 rounded font-medium flex items-center gap-0.5 sm:gap-1 cursor-pointer hover:opacity-80 transition-opacity text-left',
                                       networkColors[item.network],
@@ -1198,6 +1213,19 @@ const AgenteInstagramFacebook = () => {
                                     )}
                                   >
                                     <NetworkIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />
+                                    {item.content_type && (
+                                      <span className={cn(
+                                        'rounded px-1 py-0 text-[8px] sm:text-[9px] font-bold uppercase tracking-wide flex-shrink-0',
+                                        contentTypeBadgeColor[item.content_type],
+                                      )}>
+                                        {contentTypeShort[item.content_type]}
+                                      </span>
+                                    )}
+                                    {isTheme && (
+                                      <span className="rounded px-1 py-0 text-[8px] sm:text-[9px] font-bold uppercase tracking-wide bg-amber-400 text-amber-900 flex-shrink-0">
+                                        Tema
+                                      </span>
+                                    )}
                                     <span className="truncate hidden sm:inline flex-1">{item.title}</span>
                                     {item.status !== 'pending' && (
                                       <StatusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0 opacity-90" />
