@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Users, UserCheck, Building2, Clock, CheckCircle, XCircle, Loader2, KeyRound, Ban, Trash2 } from 'lucide-react';
+import { Users, UserCheck, Building2, Clock, CheckCircle, XCircle, Loader2, KeyRound, Ban, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { SetTemporaryPasswordDialog } from '@/components/admin/SetTemporaryPasswordDialog';
+import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
 import { PasswordResetTab } from '@/components/admin/PasswordResetTab';
 import { ApprovedUsersTab } from '@/components/admin/ApprovedUsersTab';
 
@@ -133,6 +134,7 @@ const AdminUsuarios = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [passwordResetRequests, setPasswordResetRequests] = useState<PasswordResetRequest[]>([]);
   const [loadingResetRequests, setLoadingResetRequests] = useState(true);
+  const [createUserOpen, setCreateUserOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
@@ -335,9 +337,15 @@ const AdminUsuarios = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-heading font-bold">Gerenciamento de Usuários</h1>
-          <p className="text-muted-foreground">Visualize e gerencie os usuários da plataforma</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-heading font-bold">Gerenciamento de Usuários</h1>
+            <p className="text-muted-foreground">Visualize e gerencie os usuários da plataforma</p>
+          </div>
+          <Button onClick={() => setCreateUserOpen(true)} className="gap-2">
+            <UserPlus className="h-4 w-4" />
+            Criar usuário
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -531,6 +539,12 @@ const AdminUsuarios = () => {
           onOpenChange={() => setUserToSetPassword(null)}
           user={userToSetPassword}
           onSuccess={fetchPasswordResetRequests}
+        />
+
+        <CreateUserDialog
+          open={createUserOpen}
+          onOpenChange={setCreateUserOpen}
+          onSuccess={fetchUsers}
         />
       </div>
     </MainLayout>
