@@ -29,6 +29,7 @@ import AgenteInstagramFacebook from "./pages/AgenteInstagramFacebook";
 import AgenteTikTok from "./pages/AgenteTikTok";
 import MemoriaAgente from "./pages/MemoriaAgente";
 import AgenteMonitoramentoMetricas from "./pages/AgenteMonitoramentoMetricas";
+import SaudeDeMarca from "./pages/SaudeDeMarca";
 import AuthCallbackMeta from "./pages/AuthCallbackMeta";
 import AuthCallbackTikTok from "./pages/AuthCallbackTikTok";
 
@@ -71,6 +72,10 @@ function App() {
             <Route
               path="/agente-monitoramento/metricas"
               element={<ProtectedRoute><AgenteMonitoramentoMetricas /></ProtectedRoute>}
+            />
+            <Route
+              path="/agente-monitoramento/saude-de-marca"
+              element={<ProtectedRoute requireAdmin><SaudeDeMarca /></ProtectedRoute>}
             />
             <Route path="/auth/callback/meta" element={<AuthCallbackMeta />} />
             <Route path="/auth/callback/tiktok" element={<AuthCallbackTikTok />} />

@@ -91,7 +91,7 @@ const Sidebar = () => {
   // Agente Monitoramento section - only for admins
   const monitoramentoNavigation = [
     { name: 'Métricas', href: '/agente-monitoramento/metricas', icon: BarChart3, disabled: false },
-    { name: 'Saúde de marca', href: '#', icon: Heart, disabled: true },
+    { name: 'Saúde de marca', href: '/agente-monitoramento/saude-de-marca', icon: Heart, disabled: false },
   ];
 
   // Minha Área section
