@@ -25,6 +25,7 @@ import {
   Package,
   Handshake,
   BookOpen,
+  ScrollText,
   BarChart3,
   Heart,
 } from 'lucide-react';
@@ -66,6 +67,7 @@ const Sidebar = () => {
     { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
     { name: 'Avisos', href: '/avisos', icon: Megaphone },
     { name: 'Parcerias', href: '/parcerias', icon: Handshake },
+    { name: 'Políticas de Marketing', href: '/politicas-marketing', icon: ScrollText },
     { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
     { name: 'Artes Prontas', href: '/artes-prontas', icon: Palette },

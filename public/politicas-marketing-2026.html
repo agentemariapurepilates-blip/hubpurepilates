@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pure Pilates — Políticas de Marketing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:    #B01E1E;
+  --red-dk: #861616;
+  --red-lt: #CC2A2A;
+  --red-bg: #FBF0F0;
+  --black:  #0C0C0C;
+  --ink:    #1A1A1A;
+  --mid:    #555;
+  --muted:  #888;
+  --border: #E5E5E5;
+  --bg:     #FFFFFF;
+  --bg2:    #F7F6F4;
+  --bg3:    #F0EFED;
+  --hero-bg:#0C0C0C;
+  --f:      'Montserrat', sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--f);background:var(--bg);color:var(--ink);overflow-x:hidden;cursor:none;}
+
+/* —— Cursor —— */
+#cur {width:8px;height:8px;background:var(--red);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);}
+#ring{width:28px;height:28px;border:1px solid rgba(176,30,30,.45);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:left .13s ease,top .13s ease;}
+
+/* —— Nav —— */
+nav{position:fixed;top:0;left:0;right:0;padding:16px 5vw;display:flex;align-items:center;justify-content:space-between;z-index:500;transition:background .4s,box-shadow .4s;}
+nav.scrolled{background:rgba(255,255,255,.97);backdrop-filter:blur(16px);box-shadow:0 1px 0 rgba(0,0,0,.08);}
+.nav-brand{display:flex;align-items:center;gap:14px;}
+.nav-logo{font-size:11px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:var(--white,#fff);}
+.nav-logo span{color:var(--red);}
+nav.scrolled .nav-logo{color:var(--ink);}
+.nav-divider{width:1px;height:18px;background:rgba(176,30,30,.35);}
+.nav-doc{font-size:9px;font-weight:500;letter-spacing:.25em;text-transform:uppercase;color:rgba(255,255,255,.5);}
+nav.scrolled .nav-doc{color:var(--muted);}
+.nav-links{display:flex;gap:28px;list-style:none;}
+.nav-links a{font-size:9px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.5);text-decoration:none;transition:color .2s;}
+nav.scrolled .nav-links a{color:var(--muted);}
+.nav-links a:hover,.nav.scrolled .nav-links a:hover{color:var(--red);}
+
+/* —— Animations —— */
+@keyframes up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes gpulse{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(1);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1);}}
+@keyframes spulse{0%,100%{opacity:.35}50%{opacity:.9}}
+@keyframes barIn{from{width:0}to{width:52px}}
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);}
+.reveal.on{opacity:1;transform:translateY(0);}
+.d1{transition-delay:.07s}.d2{transition-delay:.14s}.d3{transition-delay:.21s}.d4{transition-delay:.28s}.d5{transition-delay:.35s}.d6{transition-delay:.42s}
+
+/* ——————— HERO (dark) ——————— */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;background:var(--hero-bg);}
+.hero-diag{position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(-50deg,transparent 0,transparent 80px,rgba(176,30,30,.018) 80px,rgba(176,30,30,.018) 81px);}
+.hero-glow{position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(176,30,30,.15) 0%,transparent 66%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;animation:gpulse 5s ease-in-out infinite;}
+.hero-content{position:relative;text-align:center;padding:0 20px;}
+.hero-eyebrow{font-size:9px;font-weight:600;letter-spacing:.55em;text-transform:uppercase;color:var(--red);margin-bottom:20px;animation:up 1s .1s cubic-bezier(.16,1,.3,1) both;}
+.hero-pre{font-size:clamp(11px,1.5vw,14px);font-weight:300;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:12px;animation:up 1s .18s cubic-bezier(.16,1,.3,1) both;}
+.hero-title{font-size:clamp(52px,9vw,120px);font-weight:900;letter-spacing:-.01em;line-height:.92;color:#fff;text-transform:uppercase;animation:up 1s .26s cubic-bezier(.16,1,.3,1) both;}
+.hero-title .r{color:var(--red);}
+.hero-title .block{display:block;}
+.hero-bar{height:3px;background:var(--red);margin:28px auto;animation:up 1s .38s cubic-bezier(.16,1,.3,1) both,barIn .8s .5s cubic-bezier(.16,1,.3,1) both;width:0;}
+.hero-sub{font-size:11px;font-weight:400;letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.4);animation:up 1s .48s cubic-bezier(.16,1,.3,1) both;}
+.hero-meta{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:36px;flex-wrap:wrap;animation:up 1s .56s cubic-bezier(.16,1,.3,1) both;}
+.hero-badge{font-size:9px;font-weight:600;letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.45);padding:8px 16px;border:1px solid rgba(176,30,30,.3);}
+.hero-badge span{color:var(--red);}
+.hero-scroll{position:absolute;bottom:36px;display:flex;flex-direction:column;align-items:center;gap:10px;animation:up 1s .8s cubic-bezier(.16,1,.3,1) both;}
+.hero-scroll-label{font-size:8px;letter-spacing:.45em;text-transform:uppercase;color:rgba(176,30,30,.45);}
+.scroll-line{width:1px;height:44px;background:linear-gradient(to bottom,var(--red),transparent);animation:spulse 2s ease-in-out infinite;}
+
+/* ——————— SHARED ——————— */
+section{padding:96px 5vw;position:relative;}
+section.alt{background:var(--bg2);}
+section.alt2{background:var(--bg3);}
+
+.tag{display:inline-flex;align-items:center;gap:12px;margin-bottom:44px;font-size:9px;font-weight:700;letter-spacing:.45em;text-transform:uppercase;color:var(--red);}
+.tag::before{content:'';width:24px;height:2px;background:var(--red);}
+.sec-title{font-size:clamp(30px,5vw,64px);font-weight:800;text-transform:uppercase;line-height:.95;letter-spacing:-.01em;color:var(--ink);margin-bottom:12px;}
+.sec-title .r{color:var(--red);}
+.sec-intro{font-size:13px;font-weight:300;line-height:1.85;color:var(--mid);max-width:580px;margin-top:16px;}
+
+/* ——————— CHAPTER DIVIDER (icon strip) ——————— */
+.chapter-divider{display:flex;align-items:center;justify-content:center;gap:0;background:var(--ink);padding:32px 5vw;overflow:hidden;position:relative;}
+.chapter-divider::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(-50deg,transparent 0,transparent 40px,rgba(176,30,30,.04) 40px,rgba(176,30,30,.04) 41px);}
+.cd-inner{display:flex;align-items:center;gap:20px;position:relative;}
+.cd-num{font-size:11px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;color:var(--red);}
+.cd-icon{color:rgba(255,255,255,.15);}
+.cd-label{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff;}
+.cd-arrow{color:rgba(176,30,30,.5);font-size:18px;}
+
+/* ——————— SUM—RIO ——————— */
+.s-sumario{background:var(--bg);}
+.sumario-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-top:48px;}
+.si{background:var(--bg);padding:28px 24px;cursor:none;text-decoration:none;display:block;transition:background .25s;}
+.si:hover{background:var(--red-bg);}
+.si-num{font-size:9px;font-weight:700;letter-spacing:.35em;color:var(--red);display:block;margin-bottom:12px;}
+.si-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink);line-height:1.3;margin-bottom:6px;}
+.si-desc{font-size:11px;font-weight:300;line-height:1.55;color:var(--muted);}
+.si-arrow{display:block;margin-top:16px;font-size:16px;color:var(--red);transition:transform .25s;}
+.si:hover .si-arrow{transform:translateX(5px);}
+
+/* ——————— 01 VERBA ——————— */
+.s-verba{background:var(--bg);}
+.verba-layout{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:48px;}
+.verba-main{background:var(--bg2);padding:48px 40px;}
+.verba-main-title{font-size:10px;font-weight:700;letter-spacing:.4em;text-transform:uppercase;color:var(--red);margin-bottom:20px;display:block;}
+.verba-main-body{font-size:13px;font-weight:300;line-height:1.9;color:var(--mid);}
+.verba-items{display:flex;flex-direction:column;gap:1px;background:var(--border);}
+.vi{background:var(--bg);padding:20px 28px;display:flex;align-items:center;gap:16px;transition:background .2s;}
+.vi:hover{background:var(--red-bg);}
+.vi-dot{width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;}
+.vi-text{font-size:12px;font-weight:500;color:var(--ink);}
+.alert-box{background:var(--red-bg);border:1px solid rgba(176,30,30,.2);border-left:3px solid var(--red);padding:22px 24px;}
+.alert-label{font-size:8px;font-weight:700;letter-spacing:.4em;text-transform:uppercase;color:var(--red);display:block;margin-bottom:7px;}
+.alert-text{font-size:12px;font-weight:300;line-height:1.75;color:var(--mid);}
+
+/* ——————— 02 M—DIA ——————— */
+.s-midia{background:var(--bg2);}
+.midia-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-top:48px;}
+.mc{background:var(--bg);padding:44px 32px;position:relative;overflow:hidden;transition:background .25s,box-shadow .25s;}
+.mc:hover{background:var(--red-bg);}
+.mc-num{position:absolute;top:24px;right:28px;font-size:64px;font-weight:800;line-height:1;color:rgba(176,30,30,.06);}
+.mc-icon{margin-bottom:20px;color:var(--red);}
+.mc-title{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink);margin-bottom:10px;line-height:1.2;}
+.mc-body{font-size:12px;font-weight:300;line-height:1.75;color:var(--mid);}
+.mc-tag{display:inline-block;margin-top:18px;font-size:8px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--red);border:1px solid rgba(176,30,30,.3);padding:5px 10px;}
+
+/* ——————— 03 APORTES ——————— */
+.s-aportes{background:var(--bg);}
+.aportes-layout{display:grid;grid-template-columns:1.2fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:48px;align-items:start;}
+.aportes-left{display:flex;flex-direction:column;gap:1px;background:var(--border);}
+.pkg-table{background:var(--bg);}
+.pkg-header{display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--ink);padding:14px 24px;}
+.pkg-header span{font-size:9px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:#fff;}
+.pkg-row{display:grid;grid-template-columns:1fr 1fr 1fr;padding:16px 24px;border-bottom:1px solid var(--border);background:var(--bg);transition:background .2s;}
+.pkg-row:last-child{border-bottom:none;}
+.pkg-row:hover{background:var(--red-bg);}
+.pkg-row span{font-size:13px;font-weight:400;color:var(--ink);}
+.pkg-row .val{font-size:15px;font-weight:800;color:var(--red);}
+.pkg-row .dur{font-size:12px;font-weight:300;color:var(--muted);}
+.aportes-right{display:flex;flex-direction:column;gap:1px;background:var(--border);}
+.acard{background:var(--bg);padding:32px 28px;transition:background .25s;}
+.acard:hover{background:var(--red-bg);}
+.acard-label{font-size:8px;font-weight:700;letter-spacing:.38em;text-transform:uppercase;color:var(--red);display:block;margin-bottom:10px;}
+.acard-title{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink);margin-bottom:8px;}
+.acard-body{font-size:12px;font-weight:300;line-height:1.75;color:var(--mid);}
+
+/* ——————— 04 REPORT ——————— */
+.s-report{background:var(--bg2);}
+.report-layout{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:48px;}
+.report-card{background:var(--bg);padding:44px 36px;transition:background .25s;}
+.report-card:hover{background:var(--red-bg);}
+.rc-icon{margin-bottom:20px;color:var(--red);}
+.rc-title{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink);margin-bottom:10px;}
+.rc-body{font-size:12px;font-weight:300;line-height:1.8;color:var(--mid);}
+.report-highlight{grid-column:1/-1;background:var(--ink);padding:28px 36px;display:flex;align-items:center;gap:24px;}
+.rh-icon{color:var(--red);flex-shrink:0;}
+.rh-text{font-size:12px;font-weight:300;line-height:1.8;color:rgba(255,255,255,.7);}
+.rh-text strong{color:#fff;font-weight:600;}
+
+/* ——————— 05 SOCIAL ——————— */
+.s-social{background:var(--bg);}
+.social-layout{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-top:48px;}
+.social-card{background:var(--bg);padding:44px 36px;transition:background .25s;}
+.social-card:hover{background:var(--red-bg);}
+.sc-badge{display:inline-flex;align-items:center;gap:8px;margin-bottom:20px;}
+.sc-dot{width:8px;height:8px;border-radius:50%;}
+.sc-badge-text{font-size:8px;font-weight:700;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);}
+.sc-title{font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink);margin-bottom:10px;}
+.sc-body{font-size:12px;font-weight:300;line-height:1.8;color:var(--mid);}
+.sc-rule{height:1px;background:var(--border);margin:16px 0;}
+.sc-note{font-size:11px;font-weight:400;font-style:italic;color:var(--muted);}
+.social-card.proib{background:var(--red-bg);border:none;}
+.social-card.proib:hover{background:#f5e0e0;}
+
+/* ——————— 06 INFLUENCERS ——————— */
+.s-influencers{background:var(--bg2);}
+
+/* CTA Form */
+.form-cta{background:var(--ink);border-left:4px solid var(--red);padding:28px 36px;display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:1px;flex-wrap:wrap;}
+.form-cta-text{}
+.form-cta-label{font-size:9px;font-weight:700;letter-spacing:.4em;text-transform:uppercase;color:var(--red);display:block;margin-bottom:6px;}
+.form-cta-title{font-size:15px;font-weight:700;text-transform:uppercase;color:#fff;letter-spacing:.04em;}
+.form-cta-desc{font-size:11px;font-weight:300;color:rgba(255,255,255,.5);margin-top:4px;}
+.form-btn{display:inline-flex;align-items:center;gap:10px;background:var(--red);color:#fff;font-family:var(--f);font-size:10px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;text-decoration:none;padding:14px 28px;white-space:nowrap;transition:background .2s,transform .2s;flex-shrink:0;cursor:none;}
+.form-btn:hover{background:var(--red-lt);transform:translateY(-2px);}
+.form-btn svg{flex-shrink:0;}
+
+.inf-layout{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:48px;align-items:start;}
+.inf-flow{background:var(--bg);padding:44px 36px;}
+.inf-flow-title{font-size:10px;font-weight:700;letter-spacing:.35em;text-transform:uppercase;color:var(--red);margin-bottom:28px;display:block;}
+.flow-step{display:flex;gap:18px;padding:18px 0;border-bottom:1px solid var(--border);}
+.flow-step:last-child{border-bottom:none;}
+.flow-num{width:30px;height:30px;border-radius:50%;background:var(--red-bg);border:1.5px solid rgba(176,30,30,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.flow-num span{font-size:10px;font-weight:800;color:var(--red);}
+.flow-title{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.flow-body{font-size:11px;font-weight:300;color:var(--muted);line-height:1.6;}
+.inf-right{display:flex;flex-direction:column;gap:1px;background:var(--border);}
+.inf-card{background:var(--bg);padding:28px 28px;transition:background .25s;}
+.inf-card:hover{background:var(--red-bg);}
+.inf-card-label{font-size:8px;font-weight:700;letter-spacing:.38em;text-transform:uppercase;display:block;margin-bottom:8px;}
+.inf-card-label.ok{color:var(--red);}
+.inf-card-label.no{color:var(--muted);}
+.inf-card-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink);margin-bottom:8px;}
+.inf-card-body{font-size:12px;font-weight:300;line-height:1.75;color:var(--mid);}
+.inf-list{list-style:none;margin-top:10px;}
+.inf-list li{font-size:11px;font-weight:300;color:var(--mid);padding:7px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.inf-list li::before{content:'';width:14px;height:1px;flex-shrink:0;}
+.inf-list.ok li::before{background:var(--red);}
+.inf-list.no li::before{background:#ccc;}
+
+/* Manual accordion */
+.manual-block{background:var(--bg);border:1px solid var(--border);margin-top:48px;}
+.manual-header{background:var(--ink);padding:20px 32px;display:flex;align-items:center;gap:16px;}
+.manual-header-icon{color:var(--red);}
+.manual-header-text{font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#fff;}
+.manual-header-sub{font-size:10px;font-weight:300;color:rgba(255,255,255,.4);margin-top:2px;}
+.manual-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);}
+.mg-card{background:var(--bg2);padding:28px 24px;transition:background .25s;}
+.mg-card:hover{background:var(--red-bg);}
+.mg-num{font-size:9px;font-weight:700;letter-spacing:.3em;color:var(--red);display:block;margin-bottom:10px;}
+.mg-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink);margin-bottom:8px;}
+.mg-body{font-size:11px;font-weight:300;line-height:1.7;color:var(--mid);}
+
+/* Dor — Solução */
+.dor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-top:1px;}
+.dor-card{background:var(--bg);padding:28px 24px;}
+.dor-pain{font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.dor-pain-text{font-size:12px;font-weight:300;font-style:italic;color:var(--mid);margin-bottom:10px;padding-left:4px;border-left:2px solid var(--border);}
+.dor-sol{font-size:11px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;margin-top:14px;}
+.dor-sol-text{font-size:12px;font-weight:300;color:var(--mid);padding-left:4px;border-left:2px solid var(--red);}
+
+/* Script */
+.script-box{background:var(--bg2);border:1px solid var(--border);padding:32px 36px;margin-top:1px;}
+.script-label{font-size:9px;font-weight:700;letter-spacing:.4em;text-transform:uppercase;color:var(--red);display:block;margin-bottom:16px;}
+.script-text{font-size:13px;font-weight:300;line-height:1.9;color:var(--mid);max-width:700px;}
+.script-text strong{color:var(--ink);font-weight:600;}
+
+/* ——————— 07 GMB ——————— */
+.s-gmb{background:var(--bg);}
+.gmb-layout{display:grid;grid-template-columns:1.1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:48px;align-items:start;}
+.gmb-main{background:var(--bg2);padding:48px 40px;}
+.gmb-main-title{font-size:10px;font-weight:700;letter-spacing:.35em;text-transform:uppercase;color:var(--red);margin-bottom:22px;display:block;}
+.gmb-main-body{font-size:13px;font-weight:300;line-height:1.85;color:var(--mid);margin-bottom:24px;}
+.gmb-checklist{list-style:none;}
+.gmb-checklist li{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);font-size:12px;font-weight:400;color:var(--ink);line-height:1.5;}
+.gmb-checklist li::before{content:'';width:16px;height:16px;border:1.5px solid var(--red);border-radius:2px;flex-shrink:0;margin-top:1px;}
+.gmb-right{display:flex;flex-direction:column;gap:1px;background:var(--border);}
+.gmb-stat{background:var(--bg);padding:32px 28px;transition:background .25s;}
+.gmb-stat:hover{background:var(--red-bg);}
+.gmb-stat-num{font-size:48px;font-weight:900;line-height:1;color:var(--red);display:block;margin-bottom:6px;}
+.gmb-stat-label{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);display:block;margin-bottom:6px;}
+.gmb-stat-body{font-size:11px;font-weight:300;line-height:1.65;color:var(--mid);}
+
+/* ——————— RESUMO ——————— */
+.s-resumo{background:var(--bg2);}
+.resumo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-top:48px;}
+.rcard{background:var(--bg);padding:32px 28px;transition:background .25s;}
+.rcard:hover{background:var(--red-bg);}
+.rcard-num{font-size:9px;font-weight:700;letter-spacing:.3em;color:var(--red);display:block;margin-bottom:12px;}
+.rcard-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink);margin-bottom:8px;}
+.rcard-body{font-size:11px;font-weight:300;line-height:1.7;color:var(--mid);}
+.rcard.highlight{background:var(--ink);}
+.rcard.highlight:hover{background:#222;}
+.rcard.highlight .rcard-num{color:var(--red);}
+.rcard.highlight .rcard-title{color:#fff;}
+.rcard.highlight .rcard-body{color:rgba(255,255,255,.55);}
+
+/* ——— FOOTER —— */
+footer{background:var(--ink);padding:52px 5vw 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;border-top:3px solid var(--red);}
+.footer-logo{font-size:11px;font-weight:800;letter-spacing:.25em;text-transform:uppercase;color:#fff;}
+.footer-logo span{color:var(--red);}
+.footer-meta p{font-size:9px;font-weight:400;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.3);line-height:1.8;text-align:right;}
+
+/* ——— RESPONSIVE —— */
+@media(max-width:960px){
+  .sumario-grid,.tipo-grid,.lockup-grid,.voz-grid,.pilares-grid,.resumo-grid{grid-template-columns:1fr 1fr;}
+  .verba-layout,.aportes-layout,.report-layout,.inf-layout,.gmb-layout{grid-template-columns:1fr;}
+  .midia-grid,.dor-grid,.manual-grid{grid-template-columns:1fr;}
+  .social-layout{grid-template-columns:1fr;}
+  nav .nav-links{display:none;}
+  .form-cta{flex-direction:column;align-items:flex-start;}
+}
+@media(max-width:600px){
+  .sumario-grid,.resumo-grid{grid-template-columns:1fr;}
+  section{padding:64px 5vw;}
+  .chapter-divider{padding:20px 5vw;}
+}
+</style>
+</head>
+<body>
+<div id="cur"></div>
+<div id="ring"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-brand">
+    <div class="nav-logo"><span>Pure</span> Pilates</div>
+    <div class="nav-divider"></div>
+    <div class="nav-doc">Políticas de Marketing</div>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#verba">Verbas</a></li>
+    <li><a href="#midia">Mídia</a></li>
+    <li><a href="#aportes">Aportes</a></li>
+    <li><a href="#report">Report</a></li>
+    <li><a href="#social">Social</a></li>
+    <li><a href="#influencers">Influencers</a></li>
+    <li><a href="#gmb">Google</a></li>
+  </ul>
+</nav>
+
+<!-- ——————— HERO ——————— -->
+<section class="hero">
+  <div class="hero-diag"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">Documento Oficial · Agosto 2025</p>
+    <p class="hero-pre">Rede Pure Pilates — Franqueados</p>
+    <h1 class="hero-title">
+      <span class="block">Políticas</span>
+      <span class="block">de <span class="r">Marketing</span></span>
+    </h1>
+    <div class="hero-bar"></div>
+    <p class="hero-sub">Diretrizes, verbas e práticas para toda a rede</p>
+    <div class="hero-meta">
+      <div class="hero-badge">Versão <span>1.0</span></div>
+      <div class="hero-badge">Uso <span>Interno</span></div>
+      <div class="hero-badge"><span>7</span> Capítulos</div>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <span class="hero-scroll-label">Rolar</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- ——————— SUM—RIO ——————— -->
+<section class="s-sumario">
+  <div class="tag reveal">Sumário</div>
+  <h2 class="sec-title reveal">O que está<br><span class="r">neste documento</span></h2>
+  <div class="sumario-grid reveal">
+    <a class="si" href="#verba"><span class="si-num">01</span><div class="si-title">Verba Operacional</div><div class="si-desc">Taxa de propaganda e despesas estruturais de marketing</div><span class="si-arrow">→</span></a>
+    <a class="si" href="#midia"><span class="si-num">02</span><div class="si-title">Contribuição de Mídia</div><div class="si-desc">Distribuição do investimento em tráfego pago</div><span class="si-arrow">→</span></a>
+    <a class="si" href="#aportes"><span class="si-num">03</span><div class="si-title">Aportes Adicionais</div><div class="si-desc">Investimento adicional do franqueado</div><span class="si-arrow">→</span></a>
+    <a class="si" href="#report"><span class="si-num">04</span><div class="si-title">Report & Resultados</div><div class="si-desc">Transparência e acompanhamento de campanhas</div><span class="si-arrow">→</span></a>
+    <a class="si" href="#social"><span class="si-num">05</span><div class="si-title">Redes Sociais Locais</div><div class="si-desc">Diretrizes para perfis das unidades</div><span class="si-arrow">→</span></a>
+    <a class="si" href="#influencers"><span class="si-num">06</span><div class="si-title">Influenciadores</div><div class="si-desc">Manual de parceria, fluxo e formulário</div><span class="si-arrow">→</span></a>
+    <a class="si" href="#gmb"><span class="si-num">07</span><div class="si-title">Google Meu Negócio</div><div class="si-desc">Presença digital local como construção contínua</div><span class="si-arrow">→</span></a>
+    <div class="si" style="cursor:none;"><span class="si-num">→</span><div class="si-title" style="color:var(--muted);">Resumo Executivo</div><div class="si-desc">Consulta rápida de todas as diretrizes</div><span class="si-arrow" style="color:#ccc;">→</span></div>
+  </div>
+</section>
+
+<!-- ——— DIVIDER 01 ——— -->
+<div class="chapter-divider reveal" id="verba">
+  <div class="cd-inner">
+    <span class="cd-num">01</span>
+    <svg class="cd-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="3" width="16" height="14" rx="1"/><line x1="2" y1="7" x2="18" y2="7"/><line x1="7" y1="3" x2="7" y2="19"/></svg>
+    <span class="cd-label">Verba de Marketing Operacional</span>
+    <span class="cd-arrow">→</span>
+  </div>
+</div>
+
+<!-- ——————— 01 VERBA ——————— -->
+<section class="s-verba">
+  <div class="tag reveal">01 — Verba de Marketing Operacional</div>
+  <h2 class="sec-title reveal">A estrutura que<br><span class="r">mantém a marca viva</span></h2>
+  <p class="sec-intro reveal d1">A verba de marketing operacional é o valor mensal oriundo da <strong>taxa de propaganda</strong>. Destinamos este recurso para despesas estruturais da área de marketing da franqueadora.</p>
+
+  <div class="verba-layout reveal d2">
+    <div class="verba-main">
+      <span class="verba-main-title">Finalidade da verba</span>
+      <p class="verba-main-body">Este recurso sustenta a operação estratégica e criativa da marca em nível nacional — do time que pensa os conteúdos — s ferramentas que distribuem. Ele não é revertido em mídia paga para as unidades individualmente, mas é a base que viabiliza toda a comunicação da rede.</p>
+    </div>
+    <div class="verba-items">
+      <div class="vi"><div class="vi-dot"></div><span class="vi-text">Staff e equipe de marketing da franqueadora</span></div>
+      <div class="vi"><div class="vi-dot"></div><span class="vi-text">Licenças de ferramentas, plataformas e softwares</span></div>
+      <div class="vi"><div class="vi-dot"></div><span class="vi-text">Gestão e operação das redes sociais da marca</span></div>
+      <div class="vi"><div class="vi-dot"></div><span class="vi-text">Produção de conteúdos institucionais e criativos</span></div>
+      <div class="vi"><div class="vi-dot"></div><span class="vi-text">Manutenção e desenvolvimento de ativos de marca</span></div>
+      <div class="alert-box">
+        <span class="alert-label">—  Atenção</span>
+        <p class="alert-text">Esta verba não é revertida em mídia paga para as unidades. Ela sustenta a operação estratégica e criativa da marca a nível nacional.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ——— DIVIDER 02 ——— -->
+<div class="chapter-divider reveal" id="midia">
+  <div class="cd-inner">
+    <span class="cd-num">02</span>
+    <svg class="cd-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="10" cy="10" r="8"/><line x1="10" y1="2" x2="10" y2="18"/><line x1="2" y1="10" x2="18" y2="10"/><circle cx="10" cy="10" r="3" fill="currentColor" stroke="none"/></svg>
+    <span class="cd-label">Contribuição Mensal para Mídia</span>
+    <span class="cd-arrow">→</span>
+  </div>
+</div>
+
+<!-- ——————— 02 M—DIA ——————— -->
+<section class="s-midia" id="midia-section">
+  <div class="tag reveal">02 — Contribuição Mensal para Mídia</div>
+  <h2 class="sec-title reveal">Como distribuímos<br><span class="r">o investimento</span></h2>
+  <p class="sec-intro reveal d1">O valor mensal de mídia é destinado exclusivamente —  compra de espaço publicitário em plataformas digitais para geração de leads e aquisição de novos alunos. A distribuição é estratégica em três frentes.</p>
+
+  <div class="midia-grid reveal d2">
+    <div class="mc">
+      <span class="mc-num">01</span>
+      <svg class="mc-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="18" r="14"/><circle cx="18" cy="18" r="5" fill="currentColor" stroke="none"/><line x1="18" y1="4" x2="18" y2="12"/><line x1="18" y1="24" x2="18" y2="32"/><line x1="4" y1="18" x2="12" y2="18"/><line x1="24" y1="18" x2="32" y2="18"/></svg>
+      <h3 class="mc-title">Foco: Aula Experimental</h3>
+      <p class="mc-body">A maior parcela é direcionada para campanhas com foco em conversão direta — levando potenciais alunos a agendarem uma aula experimental. Principal métrica de aquisição da rede.</p>
+      <span class="mc-tag">Prioridade máxima</span>
+    </div>
+    <div class="mc">
+      <span class="mc-num">02</span>
+      <svg class="mc-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="9" width="26" height="18" rx="1"/><line x1="5" y1="15" x2="31" y2="15"/><line x1="13" y1="9" x2="13" y2="27"/></svg>
+      <h3 class="mc-title">Campanhas Promocionais</h3>
+      <p class="mc-body">Parcela reservada para ações sazonais — campanhas de datas comemorativas, períodos de alta demanda e ativações especiais ao longo do calendário da marca.</p>
+      <span class="mc-tag">Sazonal</span>
+    </div>
+    <div class="mc">
+      <span class="mc-num">03</span>
+      <svg class="mc-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="13" r="6"/><path d="M6 32c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke-linecap="round"/><line x1="27" y1="7" x2="32" y2="7"/><line x1="29.5" y1="4.5" x2="29.5" y2="9.5"/></svg>
+      <h3 class="mc-title">Institucional & Trabalhe Conosco</h3>
+      <p class="mc-body">Fração que apoia campanhas de fortalecimento de marca no Google (pesquisa e display) e ações de atração de instrutores qualificados para expansão da rede.</p>
+      <span class="mc-tag">Marca & Talentos</span>
+    </div>
+  </div>
+</section>
+
+<!-- ——— DIVIDER 03 ——— -->
+<div class="chapter-divider reveal" id="aportes">
+  <div class="cd-inner">
+    <span class="cd-num">03</span>
+    <svg class="cd-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2"><line x1="10" y1="3" x2="10" y2="17"/><line x1="3" y1="10" x2="17" y2="10"/></svg>
+    <span class="cd-label">Aportes Adicionais</span>
+    <span class="cd-arrow">→</span>
+  </div>
+</div>
+
+<!-- ——————— 03 APORTES ——————— -->
+<section class="s-aportes" id="aportes-section">
+  <div class="tag reveal">03 — O que o Franqueado pode aportar</div>
+  <h2 class="sec-title reveal">Investimento<br><span class="r">além do básico</span></h2>
+  <p class="sec-intro reveal d1">Além das contribuições obrigatórias, o franqueado pode realizar aportes adicionais para ampliar presença local e acelerar resultados específicos da sua unidade.</p>
+
+  <div class="aportes-layout reveal d2">
+    <div class="aportes-left">
+      <div class="pkg-table">
+        <div class="pkg-header"><span>Pacote</span><span>Valor Mensal</span><span>Período</span></div>
+        <div class="pkg-row"><span>Essencial</span><span class="val">R$ 1.500</span><span class="dur">3 meses</span></div>
+        <div class="pkg-row"><span>Crescimento</span><span class="val">R$ 2.000</span><span class="dur">3 meses</span></div>
+        <div class="pkg-row"><span>Aceleração</span><span class="val">R$ 2.500</span><span class="dur">3 meses</span></div>
+      </div>
+      <div class="alert-box" style="border:1px solid rgba(176,30,30,.2);">
+        <span class="alert-label">🎯 Orientação</span>
+        <p class="alert-text">O aporte adicional é recomendado para unidades em inauguração ou que desejam acelerar o crescimento local. A escolha considera o potencial do mercado e a capacidade de absorção da unidade.</p>
+      </div>
+    </div>
+    <div class="aportes-right">
+      <div class="acard"><span class="acard-label">Novas Unidades</span><h3 class="acard-title">Reforço de Presença Local</h3><p class="acard-body">Unidades em inauguração podem investir valor adicional nos primeiros 3 meses para acelerar a captação inicial e consolidar presença no mercado local.</p></div>
+      <div class="acard"><span class="acard-label">Captação de Talentos</span><h3 class="acard-title">Leads de Instrutores</h3><p class="acard-body">O franqueado pode aportar verbas para campanhas específicas de atração de instrutores qualificados, garantindo um time de alta performance.</p></div>
+      <div class="acard" style="background:var(--red-bg);"><span class="acard-label">Unidades Críticas</span><h3 class="acard-title">Plano de Reforço</h3><p class="acard-body">Unidades com queda de performance podem acionar o time de marketing para proposta personalizada — mesmos patamares aplicados a novas unidades.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ——— DIVIDER 04 ——— -->
+<div class="chapter-divider reveal" id="report">
+  <div class="cd-inner">
+    <span class="cd-num">04</span>
+    <svg class="cd-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="14" height="14" rx="1"/><line x1="7" y1="8" x2="13" y2="8"/><line x1="7" y1="11" x2="13" y2="11"/><line x1="7" y1="14" x2="10" y2="14"/></svg>
+    <span class="cd-label">Report & Transparência</span>
+    <span class="cd-arrow">→</span>
+  </div>
+</div>
+
+<!-- ——————— 04 REPORT ——————— -->
+<section class="s-report" id="report-section">
+  <div class="tag reveal">04 — Report & Transparência</div>
+  <h2 class="sec-title reveal">Como funcionam<br><span class="r">os resultados</span></h2>
+  <p class="sec-intro reveal d1">A gestão de campanhas é centralizada pelo Pure System, que possui visão total dos leads gerados em toda a rede.</p>
+
+  <div class="report-layout reveal d2">
+    <div class="report-card">
+      <svg class="rc-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="18" r="14"/><path d="M11 18l5 5 9-10" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h3 class="rc-title">Coordenação por Clusters</h3>
+      <p class="rc-body">Campanhas gerenciadas por agrupamentos geográficos (clusters) para garantir eficiência. Por este motivo, <strong style="color:var(--ink)">não existe report individual por unidade</strong> no modelo padrão.</p>
+    </div>
+    <div class="report-card">
+      <svg class="rc-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="7" y="5" width="22" height="26" rx="1"/><line x1="12" y1="13" x2="24" y2="13"/><line x1="12" y1="18" x2="24" y2="18"/><line x1="12" y1="23" x2="18" y2="23"/><circle cx="26" cy="26" r="5" fill="var(--red)" stroke="none"/><line x1="23.5" y1="26" x2="28.5" y2="26" stroke="white" stroke-width="1.5"/><line x1="26" y1="23.5" x2="26" y2="28.5" stroke="white" stroke-width="1.5"/></svg>
+      <h3 class="rc-title">Report para Aportes Adicionais</h3>
+      <p class="rc-body">Com aporte adicional, o franqueado recebe relatório específico do veículo digital utilizado (Meta Ads, Google Ads), apresentando os resultados do investimento realizado.</p>
+    </div>
+    <div class="report-highlight reveal d3">
+      <svg class="rh-icon" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="16" cy="16" r="12"/><line x1="16" y1="11" x2="16" y2="18"/><circle cx="16" cy="22" r="1.5" fill="currentColor" stroke="none"/></svg>
+      <p class="rh-text"><strong>Importante:</strong> O relatório de aporte é gerado diretamente pelo veículo digital. O franqueado não tem acesso à visão consolidada do cluster — essa gestão é responsabilidade da franqueadora via Pure System.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ——— DIVIDER 05 ——— -->
+<div class="chapter-divider reveal" id="social">
+  <div class="cd-inner">
+    <span class="cd-num">05</span>
+    <svg class="cd-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><line x1="10" y1="3" x2="10" y2="7"/><line x1="10" y1="13" x2="10" y2="17"/><line x1="3" y1="10" x2="7" y2="10"/><line x1="13" y1="10" x2="17" y2="10"/></svg>
+    <span class="cd-label">Redes Sociais Locais</span>
+    <span class="cd-arrow">→</span>
+  </div>
+</div>
+
+<!-- ——————— 05 SOCIAL ——————— -->
+<section class="s-social" id="social-section">
+  <div class="tag reveal">05 — Redes Sociais Locais</div>
+  <h2 class="sec-title reveal">Perfis locais:<br><span class="r">extensão da marca</span></h2>
+  <p class="sec-intro reveal d1">A gestão das redes sociais locais é responsabilidade do franqueado, que deve atuar como extensão fiel da comunicação da matriz.</p>
+
+  <div class="social-layout reveal d2">
+    <div class="social-card">
+      <div class="sc-badge"><div class="sc-dot" style="background:#2E7D32;"></div><span class="sc-badge-text">Obrigatório</span></div>
+      <h3 class="sc-title">Suporte ao Conteúdo da Matriz</h3>
+      <p class="sc-body">Todas as unidades devem suportar mensalmente os conteúdos produzidos e distribuídos pela franqueadora. Inclui reposts, compartilhamentos e alinhamento com o calendário nacional da marca.</p>
+      <div class="sc-rule"></div>
+      <p class="sc-note">O calendário de conteúdo da matriz é enviado mensalmente pelo time de marketing.</p>
+    </div>
+    <div class="social-card">
+      <div class="sc-badge"><div class="sc-dot" style="background:#999;"></div><span class="sc-badge-text">Opcional — com restrições</span></div>
+      <h3 class="sc-title">Produção de Conteúdo Próprio</h3>
+      <p class="sc-body">Não é obrigatória a produção própria. Caso o franqueado opte, todo conteúdo deve seguir rigorosamente os padrões visuais e editoriais da marca Pure Pilates.</p>
+      <div class="sc-rule"></div>
+      <p class="sc-note">Em dúvida, consulte o time de marketing antes de publicar.</p>
+    </div>
+    <div class="social-card proib" style="grid-column:1/-1;">
+      <div class="sc-badge"><div class="sc-dot" style="background:var(--red);"></div><span class="sc-badge-text">Proibido</span></div>
+      <h3 class="sc-title" style="color:var(--red);">Conteúdos fora dos padrões da marca</h3>
+      <p class="sc-body">Produção ou publicação que fuja dos padrões do Manual de Identidade da Marca Pure Pilates é expressamente proibida — cores, fontes, linguagem e tom de comunicação.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ——— DIVIDER 06 ——— -->
+<div class="chapter-divider reveal" id="influencers">
+  <div class="cd-inner">
+    <span class="cd-num">06</span>
+    <svg class="cd-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="10" cy="7" r="4"/><path d="M3 18c0-3.866 3.134-7 7-7s7 3.134 7 7"/></svg>
+    <span class="cd-label">Manual de Influenciadores</span>
+    <span class="cd-arrow">→</span>
+  </div>
+</div>
+
+<!-- ——————— 06 INFLUENCERS ——————— -->
+<section class="s-influencers" id="influencers-section">
+  <div class="tag reveal">06 — Influenciadores Digitais</div>
+  <h2 class="sec-title reveal">Parcerias com<br><span class="r">aprovação obrigatória</span></h2>
+  <p class="sec-intro reveal d1">Os influenciadores são a extensão da marca, levando a experiência Pure Pilates a mais pessoas. A parceria exige fluxo oficial de aprovação e alinhamento com a identidade da rede.</p>
+
+  <!-- CTA Formulário -->
+  <div class="form-cta reveal d2">
+    <div class="form-cta-text">
+      <span class="form-cta-label">Ação obrigatória · Primeiro passo</span>
+      <div class="form-cta-title">Formulário de Validação de Influencers</div>
+      <div class="form-cta-desc">SLA: análise e aprovação em até 7 dias úteis pelo time de marketing</div>
+    </div>
+    <a class="form-btn" href="https://docs.google.com/forms/d/1t1GRUbC9J_eG-Wef_qVfrZPW_Ubkg1fO275uSLa5QwA/viewform?edit_requested=true" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="12" height="12" rx="1"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="8" y2="11"/></svg>
+      Acessar Formulário
+    </a>
+  </div>
+
+  <!-- Fluxo + Diretrizes -->
+  <div class="inf-layout reveal d3">
+    <div class="inf-flow">
+      <span class="inf-flow-title">Fluxo de Parceria — 4 etapas</span>
+      <div class="flow-step">
+        <div class="flow-num"><span>01</span></div>
+        <div><div class="flow-title">Escolha & Formulário</div><div class="flow-body">O estúdio identifica o influenciador e preenche o formulário oficial para centralizar informações e agilizar a análise.</div></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num"><span>02</span></div>
+        <div><div class="flow-title">Análise e Aprovação — Marketing</div><div class="flow-body">O time de marketing avalia em até 7 dias úteis: autenticidade da base, engajamento, público alinhado, reputação e qualidade do conteúdo.</div></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num"><span>03</span></div>
+        <div><div class="flow-title">Negociação e Cadastro — Marketing</div><div class="flow-body">Com aprovação, o time de marketing formaliza a parceria. O franqueado conduz a permuta diretamente com o influenciador.</div></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num"><span>04</span></div>
+        <div><div class="flow-title">Acompanhamento via BuzzMonitor</div><div class="flow-body">Todas as entregas são monitoradas pelo time de marketing. Publicações e stories devem sempre incluir @ da Pure Pilates.</div></div>
+      </div>
+    </div>
+
+    <div class="inf-right">
+      <div class="inf-card">
+        <span class="inf-card-label ok">Pacote de Permuta</span>
+        <h3 class="inf-card-title">O que a Pure oferece</h3>
+        <p class="inf-card-body">Pacote de <strong style="color:var(--ink)">10 aulas por 45 dias</strong> em permuta. Com renovação, o influenciador migra para pacote manual com 2 aulas por semana.</p>
+        <ul class="inf-list ok">
+          <li>Fase 1: 10 aulas em 45 dias — agendar pelo app</li>
+          <li>Renovação: plano manual recorrente (2x/semana)</li>
+          <li>Periodicidade definida com o time de marketing</li>
+        </ul>
+      </div>
+      <div class="inf-card">
+        <span class="inf-card-label ok">Pode</span>
+        <h3 class="inf-card-title">Diretrizes — O que é permitido</h3>
+        <ul class="inf-list ok">
+          <li>Mostrar benefícios do Pilates na rotina</li>
+          <li>Compartilhar a experiência da aula experimental</li>
+          <li>Marcar <strong style="color:var(--ink)">@purepilatesbr</strong> em todas as publicações</li>
+          <li>Produzir conteúdo com linguagem leve e motivadora</li>
+          <li>Usar o selo <em>"A MELHOR HORA DO SEU DIA · TÔ PAGO"</em></li>
+        </ul>
+      </div>
+      <div class="inf-card">
+        <span class="inf-card-label no">Não pode</span>
+        <h3 class="inf-card-title">O que é proibido</h3>
+        <ul class="inf-list no">
+          <li>Usar termos negativos relacionados ao Pilates</li>
+          <li>Divulgar informações incorretas sobre a prática</li>
+          <li>Criar conteúdo com linguagem ofensiva ou polêmica</li>
+          <li>Promover concorrentes na mesma campanha</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Critérios de aprovação -->
+  <div class="manual-block reveal d4">
+    <div class="manual-header">
+      <svg class="manual-header-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M10 2l2 6h6l-5 3.5 2 6L10 14l-5 3.5 2-6L2 8h6z"/></svg>
+      <div>
+        <div class="manual-header-text">Critérios de Aprovação de Influenciadores</div>
+        <div class="manual-header-sub">Política oficial Pure Pilates · AGO 2025</div>
+      </div>
+    </div>
+    <div class="manual-grid">
+      <div class="mg-card"><span class="mg-num">01</span><div class="mg-title">Autenticidade da base</div><p class="mg-body">Seguidores reais e qualificados — evitar público fake ou adquirido.</p></div>
+      <div class="mg-card"><span class="mg-num">02</span><div class="mg-title">Crescimento saudável</div><p class="mg-body">Evolução orgânica, sem picos artificiais no histórico de seguidores.</p></div>
+      <div class="mg-card"><span class="mg-num">03</span><div class="mg-title">Engajamento compatível</div><p class="mg-body">Taxa adequada ao tamanho e nicho. Comentários genuínos, não genéricos.</p></div>
+      <div class="mg-card"><span class="mg-num">04</span><div class="mg-title">Público alinhado</div><p class="mg-body">Localização, gênero, faixa etária e interesses compatíveis com a marca.</p></div>
+      <div class="mg-card"><span class="mg-num">05</span><div class="mg-title">Autoridade no nicho</div><p class="mg-body">Influência real na decisão de compra. Evitar perfis generalistas sem identidade.</p></div>
+      <div class="mg-card"><span class="mg-num">06</span><div class="mg-title">Qualidade do conteúdo</div><p class="mg-body">Estética, frequência e coerência com o posicionamento da marca Pure Pilates.</p></div>
+      <div class="mg-card"><span class="mg-num">07</span><div class="mg-title">Reputação e conduta</div><p class="mg-body">Histórico sem polêmicas que possam prejudicar a imagem da marca.</p></div>
+      <div class="mg-card"><span class="mg-num">08</span><div class="mg-title">Profissionalismo</div><p class="mg-body">Cumpre prazos, responde com agilidade e entende o briefing sem resistências.</p></div>
+      <div class="mg-card"><span class="mg-num">09</span><div class="mg-title">Segmentação por porte</div><p class="mg-body">Nano–Micro: narrativas. Médio+: narrativas + performance remunerada.</p></div>
+    </div>
+  </div>
+
+  <!-- Conteúdo esperado / Dores -->
+  <div class="reveal d4" style="margin-top:2px;">
+    <div class="manual-header" style="background:var(--red);">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.4"><path d="M10 17s-7-4.5-7-9a7 7 0 0114 0c0 4.5-7 9-7 9z"/><circle cx="10" cy="8" r="2"/></svg>
+      <div>
+        <div class="manual-header-text">Dor — Solução: narrativas para o influenciador</div>
+        <div class="manual-header-sub">Campanha "A melhor hora do seu dia" · Etapa 1: foco em alcance e narrativa</div>
+      </div>
+    </div>
+    <div class="dor-grid">
+      <div class="dor-card"><div class="dor-pain"><span>01</span> Dor nas costas</div><div class="dor-pain-text">"Eu vivia com dor nas costas, sentar no trabalho era um desafio."</div><div class="dor-sol">Solução</div><div class="dor-sol-text">"No Pilates aprendi a fortalecer o core e alinhar a postura. Hoje minha coluna agradece — é minha melhor hora do dia."</div></div>
+      <div class="dor-card"><div class="dor-pain"><span>02</span> Estresse e ansiedade</div><div class="dor-pain-text">"Minha cabeça não parava nem um segundo. Trabalho, rotina, tudo me deixava esgotada."</div><div class="dor-sol">Solução</div><div class="dor-sol-text">"No estúdio, eu respiro, foco e volto leve. O Pilates virou meu reset mental — aquele momento só meu."</div></div>
+      <div class="dor-card"><div class="dor-pain"><span>03</span> Falta de autocuidado</div><div class="dor-pain-text">"Eu passava o dia cuidando de tudo, menos de mim."</div><div class="dor-sol">Solução</div><div class="dor-sol-text">"Os treinos da Pure cabem na rotina e mudam o meu dia. É o tempo que eu tiro pra me reconectar."</div></div>
+      <div class="dor-card"><div class="dor-pain"><span>04</span> Corpo rígido / home office</div><div class="dor-pain-text">"Home office acabou com a minha postura. Pescoço e ombros sempre duros."</div><div class="dor-sol">Solução</div><div class="dor-sol-text">"Com os exercícios da Pure, voltei a ter mobilidade. Hoje trabalho sem dor e com mais energia."</div></div>
+      <div class="dor-card"><div class="dor-pain"><span>05</span> Falta de motivação</div><div class="dor-pain-text">"Eu já tinha desistido de tentar treinar. Academia me cansava antes de começar."</div><div class="dor-sol">Solução</div><div class="dor-sol-text">"Na Pure, a aula em grupo me motiva. É leve, divertida, e saio sempre melhor do que entrei."</div></div>
+      <div class="dor-card" style="background:var(--red-bg);">
+        <div class="dor-pain">⚠ Etapa 1</div>
+        <p style="font-size:12px;font-weight:300;line-height:1.75;color:var(--mid);">Neste momento <strong style="color:var(--ink)">não vamos atrelar a ação à geração de leads</strong>. O foco é alcance e fortalecimento da narrativa. A conversão ocorre em formatos posteriores com cupom e performance remunerada.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script de abordagem -->
+  <div class="script-box reveal d5">
+    <span class="script-label">Sugestão de Script · Abordagem inicial</span>
+    <p class="script-text">Olá, <strong>[Nome do Influenciador]</strong>! Tudo bem? Me chamo <strong>[Seu Nome]</strong> e represento a Pure Pilates na unidade <strong>[Nome da Unidade]</strong>.<br><br>Gostamos muito do seu perfil e acreditamos que você tem tudo a ver com a nossa marca! Estamos buscando parceiros para divulgar a experiência de uma aula de Pilates e acreditamos que seus seguidores iriam adorar.<br><br>Caso tenha interesse, podemos conversar melhor? Um grande abraço e espero seu retorno!</p>
+  </div>
+</section>
+
+<!-- ——— DIVIDER 07 ——— -->
+<div class="chapter-divider reveal" id="gmb">
+  <div class="cd-inner">
+    <span class="cd-num">07</span>
+    <svg class="cd-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="10" cy="9" r="5"/><path d="M10 14s-5-3-5-7a5 5 0 0110 0c0 4-5 7-5 7z"/><circle cx="10" cy="9" r="2" fill="currentColor" stroke="none"/></svg>
+    <span class="cd-label">Google Meu Negócio</span>
+    <span class="cd-arrow">→</span>
+  </div>
+</div>
+
+<!-- ——————— 07 GMB ——————— -->
+<section class="s-gmb" id="gmb-section">
+  <div class="tag reveal">07 — Google Meu Negócio</div>
+  <h2 class="sec-title reveal">Presença local<br>é uma <span class="r">construção</span></h2>
+  <p class="sec-intro reveal d1">O Google Meu Negócio é uma das ferramentas mais importantes para a presença digital local. Manter ativo não é opcional — é parte fundamental da estratégia da unidade.</p>
+
+  <div class="gmb-layout reveal d2">
+    <div class="gmb-main">
+      <span class="gmb-main-title">Responsabilidades da Franquia</span>
+      <p class="gmb-main-body">A ativação, gestão e manutenção do perfil é de responsabilidade direta de cada franquia. Perfis desatualizados prejudicam o ranqueamento local e comprometem a captação orgânica de novos alunos.</p>
+      <ul class="gmb-checklist">
+        <li>Informações sempre atualizadas: endereço, horário, telefone e fotos</li>
+        <li>Solicitação ativa de avaliações de alunos após cada aula</li>
+        <li>Resposta às avaliações recebidas — positivas e negativas</li>
+        <li>Publicação periódica de posts e novidades no perfil</li>
+        <li>Fotos da unidade, equipe e equipamentos em alta qualidade</li>
+        <li>Categorias e serviços cadastrados corretamente</li>
+      </ul>
+    </div>
+    <div class="gmb-right">
+      <div class="gmb-stat">
+        <span class="gmb-stat-num">97%</span>
+        <span class="gmb-stat-label">dos usuários pesquisam antes de decidir</span>
+        <p class="gmb-stat-body">Perfil incompleto ou desatualizado representa perda direta de alunos que estão buscando no Google agora.</p>
+      </div>
+      <div class="gmb-stat">
+        <span class="gmb-stat-num">#1</span>
+        <span class="gmb-stat-label">Canal Orgânico Local</span>
+        <p class="gmb-stat-body">O Google Meu Negócio é o principal canal de tráfego orgânico sem custo de mídia para unidades físicas.</p>
+      </div>
+      <div class="alert-box" style="border:1px solid rgba(176,30,30,.2);">
+        <span class="alert-label">—  Atenção</span>
+        <p class="alert-text">A franqueadora não gerencia perfis locais. Esta ativação é de responsabilidade exclusiva de cada franquia.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ——— DIVIDER RESUMO ——— -->
+<div class="chapter-divider reveal">
+  <div class="cd-inner">
+    <svg class="cd-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="16" height="16" rx="1"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="10" x2="14" y2="10"/><line x1="6" y1="13" x2="10" y2="13"/></svg>
+    <span class="cd-label">Resumo Executivo</span>
+    <span class="cd-arrow">→</span>
+  </div>
+</div>
+
+<!-- ——————— RESUMO ——————— -->
+<section class="s-resumo">
+  <div class="tag reveal">Resumo Executivo</div>
+  <h2 class="sec-title reveal">Consulta rápida<br><span class="r">das diretrizes</span></h2>
+  <div class="resumo-grid reveal d1">
+    <div class="rcard"><span class="rcard-num">01</span><h4 class="rcard-title">Verba Operacional</h4><p class="rcard-body">Oriunda da taxa de propaganda. Cobre staff, ferramentas, social e conteúdos. Não reverte em mídia paga para unidades.</p></div>
+    <div class="rcard"><span class="rcard-num">02</span><h4 class="rcard-title">Verba de Mídia</h4><p class="rcard-body">Tráfego pago: foco aula experimental (prioridade), campanhas promocionais e institucional/Google.</p></div>
+    <div class="rcard"><span class="rcard-num">03</span><h4 class="rcard-title">Aporte Adicional</h4><p class="rcard-body">R$1.500, R$2.000 ou R$2.500/mês por 3 meses. Para novas unidades, captação de instrutores ou unidades críticas.</p></div>
+    <div class="rcard"><span class="rcard-num">04</span><h4 class="rcard-title">Report</h4><p class="rcard-body">Gerido por cluster — sem report individual no padrão. Com aporte, o franqueado recebe report do veículo digital.</p></div>
+    <div class="rcard"><span class="rcard-num">05</span><h4 class="rcard-title">Social Local</h4><p class="rcard-body">Suporte ao conteúdo da matriz é obrigatório. Produção própria permitida, desde que siga os padrões da marca.</p></div>
+    <div class="rcard"><span class="rcard-num">06</span><h4 class="rcard-title">Influencers</h4><p class="rcard-body">Formulário obrigatório — aprovação em 7 dias úteis. Pacote: 10 aulas/45 dias. Permutas conduzidas pelo franqueado.</p></div>
+    <div class="rcard highlight" style="grid-column:1/-1;"><span class="rcard-num">07</span><h4 class="rcard-title">Google Meu Negócio</h4><p class="rcard-body" style="max-width:600px;">Presença local é uma construção contínua — responsabilidade exclusiva da franquia. Manter ativo, atualizado e com avaliações constantes é parte fundamental da estratégia de captação orgânica.</p></div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo"><span>Pure</span> Pilates</div>
+  <div class="footer-meta">
+    <p>Políticas de Marketing · Versão 1.0 · Agosto 2025</p>
+    <p>Uso interno — Franqueados e Equipe de Marketing</p>
+  </div>
+</footer>
+
+<script>
+const cur=document.getElementById('cur'),ring=document.getElementById('ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function tick(){
+  cur.style.left=mx+'px';cur.style.top=my+'px';
+  rx+=(mx-rx)*.14;ry+=(my-ry)*.14;
+  ring.style.left=rx+'px';ring.style.top=ry+'px';
+  requestAnimationFrame(tick);
+})();
+
+const nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>60));
+
+const obs=new IntersectionObserver(es=>{
+  es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('on');});
+},{threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    const t=document.querySelector(a.getAttribute('href'));
+    if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth'});}
+  });
+});
+</script>
+</body>
+</html>
