@@ -4,7 +4,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, ArrowLeft, Loader2, Inbox } from 'lucide-react';
+import { Building2, ArrowLeft, Loader2, Inbox, CircleCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -52,6 +52,7 @@ const MidiaAdicionalUnidades = () => {
 
   const [requests, setRequests] = useState<MidiaRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [acaoEmAndamento, setAcaoEmAndamento] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -74,6 +75,26 @@ const MidiaAdicionalUnidades = () => {
   useEffect(() => {
     if (podeAcessar) carregar();
   }, [podeAcessar, carregar]);
+
+  const aprovarVerba = async (id: string) => {
+    setAcaoEmAndamento(id);
+    try {
+      const { error } = await supabase
+        .from('midia_adicional_requests')
+        .update({ status: 'aprovada' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'aprovada' } : r)));
+      toast.success('Verba aprovada.');
+    } catch (err: any) {
+      console.error('Erro ao aprovar verba:', err);
+      toast.error(err?.message || 'Não foi possível aprovar a verba.');
+    } finally {
+      setAcaoEmAndamento(null);
+    }
+  };
 
   if (!authLoading && !podeAcessar) {
     return (
@@ -141,6 +162,8 @@ const MidiaAdicionalUnidades = () => {
               <div className="space-y-3">
                 {requests.map((req) => {
                   const statusMeta = STATUS_META[req.status];
+                  const carregandoAcao = acaoEmAndamento === req.id;
+                  const ehPendente = req.status === 'pendente';
                   return (
                     <div key={req.id}
                       className="rounded-lg border border-foreground/10 p-4 hover:border-foreground/20 transition-colors">
@@ -165,8 +188,25 @@ const MidiaAdicionalUnidades = () => {
                             {req.email_franqueado ? ` · ${req.email_franqueado}` : ''}
                           </p>
                         </div>
-                        <div className="text-xs text-muted-foreground sm:text-right shrink-0">
-                          Solicitada em<br className="hidden sm:inline" /> {formatarDataHora(req.created_at)}
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <div className="text-xs text-muted-foreground sm:text-right">
+                            Solicitada em<br className="hidden sm:inline" /> {formatarDataHora(req.created_at)}
+                          </div>
+                          {ehPendente && (
+                            <Button
+                              size="sm"
+                              onClick={() => aprovarVerba(req.id)}
+                              disabled={carregandoAcao}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              {carregandoAcao ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <CircleCheck className="h-4 w-4 mr-2" />
+                              )}
+                              Aprovar verba
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>

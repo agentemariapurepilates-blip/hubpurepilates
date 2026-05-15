@@ -32,7 +32,18 @@ import {
   Bot,
   ChevronDown,
   ChevronRight,
+  Globe,
+  Inbox,
 } from 'lucide-react';
+
+const SectionTag = ({ icon: Icon, label }: { icon: React.ComponentType<{ className?: string }>; label: string }) => (
+  <div className="pt-4 pb-2 px-4">
+    <span className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+      <Icon className="h-3 w-3" />
+      {label}
+    </span>
+  </div>
+);
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState, useEffect } from 'react';
 
@@ -87,9 +98,7 @@ const Sidebar = () => {
     { name: 'Comece aqui', href: '/', icon: Home },
     { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
     { name: 'Tutorial do Marketing', href: '/tutorial-marketing', icon: ScrollText },
-    ...((isFranqueado || isColaborador)
-      ? [{ name: 'Mídia adicional', href: '/autorizar-midia-adicional', icon: Megaphone }]
-      : []),
+    { name: 'Mídia adicional', href: '/autorizar-midia-adicional', icon: Megaphone },
     { name: 'Avisos', href: '/avisos', icon: Megaphone },
     { name: 'Parcerias', href: '/parcerias', icon: Handshake },
     { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
@@ -122,6 +131,7 @@ const Sidebar = () => {
   // Minha Área section
   const minhaAreaNavigation = [
     { name: 'Relatórios', href: '#', icon: FileText, disabled: true },
+    { name: 'Minhas solicitações', href: '#', icon: Inbox, disabled: true },
   ];
 
   // Admin section
@@ -136,7 +146,8 @@ const Sidebar = () => {
       </div>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {/* Main Navigation - No section label */}
+        {/* Geral Section - accessible by everyone */}
+        <SectionTag icon={Globe} label="Geral" />
         {mainNavigation.map((item) => (
           <NavLink
             key={item.name}
@@ -159,12 +170,7 @@ const Sidebar = () => {
         {/* Colaboradores Section - Only for colaboradores and admins */}
         {(isColaborador || isAdmin) && (
           <>
-            <div className="pt-4 pb-2">
-              <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                <UsersRound className="h-3.5 w-3.5" />
-                Colaboradores
-              </p>
-            </div>
+            <SectionTag icon={UsersRound} label="Colaboradores" />
             {colaboradoresNavigation.map((item) => (
               <NavLink
                 key={item.name}
@@ -192,16 +198,16 @@ const Sidebar = () => {
             <button
               type="button"
               onClick={() => setAgentesOpen((o) => !o)}
-              className="w-full pt-4 pb-2 px-4 flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+              className="w-full pt-4 pb-2 px-4 flex items-center justify-between hover:opacity-80 transition-opacity"
             >
-              <span className="flex items-center gap-2">
-                <Bot className="h-3.5 w-3.5" />
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+                <Bot className="h-3 w-3" />
                 Agentes de IA
               </span>
               {agentesOpen ? (
-                <ChevronDown className="h-3.5 w-3.5" />
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
               ) : (
-                <ChevronRight className="h-3.5 w-3.5" />
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               )}
             </button>
 
@@ -275,12 +281,7 @@ const Sidebar = () => {
         )}
 
         {/* Minha Área Section */}
-        <div className="pt-4 pb-2">
-          <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-            <FolderOpen className="h-3.5 w-3.5" />
-            Minha Área
-          </p>
-        </div>
+        <SectionTag icon={FolderOpen} label="Minha Área" />
         {minhaAreaNavigation.map((item) => (
           item.disabled ? (
             <div
@@ -314,12 +315,7 @@ const Sidebar = () => {
         {/* Admin Section */}
         {isAdmin && (
           <>
-            <div className="pt-4 pb-2">
-              <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                <Settings className="h-3.5 w-3.5" />
-                Administração
-              </p>
-            </div>
+            <SectionTag icon={Settings} label="Administração" />
             {adminNavigation.map((item) => (
               <NavLink
                 key={item.name}
