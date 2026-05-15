@@ -37,15 +37,18 @@ import {
 } from 'lucide-react';
 
 const SectionTag = ({ icon: Icon, label }: { icon: React.ComponentType<{ className?: string }>; label: string }) => (
-  <div className="pt-4 pb-2 px-4">
-    <span className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
-      <Icon className="h-3 w-3" />
+  <div className="pt-4 pb-2 -mx-4">
+    <div
+      className="flex items-center gap-2 bg-primary px-4 py-2.5 text-sm font-bold uppercase tracking-wider text-primary-foreground"
+      style={{ fontFamily: "'Yaro', 'Inter', system-ui, sans-serif" }}
+    >
+      <Icon className="h-4 w-4" />
       {label}
-    </span>
+    </div>
   </div>
 );
 import logo from '@/assets/logo-pure-pilates.png';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export const MobileMenuButton = ({ mobileOpen, setMobileOpen }: { mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) => (
   <Button
@@ -77,10 +80,22 @@ const Sidebar = () => {
     location.pathname.startsWith(p),
   );
   const [agentesOpen, setAgentesOpen] = useState(isOnAgenteRoute);
+  const agentesTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (isOnAgenteRoute) setAgentesOpen(true);
   }, [isOnAgenteRoute]);
+
+  // Quando abre o submenu, garante que o trigger fique visível com seus filhos.
+  useEffect(() => {
+    if (!agentesOpen || !agentesTriggerRef.current) return;
+    const btn = agentesTriggerRef.current;
+    // Espera a animação começar para medir corretamente.
+    const t = setTimeout(() => {
+      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
+    return () => clearTimeout(t);
+  }, [agentesOpen]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -145,7 +160,7 @@ const Sidebar = () => {
         <img src={logo} alt="Pure Pilates" className="h-12 mx-auto" />
       </div>
 
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto" style={{ overflowAnchor: 'none' }}>
         {/* Geral Section - accessible by everyone */}
         <SectionTag icon={Globe} label="Geral" />
         {mainNavigation.map((item) => (
@@ -197,17 +212,23 @@ const Sidebar = () => {
           <Collapsible open={agentesOpen} onOpenChange={setAgentesOpen}>
             <CollapsibleTrigger asChild>
               <button
+                ref={agentesTriggerRef}
                 type="button"
-                className="w-full pt-4 pb-2 px-4 flex items-center justify-between hover:opacity-80 transition-opacity group"
+                className="w-full pt-4 pb-2 -mx-4 block hover:opacity-95 transition-opacity"
               >
-                <span className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
-                  <Bot className="h-3 w-3" />
-                  Agentes de IA
-                </span>
-                <ChevronDown className={cn(
-                  'h-3.5 w-3.5 text-muted-foreground transition-transform duration-200',
-                  !agentesOpen && '-rotate-90',
-                )} />
+                <div
+                  className="flex items-center justify-between gap-2 bg-primary px-4 py-2.5 text-sm font-bold uppercase tracking-wider text-primary-foreground"
+                  style={{ fontFamily: "'Yaro', 'Inter', system-ui, sans-serif" }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Bot className="h-4 w-4" />
+                    Agentes de IA
+                  </span>
+                  <ChevronDown className={cn(
+                    'h-4 w-4 transition-transform duration-200',
+                    !agentesOpen && '-rotate-90',
+                  )} />
+                </div>
               </button>
             </CollapsibleTrigger>
 
