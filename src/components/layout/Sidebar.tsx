@@ -124,11 +124,11 @@ const Sidebar = () => {
   const isOnMinhaAreaRoute = ['/minha-area'].some((p) => location.pathname.startsWith(p));
   const isOnAdminRoute = location.pathname.startsWith('/admin');
 
-  const [geralOpen, setGeralOpen] = useCollapsibleSection('geral', true);
-  const [colaboradoresOpen, setColaboradoresOpen] = useCollapsibleSection('colaboradores', true, isOnColaboradorRoute);
-  const [agentesOpen, setAgentesOpen] = useCollapsibleSection('agentes', true, isOnAgenteRoute);
-  const [minhaAreaOpen, setMinhaAreaOpen] = useCollapsibleSection('minha-area', true, isOnMinhaAreaRoute);
-  const [adminOpen, setAdminOpen] = useCollapsibleSection('admin', true, isOnAdminRoute);
+  const [geralOpen, setGeralOpen] = useCollapsibleSection('geral', false);
+  const [colaboradoresOpen, setColaboradoresOpen] = useCollapsibleSection('colaboradores', false, isOnColaboradorRoute);
+  const [agentesOpen, setAgentesOpen] = useCollapsibleSection('agentes', false, isOnAgenteRoute);
+  const [minhaAreaOpen, setMinhaAreaOpen] = useCollapsibleSection('minha-area', false, isOnMinhaAreaRoute);
+  const [adminOpen, setAdminOpen] = useCollapsibleSection('admin', false, isOnAdminRoute);
 
   const handleSignOut = async () => {
     await signOut();
