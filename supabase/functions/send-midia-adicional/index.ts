@@ -1,14 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getCorsHeaders } from '../_shared/cors.ts'
 
-const MARKETING_EMAILS = [
-  'victormoura@sharpmedia.com.br',
-  'henrique@sharpmedia.com.br',
-  'renan.wrk@gmail.com',
-  'douglas@sharpmedia.com.br',
-  'dcosta@risead.com.br',
-  'renataramosflores.cmo@gmail.com',
-]
+const N8N_WEBHOOK_URL = Deno.env.get('MIDIA_ADICIONAL_WEBHOOK_URL')
+  || 'https://backend.purepilates.com.br/webhook/midia-adicional-email'
 
 const PLAN_LABELS: Record<string, string> = {
   '1500_3m': 'R$ 1.500,00 — campanha de aula experimental por 3 meses',
@@ -95,49 +89,33 @@ Deno.serve(async (req) => {
       )
     }
 
-    const resendKey = Deno.env.get('RESEND_API_KEY')
-    if (resendKey) {
+    try {
       const planLabel = PLAN_LABELS[body.plano]
-      const formattedDate = new Date(body.data_inauguracao + 'T00:00:00').toLocaleDateString('pt-BR')
+      const dataInauguracaoFmt = new Date(body.data_inauguracao + 'T00:00:00').toLocaleDateString('pt-BR')
 
-      const htmlBody = `
-        <h2>Nova solicitacao de Midia adicional</h2>
-        <table style="border-collapse: collapse; font-family: Arial, sans-serif;">
-          <tr><td style="padding: 6px 12px;"><b>Franqueado:</b></td><td style="padding: 6px 12px;">${escapeHtml(body.nome_franqueado)}</td></tr>
-          <tr><td style="padding: 6px 12px;"><b>Unidade:</b></td><td style="padding: 6px 12px;">${escapeHtml(body.nome_unidade)}</td></tr>
-          <tr><td style="padding: 6px 12px;"><b>Inauguracao:</b></td><td style="padding: 6px 12px;">${formattedDate}</td></tr>
-          <tr><td style="padding: 6px 12px;"><b>Plano:</b></td><td style="padding: 6px 12px;">${planLabel}</td></tr>
-          <tr><td style="padding: 6px 12px;"><b>Email da unidade:</b></td><td style="padding: 6px 12px;">${escapeHtml(body.email_unidade)}</td></tr>
-          ${body.email_franqueado ? `<tr><td style="padding: 6px 12px;"><b>Email do franqueado:</b></td><td style="padding: 6px 12px;">${escapeHtml(body.email_franqueado)}</td></tr>` : ''}
-        </table>
-        <p style="font-family: Arial, sans-serif; color: #666; font-size: 12px;">
-          Solicitacao #${inserted.id}<br/>
-          Submetida em ${new Date(inserted.created_at).toLocaleString('pt-BR')} por ${user.email}
-        </p>
-      `
-
-      const emailResp = await fetch('https://api.resend.com/emails', {
+      const webhookResp = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendKey}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: 'Hub Pure Pilates <hub@purepilates.com.br>',
-          to: MARKETING_EMAILS,
-          reply_to: body.email_franqueado || body.email_unidade,
-          subject: `Midia adicional · ${body.nome_unidade}`,
-          html: htmlBody,
+          id: inserted.id,
+          nome_franqueado: body.nome_franqueado,
+          nome_unidade: body.nome_unidade,
+          data_inauguracao: body.data_inauguracao,
+          data_inauguracao_fmt: dataInauguracaoFmt,
+          plano: body.plano,
+          plano_label: planLabel,
+          email_unidade: body.email_unidade,
+          email_franqueado: body.email_franqueado || null,
+          submitted_by: user.email,
         }),
       })
 
-      if (!emailResp.ok) {
-        const errText = await emailResp.text()
-        console.error('Resend error:', emailResp.status, errText)
-        // Nao falha a request: solicitacao ja foi salva.
+      if (!webhookResp.ok) {
+        const errText = await webhookResp.text()
+        console.error('n8n webhook error:', webhookResp.status, errText)
       }
-    } else {
-      console.warn('RESEND_API_KEY nao configurada — solicitacao salva sem envio de email.')
+    } catch (err) {
+      console.error('Falha ao chamar webhook n8n:', err)
     }
 
     return new Response(
@@ -152,12 +130,3 @@ Deno.serve(async (req) => {
     )
   }
 })
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
