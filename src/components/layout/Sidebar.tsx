@@ -66,7 +66,7 @@ const Sidebar = () => {
     { name: 'Comece aqui', href: '/', icon: Home },
     { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
     { name: 'Tutorial do Marketing', href: '/tutorial-marketing', icon: ScrollText },
-    ...((isFranqueado || isAdmin)
+    ...((isFranqueado || isColaborador)
       ? [{ name: 'Autorizar Mídia adicional', href: '/autorizar-midia-adicional', icon: Megaphone }]
       : []),
     { name: 'Avisos', href: '/avisos', icon: Megaphone },
