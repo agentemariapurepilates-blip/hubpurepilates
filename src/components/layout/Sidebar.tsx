@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Home,
   Newspaper,
@@ -31,7 +32,6 @@ import {
   Building2,
   Bot,
   ChevronDown,
-  ChevronRight,
   Globe,
   Inbox,
 } from 'lucide-react';
@@ -194,24 +194,24 @@ const Sidebar = () => {
 
         {/* Agentes de IA Section - collapsible parent grouping Pure Studio + Monitoramento */}
         {(isColaborador || isAdmin) && (
-          <>
-            <button
-              type="button"
-              onClick={() => setAgentesOpen((o) => !o)}
-              className="w-full pt-4 pb-2 px-4 flex items-center justify-between hover:opacity-80 transition-opacity"
-            >
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
-                <Bot className="h-3 w-3" />
-                Agentes de IA
-              </span>
-              {agentesOpen ? (
-                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-              )}
-            </button>
+          <Collapsible open={agentesOpen} onOpenChange={setAgentesOpen}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="w-full pt-4 pb-2 px-4 flex items-center justify-between hover:opacity-80 transition-opacity group"
+              >
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+                  <Bot className="h-3 w-3" />
+                  Agentes de IA
+                </span>
+                <ChevronDown className={cn(
+                  'h-3.5 w-3.5 text-muted-foreground transition-transform duration-200',
+                  !agentesOpen && '-rotate-90',
+                )} />
+              </button>
+            </CollapsibleTrigger>
 
-            {agentesOpen && (
+            <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
               <div className="space-y-1">
                 {/* Sub-grupo: Agente Pure Studio */}
                 <div className="pt-1 pb-1">
@@ -276,8 +276,8 @@ const Sidebar = () => {
                   )
                 )}
               </div>
-            )}
-          </>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
         {/* Minha Área Section */}
