@@ -1,8 +1,14 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getCorsHeaders } from '../_shared/cors.ts'
 
-// TODO: substituir pelo email definitivo do time de marketing.
-const MARKETING_EMAIL = Deno.env.get('MARKETING_NOTIFICATION_EMAIL') || 'marketing@purepilates.com.br'
+const MARKETING_EMAILS = [
+  'victormoura@sharpmedia.com.br',
+  'henrique@sharpmedia.com.br',
+  'renan.wrk@gmail.com',
+  'douglas@sharpmedia.com.br',
+  'dcosta@risead.com.br',
+  'renataramosflores.cmo@gmail.com',
+]
 
 const PLAN_LABELS: Record<string, string> = {
   '1500_3m': 'R$ 1.500,00 — campanha de aula experimental por 3 meses',
@@ -118,7 +124,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           from: 'Hub Pure Pilates <hub@purepilates.com.br>',
-          to: MARKETING_EMAIL,
+          to: MARKETING_EMAILS,
           reply_to: body.email_franqueado || body.email_unidade,
           subject: `Midia adicional · ${body.nome_unidade}`,
           html: htmlBody,
