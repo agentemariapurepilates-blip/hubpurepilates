@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -6,18 +6,33 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Megaphone, ArrowLeft, AlertTriangle, Check } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Megaphone, ArrowLeft, AlertTriangle, Check, Plus, Inbox, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 type PlanKey = '1500_3m' | '2000_3m' | '2500';
+type StatusKey = 'pendente' | 'em_analise' | 'aprovado' | 'recusado';
+type ViewMode = 'list' | 'form' | 'success';
 
 interface PlanOption {
   key: PlanKey;
   valor: string;
   titulo: string;
   descricao: string;
+}
+
+interface MidiaRequest {
+  id: string;
+  nome_franqueado: string;
+  nome_unidade: string;
+  data_inauguracao: string;
+  plano: PlanKey;
+  email_unidade: string;
+  email_franqueado: string | null;
+  status: StatusKey;
+  created_at: string;
 }
 
 const PLAN_OPTIONS: PlanOption[] = [
@@ -41,12 +56,30 @@ const PLAN_OPTIONS: PlanOption[] = [
   },
 ];
 
+const PLAN_LABEL: Record<PlanKey, string> = {
+  '1500_3m': 'Plano A · R$ 1.500,00',
+  '2000_3m': 'Plano B · R$ 2.000,00',
+  '2500':    'Plano C · R$ 2.500,00',
+};
+
+const STATUS_META: Record<StatusKey, { label: string; className: string }> = {
+  pendente:   { label: 'Pendente',     className: 'bg-amber-100 text-amber-800 border-amber-200' },
+  em_analise: { label: 'Em análise',   className: 'bg-blue-100 text-blue-800 border-blue-200' },
+  aprovado:   { label: 'Aprovado',     className: 'bg-green-100 text-green-800 border-green-200' },
+  recusado:   { label: 'Recusado',     className: 'bg-red-100 text-red-800 border-red-200' },
+};
+
 const AutorizarMidiaAdicional = () => {
   const { user, isAdmin, userType, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const isFranqueado = userType === 'franqueado';
   const podeAcessar = isFranqueado || isAdmin;
+
+  const [view, setView] = useState<ViewMode>('list');
+
+  const [requests, setRequests] = useState<MidiaRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
 
   const [nomeFranqueado, setNomeFranqueado] = useState('');
   const [nomeUnidade, setNomeUnidade] = useState('');
@@ -57,7 +90,42 @@ const AutorizarMidiaAdicional = () => {
   const [aceitouRegras, setAceitouRegras] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
-  const [sucesso, setSucesso] = useState(false);
+
+  const carregarSolicitacoes = useCallback(async () => {
+    if (!user) return;
+    setLoadingRequests(true);
+    try {
+      const { data, error } = await supabase
+        .from('midia_adicional_requests')
+        .select('id, nome_franqueado, nome_unidade, data_inauguracao, plano, email_unidade, email_franqueado, status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      setRequests((data as MidiaRequest[]) || []);
+    } catch (err) {
+      console.error('Erro ao carregar solicitações:', err);
+      toast.error('Não foi possível carregar suas solicitações.');
+    } finally {
+      setLoadingRequests(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user && podeAcessar) {
+      carregarSolicitacoes();
+    }
+  }, [user, podeAcessar, carregarSolicitacoes]);
+
+  const limparFormulario = () => {
+    setNomeFranqueado('');
+    setNomeUnidade('');
+    setDataInauguracao('');
+    setPlano('');
+    setEmailUnidade('');
+    setEmailFranqueado('');
+    setAceitouRegras(false);
+  };
 
   if (!authLoading && !podeAcessar) {
     return (
@@ -101,8 +169,10 @@ const AutorizarMidiaAdicional = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setSucesso(true);
       toast.success('Solicitação enviada com sucesso!');
+      limparFormulario();
+      setView('success');
+      carregarSolicitacoes();
     } catch (err: any) {
       console.error('Erro ao enviar solicitação:', err);
       toast.error(err?.message || 'Não foi possível enviar a solicitação. Tente novamente.');
@@ -111,7 +181,21 @@ const AutorizarMidiaAdicional = () => {
     }
   };
 
-  if (sucesso) {
+  const formatarData = (dataIso: string) => {
+    return new Date(dataIso + 'T00:00:00').toLocaleDateString('pt-BR');
+  };
+
+  const formatarDataHora = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  if (view === 'success') {
     return (
       <MainLayout>
         <div className="max-w-2xl mx-auto py-8">
@@ -125,21 +209,10 @@ const AutorizarMidiaAdicional = () => {
                 Sua solicitação de mídia adicional foi registrada. O time de marketing entrará em contato pelos e-mails informados.
               </p>
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => navigate('/')}>
-                  Voltar ao início
+                <Button variant="outline" onClick={() => setView('list')}>
+                  Ver minhas solicitações
                 </Button>
-                <Button
-                  onClick={() => {
-                    setSucesso(false);
-                    setNomeFranqueado('');
-                    setNomeUnidade('');
-                    setDataInauguracao('');
-                    setPlano('');
-                    setEmailUnidade('');
-                    setEmailFranqueado('');
-                    setAceitouRegras(false);
-                  }}
-                >
+                <Button onClick={() => setView('form')}>
                   Nova solicitação
                 </Button>
               </div>
@@ -150,9 +223,193 @@ const AutorizarMidiaAdicional = () => {
     );
   }
 
+  if (view === 'form') {
+    return (
+      <MainLayout>
+        <div className="max-w-3xl mx-auto py-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mb-4 -ml-2"
+            onClick={() => setView('list')}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+
+          <div className="mb-6">
+            <h1 className="text-xl sm:text-2xl font-heading font-bold flex items-center gap-2">
+              <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              Nova solicitação de Mídia adicional
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+              Preencha os dados abaixo para solicitar autorização de investimento adicional em campanha de aula experimental para sua unidade.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-heading">Dados da unidade</CardTitle>
+                <CardDescription>Quem está solicitando e qual unidade será beneficiada.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nome-franqueado">Nome do franqueado *</Label>
+                  <Input
+                    id="nome-franqueado"
+                    value={nomeFranqueado}
+                    onChange={(e) => setNomeFranqueado(e.target.value)}
+                    placeholder="Nome completo"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nome-unidade">Nome da unidade Pure Pilates *</Label>
+                  <Input
+                    id="nome-unidade"
+                    value={nomeUnidade}
+                    onChange={(e) => setNomeUnidade(e.target.value)}
+                    placeholder="Ex.: Pure Pilates Vila Olímpia"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="data-inauguracao">Data de inauguração *</Label>
+                  <Input
+                    id="data-inauguracao"
+                    type="date"
+                    value={dataInauguracao}
+                    onChange={(e) => setDataInauguracao(e.target.value)}
+                    required
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-heading">Plano de investimento *</CardTitle>
+                <CardDescription>Selecione uma das opções abaixo.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup value={plano} onValueChange={(v) => setPlano(v as PlanKey)}>
+                  <div className="space-y-3">
+                    {PLAN_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.key}
+                        htmlFor={`plano-${opt.key}`}
+                        className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer transition-all hover:border-primary/50 ${
+                          plano === opt.key ? 'border-primary bg-primary/5' : 'border-foreground/10'
+                        }`}
+                      >
+                        <RadioGroupItem value={opt.key} id={`plano-${opt.key}`} className="mt-1" />
+                        <div className="flex-1">
+                          <div className="flex items-baseline gap-2 mb-1">
+                            <span className="font-heading font-bold text-base">{opt.titulo}</span>
+                            <span className="text-primary font-semibold">{opt.valor}</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{opt.descricao}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-heading">Contatos para retorno</CardTitle>
+                <CardDescription>O time de marketing entrará em contato pelos e-mails abaixo.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email-unidade">E-mail da unidade *</Label>
+                  <Input
+                    id="email-unidade"
+                    type="email"
+                    value={emailUnidade}
+                    onChange={(e) => setEmailUnidade(e.target.value)}
+                    placeholder="unidade@purepilates.com.br"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email-franqueado">
+                    E-mail do franqueado <span className="text-muted-foreground font-normal">(opcional)</span>
+                  </Label>
+                  <Input
+                    id="email-franqueado"
+                    type="email"
+                    value={emailFranqueado}
+                    onChange={(e) => setEmailFranqueado(e.target.value)}
+                    placeholder="franqueado@exemplo.com"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-amber-300/40 bg-amber-50/50">
+              <CardHeader>
+                <CardTitle className="text-base font-heading flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  Regras de faturamento e aplicação
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-sm text-foreground/80 leading-relaxed space-y-2">
+                  <p>
+                    <strong>[Texto placeholder]</strong> Substitua este bloco pelo texto definitivo das regras de
+                    faturamento e aplicação da campanha de mídia adicional.
+                  </p>
+                  <p>
+                    O valor solicitado será faturado pela unidade conforme as regras vigentes. A campanha será
+                    veiculada pelo time central de marketing, após análise e aprovação da solicitação.
+                    Os prazos, formatos e canais de veiculação seguem as diretrizes da Pure Pilates para o período
+                    selecionado.
+                  </p>
+                </div>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={aceitouRegras}
+                    onChange={(e) => setAceitouRegras(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-foreground/30 text-primary focus:ring-primary"
+                    required
+                  />
+                  <span className="text-sm text-foreground/85 leading-relaxed">
+                    Li e concordo com as regras de faturamento e aplicação descritas acima.
+                  </span>
+                </label>
+              </CardContent>
+            </Card>
+
+            <div className="flex items-center justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setView('list')}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={!camposObrigatoriosPreenchidos || submitting}
+                className="min-w-[160px]"
+              >
+                {submitting ? 'Enviando...' : 'Enviar solicitação'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
-      <div className="max-w-3xl mx-auto py-6">
+      <div className="max-w-4xl mx-auto py-6">
         <Button
           variant="ghost"
           size="sm"
@@ -163,177 +420,88 @@ const AutorizarMidiaAdicional = () => {
           Voltar
         </Button>
 
-        <div className="mb-6">
-          <h1 className="text-xl sm:text-2xl font-heading font-bold flex items-center gap-2">
-            <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-            Autorizar Mídia adicional
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Preencha os dados abaixo para solicitar autorização de investimento adicional em campanha de aula experimental para sua unidade.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-heading font-bold flex items-center gap-2">
+              <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              Autorizar Mídia adicional
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+              Histórico das suas solicitações de investimento adicional em campanha.
+            </p>
+          </div>
+          <Button onClick={() => setView('form')} className="shrink-0">
+            <Plus className="h-4 w-4 mr-2" />
+            Nova solicitação
+          </Button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Bloco 1: Dados da unidade */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-heading">Dados da unidade</CardTitle>
-              <CardDescription>Quem está solicitando e qual unidade será beneficiada.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome-franqueado">Nome do franqueado *</Label>
-                <Input
-                  id="nome-franqueado"
-                  value={nomeFranqueado}
-                  onChange={(e) => setNomeFranqueado(e.target.value)}
-                  placeholder="Nome completo"
-                  required
-                />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-heading">Minhas solicitações</CardTitle>
+            <CardDescription>
+              {loadingRequests
+                ? 'Carregando...'
+                : requests.length === 0
+                ? 'Você ainda não fez nenhuma solicitação.'
+                : `${requests.length} ${requests.length === 1 ? 'solicitação' : 'solicitações'} (mais recentes primeiro).`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingRequests ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="nome-unidade">Nome da unidade Pure Pilates *</Label>
-                <Input
-                  id="nome-unidade"
-                  value={nomeUnidade}
-                  onChange={(e) => setNomeUnidade(e.target.value)}
-                  placeholder="Ex.: Pure Pilates Vila Olímpia"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="data-inauguracao">Data de inauguração *</Label>
-                <Input
-                  id="data-inauguracao"
-                  type="date"
-                  value={dataInauguracao}
-                  onChange={(e) => setDataInauguracao(e.target.value)}
-                  required
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bloco 2: Plano de investimento */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-heading">Plano de investimento *</CardTitle>
-              <CardDescription>Selecione uma das opções abaixo.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup value={plano} onValueChange={(v) => setPlano(v as PlanKey)}>
-                <div className="space-y-3">
-                  {PLAN_OPTIONS.map((opt) => (
-                    <label
-                      key={opt.key}
-                      htmlFor={`plano-${opt.key}`}
-                      className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer transition-all hover:border-primary/50 ${
-                        plano === opt.key ? 'border-primary bg-primary/5' : 'border-foreground/10'
-                      }`}
-                    >
-                      <RadioGroupItem value={opt.key} id={`plano-${opt.key}`} className="mt-1" />
-                      <div className="flex-1">
-                        <div className="flex items-baseline gap-2 mb-1">
-                          <span className="font-heading font-bold text-base">{opt.titulo}</span>
-                          <span className="text-primary font-semibold">{opt.valor}</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{opt.descricao}</p>
-                      </div>
-                    </label>
-                  ))}
+            ) : requests.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="rounded-full bg-muted p-3 mb-3">
+                  <Inbox className="h-6 w-6 text-muted-foreground" />
                 </div>
-              </RadioGroup>
-            </CardContent>
-          </Card>
-
-          {/* Bloco 3: Contatos */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-heading">Contatos para retorno</CardTitle>
-              <CardDescription>O time de marketing entrará em contato pelos e-mails abaixo.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email-unidade">E-mail da unidade *</Label>
-                <Input
-                  id="email-unidade"
-                  type="email"
-                  value={emailUnidade}
-                  onChange={(e) => setEmailUnidade(e.target.value)}
-                  placeholder="unidade@purepilates.com.br"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email-franqueado">
-                  E-mail do franqueado <span className="text-muted-foreground font-normal">(opcional)</span>
-                </Label>
-                <Input
-                  id="email-franqueado"
-                  type="email"
-                  value={emailFranqueado}
-                  onChange={(e) => setEmailFranqueado(e.target.value)}
-                  placeholder="franqueado@exemplo.com"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bloco 4: Disclaimer */}
-          <Card className="border-amber-300/40 bg-amber-50/50">
-            <CardHeader>
-              <CardTitle className="text-base font-heading flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                Regras de faturamento e aplicação
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-sm text-foreground/80 leading-relaxed space-y-2">
-                {/* TODO: substituir pelo texto definitivo das regras de faturamento e aplicacao da campanha. */}
-                <p>
-                  <strong>[Texto placeholder]</strong> Substitua este bloco pelo texto definitivo das regras de
-                  faturamento e aplicação da campanha de mídia adicional.
+                <p className="text-sm text-muted-foreground mb-4">
+                  Nenhuma solicitação registrada até o momento.
                 </p>
-                <p>
-                  O valor solicitado será faturado pela unidade conforme as regras vigentes. A campanha será
-                  veiculada pelo time central de marketing, após análise e aprovação da solicitação.
-                  Os prazos, formatos e canais de veiculação seguem as diretrizes da Pure Pilates para o período
-                  selecionado.
-                </p>
+                <Button onClick={() => setView('form')} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar primeira solicitação
+                </Button>
               </div>
-
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={aceitouRegras}
-                  onChange={(e) => setAceitouRegras(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-foreground/30 text-primary focus:ring-primary"
-                  required
-                />
-                <span className="text-sm text-foreground/85 leading-relaxed">
-                  Li e concordo com as regras de faturamento e aplicação descritas acima.
-                </span>
-              </label>
-            </CardContent>
-          </Card>
-
-          {/* Submit */}
-          <div className="flex items-center justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => navigate('/')}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={!camposObrigatoriosPreenchidos || submitting}
-              className="min-w-[160px]"
-            >
-              {submitting ? 'Enviando...' : 'Enviar solicitação'}
-            </Button>
-          </div>
-        </form>
+            ) : (
+              <div className="space-y-3">
+                {requests.map((req) => {
+                  const statusMeta = STATUS_META[req.status];
+                  return (
+                    <div
+                      key={req.id}
+                      className="rounded-lg border border-foreground/10 p-4 hover:border-foreground/20 transition-colors"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h3 className="font-heading font-semibold text-base truncate">
+                              {req.nome_unidade}
+                            </h3>
+                            <Badge variant="outline" className={statusMeta.className}>
+                              {statusMeta.label}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {req.nome_franqueado} · Inauguração em {formatarData(req.data_inauguracao)}
+                          </p>
+                          <p className="text-sm text-primary font-medium mt-1">
+                            {PLAN_LABEL[req.plano]}
+                          </p>
+                        </div>
+                        <div className="text-xs text-muted-foreground sm:text-right shrink-0">
+                          Enviada em<br className="hidden sm:inline" /> {formatarDataHora(req.created_at)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );
