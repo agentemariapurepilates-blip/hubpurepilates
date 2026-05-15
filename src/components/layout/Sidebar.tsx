@@ -48,7 +48,7 @@ const SectionTag = ({ icon: Icon, label }: { icon: React.ComponentType<{ classNa
   </div>
 );
 import logo from '@/assets/logo-pure-pilates.png';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 export const MobileMenuButton = ({ mobileOpen, setMobileOpen }: { mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) => (
   <Button
@@ -80,22 +80,10 @@ const Sidebar = () => {
     location.pathname.startsWith(p),
   );
   const [agentesOpen, setAgentesOpen] = useState(isOnAgenteRoute);
-  const agentesTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (isOnAgenteRoute) setAgentesOpen(true);
   }, [isOnAgenteRoute]);
-
-  // Quando abre o submenu, garante que o trigger fique visível com seus filhos.
-  useEffect(() => {
-    if (!agentesOpen || !agentesTriggerRef.current) return;
-    const btn = agentesTriggerRef.current;
-    // Espera a animação começar para medir corretamente.
-    const t = setTimeout(() => {
-      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 50);
-    return () => clearTimeout(t);
-  }, [agentesOpen]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -212,7 +200,6 @@ const Sidebar = () => {
           <Collapsible open={agentesOpen} onOpenChange={setAgentesOpen}>
             <CollapsibleTrigger asChild>
               <button
-                ref={agentesTriggerRef}
                 type="button"
                 className="w-full pt-4 pb-2 -mx-4 block hover:opacity-95 transition-opacity"
               >
