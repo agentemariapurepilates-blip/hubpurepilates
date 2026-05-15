@@ -131,7 +131,7 @@ const Sidebar = () => {
   // Minha Área section
   const minhaAreaNavigation = [
     { name: 'Relatórios', href: '#', icon: FileText, disabled: true },
-    { name: 'Minhas solicitações', href: '#', icon: Inbox, disabled: true },
+    { name: 'Minhas solicitações', href: '/minha-area/minhas-solicitacoes', icon: Inbox, disabled: false },
   ];
 
   // Admin section

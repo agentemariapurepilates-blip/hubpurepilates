@@ -137,8 +137,8 @@ const SolicitarMidiaAdicional = () => {
                 Para acompanhar suas solicitações, acesse <strong>Minha Área</strong> &gt; <strong>Minhas Solicitações</strong>.
               </p>
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => navigate('/')}>
-                  Voltar ao início
+                <Button variant="outline" onClick={() => navigate('/minha-area/minhas-solicitacoes')}>
+                  Ver minhas solicitações
                 </Button>
                 <Button onClick={() => setEnviado(false)}>
                   Nova solicitação
@@ -173,8 +173,15 @@ const SolicitarMidiaAdicional = () => {
         <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
           <p className="text-sm text-blue-900">
-            Se você já solicitou mídia adicional, acesse <strong>Minha Área</strong> &gt;{' '}
-            <strong>Minhas Solicitações</strong> para ver o espelho do último pedido.
+            Se você já solicitou mídia adicional, acesse{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/minha-area/minhas-solicitacoes')}
+              className="font-semibold underline hover:no-underline"
+            >
+              Minha Área &gt; Minhas Solicitações
+            </button>{' '}
+            para ver o espelho dos seus pedidos.
           </p>
         </div>
 

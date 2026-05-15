@@ -23,6 +23,7 @@ import Parcerias from "./pages/Parcerias";
 import TutorialMarketing from "./pages/TutorialMarketing";
 import AutorizarMidiaAdicional from "./pages/AutorizarMidiaAdicional";
 import MidiaAdicionalUnidades from "./pages/MidiaAdicionalUnidades";
+import MinhasSolicitacoes from "./pages/MinhasSolicitacoes";
 import ManualSistema from "./pages/ManualSistema";
 import PureDesign from "./pages/PureDesign";
 import PureDesignEditor from "./pages/PureDesignEditor";
@@ -63,6 +64,7 @@ function App() {
             <Route path="/tutorial-marketing" element={<ProtectedRoute><TutorialMarketing /></ProtectedRoute>} />
             <Route path="/autorizar-midia-adicional" element={<ProtectedRoute><AutorizarMidiaAdicional /></ProtectedRoute>} />
             <Route path="/midia-adicional/unidades" element={<ProtectedRoute><MidiaAdicionalUnidades /></ProtectedRoute>} />
+            <Route path="/minha-area/minhas-solicitacoes" element={<ProtectedRoute><MinhasSolicitacoes /></ProtectedRoute>} />
             <Route path="/manual-sistema" element={<ProtectedRoute><ManualSistema /></ProtectedRoute>} />
             <Route path="/pure-design" element={<ProtectedRoute><PureDesign /></ProtectedRoute>} />
             <Route path="/pure-design/:id" element={<ProtectedRoute><PureDesignEditor /></ProtectedRoute>} />
