@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import {
-  Megaphone, ArrowLeft, AlertTriangle, Check, Plus, Inbox, Loader2, CircleCheck, Undo2,
+  Megaphone, ArrowLeft, AlertTriangle, Check, Plus, Inbox, Loader2, CircleCheck,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -482,9 +482,8 @@ const ColaboradorView = () => {
   };
 
   const pendentes = requests.filter((r) => r.status === 'pendente');
-  const aprovadas = requests.filter((r) => r.status === 'aprovada');
 
-  const renderCard = (req: MidiaRequest, acao: 'aprovar' | 'desfazer') => {
+  const renderCard = (req: MidiaRequest, _acao: 'aprovar') => {
     const statusMeta = STATUS_META[req.status];
     const carregandoAcao = acaoEmAndamento === req.id;
 
@@ -516,35 +515,19 @@ const ColaboradorView = () => {
             <div className="text-xs text-muted-foreground sm:text-right">
               Enviada em<br className="hidden sm:inline" /> {formatarDataHora(req.created_at)}
             </div>
-            {acao === 'aprovar' ? (
-              <Button
-                size="sm"
-                onClick={() => alterarStatus(req.id, 'aprovada')}
-                disabled={carregandoAcao}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                {carregandoAcao ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <CircleCheck className="h-4 w-4 mr-2" />
-                )}
-                Aprovar verba
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => alterarStatus(req.id, 'pendente')}
-                disabled={carregandoAcao}
-              >
-                {carregandoAcao ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Undo2 className="h-4 w-4 mr-2" />
-                )}
-                Desfazer
-              </Button>
-            )}
+            <Button
+              size="sm"
+              onClick={() => alterarStatus(req.id, 'aprovada')}
+              disabled={carregandoAcao}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {carregandoAcao ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CircleCheck className="h-4 w-4 mr-2" />
+              )}
+              Aprovar verba
+            </Button>
           </div>
         </div>
       </div>
@@ -561,10 +544,11 @@ const ColaboradorView = () => {
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl font-heading font-bold flex items-center gap-2">
           <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-          Mídia adicional - Gestão
+          Mídia adicional - Aprovações
         </h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Aprove solicitações de franqueados e acompanhe as verbas ativas.
+          Solicitações de franqueados aguardando aprovação. Para ver todas as unidades com mídia adicional,
+          acesse <strong>Visão Geral das Unidades</strong>.
         </p>
       </div>
 
@@ -575,53 +559,28 @@ const ColaboradorView = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-heading flex items-center gap-2">
-                <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
-                Solicitações pendentes ({pendentes.length})
-              </CardTitle>
-              <CardDescription>
-                Pedidos aguardando aprovação. Clique em "Aprovar verba" para liberar.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pendentes.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">
-                  Nenhuma solicitação pendente no momento.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {pendentes.map((r) => renderCard(r, 'aprovar'))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-heading flex items-center gap-2">
-                <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
-                Verbas ativas ({aprovadas.length})
-              </CardTitle>
-              <CardDescription>
-                Unidades com verba adicional aprovada.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {aprovadas.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">
-                  Nenhuma verba ativa no momento.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {aprovadas.map((r) => renderCard(r, 'desfazer'))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-heading flex items-center gap-2">
+              <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+              Solicitações pendentes ({pendentes.length})
+            </CardTitle>
+            <CardDescription>
+              Pedidos aguardando aprovação. Clique em "Aprovar verba" para liberar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {pendentes.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                Nenhuma solicitação pendente no momento.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {pendentes.map((r) => renderCard(r, 'aprovar'))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );

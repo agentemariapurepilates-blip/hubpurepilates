@@ -28,6 +28,7 @@ import {
   ScrollText,
   BarChart3,
   Heart,
+  Building2,
 } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState } from 'react';
@@ -67,7 +68,10 @@ const Sidebar = () => {
     { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
     { name: 'Tutorial do Marketing', href: '/tutorial-marketing', icon: ScrollText },
     ...((isFranqueado || isColaborador)
-      ? [{ name: 'Autorizar Mídia adicional', href: '/autorizar-midia-adicional', icon: Megaphone }]
+      ? [{ name: 'Mídia adicional', href: '/autorizar-midia-adicional', icon: Megaphone }]
+      : []),
+    ...(isColaborador
+      ? [{ name: 'Visão Geral das Unidades', href: '/midia-adicional/unidades', icon: Building2 }]
       : []),
     { name: 'Avisos', href: '/avisos', icon: Megaphone },
     { name: 'Parcerias', href: '/parcerias', icon: Handshake },
