@@ -49,45 +49,29 @@ const SectionHeader = ({
 }) => (
   <div
     onMouseDown={onMouseDown}
-    className="flex items-center justify-between gap-2 px-3 py-2 mt-3 text-[13px] font-medium text-sidebar-foreground/55 hover:text-sidebar-foreground transition-colors cursor-pointer select-none"
+    className={cn(
+      'flex items-center justify-between gap-2 px-3 py-2 mt-3 rounded-lg text-[15px] font-semibold transition-colors cursor-pointer select-none',
+      open
+        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+        : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+    )}
     style={{ fontFamily: "'Yaro', 'Inter', system-ui, sans-serif" }}
   >
     <span className="flex items-center gap-2">
-      <Icon className="h-3.5 w-3.5" />
+      <Icon className="h-4 w-4" />
       <span>{label}</span>
     </span>
-    <ChevronDown className={cn('h-3 w-3 transition-transform duration-200', !open && '-rotate-90')} />
+    <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', !open && '-rotate-90')} />
   </div>
 );
 
 import logo from '@/assets/logo-pure-pilates.png';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-// Hook simples para persistir estado de cada seção colapsável no localStorage.
-// autoOpen força aberto (ex: quando o usuário está numa rota dessa seção).
-const useCollapsibleSection = (key: string, defaultOpen: boolean, autoOpen?: boolean) => {
-  const storageKey = `sidebar-section:${key}`;
-  const [open, setOpen] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return defaultOpen;
-    const stored = window.localStorage.getItem(storageKey);
-    if (stored === null) return defaultOpen;
-    return stored === 'true';
-  });
-
-  useEffect(() => {
-    if (autoOpen) setOpen(true);
-  }, [autoOpen]);
-
-  const setOpenPersist = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
-    setOpen((prev) => {
-      const next = typeof value === 'function' ? (value as (p: boolean) => boolean)(prev) : value;
-      try { window.localStorage.setItem(storageKey, String(next)); } catch { /* ignore */ }
-      return next;
-    });
-  }, [storageKey]);
-
-  return [open, setOpenPersist] as const;
-};
+// Accordion: apenas uma seção aberta por vez. Abrir uma fecha a anterior.
+// Persistido em sessionStorage — sobrevive à navegação e ao reload; reseta ao fechar a aba.
+type SectionKey = 'geral' | 'colaboradores' | 'agentes' | 'minha-area' | 'admin';
+const OPEN_SECTION_STORAGE_KEY = 'sidebar:openSection';
 
 export const MobileMenuButton = ({ mobileOpen, setMobileOpen }: { mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) => (
   <Button
@@ -107,6 +91,14 @@ const AGENTES_DE_IA_ROUTE_PREFIXES = [
   '/agente-monitoramento',
 ];
 
+const sectionFromPath = (path: string): SectionKey | null => {
+  if (AGENTES_DE_IA_ROUTE_PREFIXES.some((p) => path.startsWith(p))) return 'agentes';
+  if (['/feed', '/pedidos-demanda'].some((p) => path.startsWith(p))) return 'colaboradores';
+  if (path.startsWith('/minha-area')) return 'minha-area';
+  if (path.startsWith('/admin')) return 'admin';
+  return null;
+};
+
 const Sidebar = () => {
   const { user, signOut, isAdmin, isColaborador, userType } = useAuth();
   const navigate = useNavigate();
@@ -115,20 +107,34 @@ const Sidebar = () => {
 
   const isFranqueado = userType === 'franqueado';
 
-  const isOnAgenteRoute = AGENTES_DE_IA_ROUTE_PREFIXES.some((p) =>
-    location.pathname.startsWith(p),
-  );
-  const isOnColaboradorRoute = ['/feed', '/pedidos-demanda'].some((p) =>
-    location.pathname.startsWith(p),
-  );
-  const isOnMinhaAreaRoute = ['/minha-area'].some((p) => location.pathname.startsWith(p));
-  const isOnAdminRoute = location.pathname.startsWith('/admin');
+  const [openSection, setOpenSectionState] = useState<SectionKey | null>(() => {
+    if (typeof window === 'undefined') return sectionFromPath(location.pathname);
+    const stored = window.sessionStorage.getItem(OPEN_SECTION_STORAGE_KEY);
+    if (stored !== null) return stored === '' ? null : (stored as SectionKey);
+    return sectionFromPath(location.pathname);
+  });
 
-  const [geralOpen, setGeralOpen] = useCollapsibleSection('geral', false);
-  const [colaboradoresOpen, setColaboradoresOpen] = useCollapsibleSection('colaboradores', false, isOnColaboradorRoute);
-  const [agentesOpen, setAgentesOpen] = useCollapsibleSection('agentes', false, isOnAgenteRoute);
-  const [minhaAreaOpen, setMinhaAreaOpen] = useCollapsibleSection('minha-area', false, isOnMinhaAreaRoute);
-  const [adminOpen, setAdminOpen] = useCollapsibleSection('admin', false, isOnAdminRoute);
+  const setOpenSection = (next: SectionKey | null) => {
+    setOpenSectionState(next);
+    try {
+      window.sessionStorage.setItem(OPEN_SECTION_STORAGE_KEY, next ?? '');
+    } catch {
+      // ignore storage failures
+    }
+  };
+
+  // Ao mudar de rota (não no mount inicial), se a nova rota pertencer a uma seção,
+  // abre essa seção e fecha as outras. No mount, a escolha salva em sessionStorage manda.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const auto = sectionFromPath(location.pathname);
+    if (auto) setOpenSection(auto);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -195,10 +201,10 @@ const Sidebar = () => {
 
       <nav className="flex-1 p-4 space-y-0.5 overflow-y-auto" style={{ overflowAnchor: 'none' }}>
         {/* Geral Section */}
-        <Collapsible open={geralOpen} onOpenChange={setGeralOpen}>
+        <Collapsible open={openSection === 'geral'} onOpenChange={(o) => setOpenSection(o ? 'geral' : null)}>
           <CollapsibleTrigger asChild>
             <button type="button" className="w-full">
-              <SectionHeader icon={Globe} label="Geral" open={geralOpen} onMouseDown={(e) => e.preventDefault()} />
+              <SectionHeader icon={Globe} label="Geral" open={openSection === 'geral'} onMouseDown={(e) => e.preventDefault()} />
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
@@ -210,10 +216,10 @@ const Sidebar = () => {
                   onClick={() => setMobileOpen(false)}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                      'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
                       isActive
                         ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                        : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
                     )
                   }
                 >
@@ -227,10 +233,10 @@ const Sidebar = () => {
 
         {/* Colaboradores Section */}
         {(isColaborador || isAdmin) && (
-          <Collapsible open={colaboradoresOpen} onOpenChange={setColaboradoresOpen}>
+          <Collapsible open={openSection === 'colaboradores'} onOpenChange={(o) => setOpenSection(o ? 'colaboradores' : null)}>
             <CollapsibleTrigger asChild>
               <button type="button" className="w-full">
-                <SectionHeader icon={UsersRound} label="Colaboradores" open={colaboradoresOpen} onMouseDown={(e) => e.preventDefault()} />
+                <SectionHeader icon={UsersRound} label="Colaboradores" open={openSection === 'colaboradores'} onMouseDown={(e) => e.preventDefault()} />
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
@@ -242,10 +248,10 @@ const Sidebar = () => {
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
                       cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                        'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
                         isActive
                           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
                       )
                     }
                   >
@@ -260,10 +266,10 @@ const Sidebar = () => {
 
         {/* Agentes de IA Section */}
         {(isColaborador || isAdmin) && (
-          <Collapsible open={agentesOpen} onOpenChange={setAgentesOpen}>
+          <Collapsible open={openSection === 'agentes'} onOpenChange={(o) => setOpenSection(o ? 'agentes' : null)}>
             <CollapsibleTrigger asChild>
               <button type="button" className="w-full">
-                <SectionHeader icon={Bot} label="Agentes de IA" open={agentesOpen} onMouseDown={(e) => e.preventDefault()} />
+                <SectionHeader icon={Bot} label="Agentes de IA" open={openSection === 'agentes'} onMouseDown={(e) => e.preventDefault()} />
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
@@ -280,10 +286,10 @@ const Sidebar = () => {
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
                       cn(
-                        'flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-sm font-medium transition-all duration-200',
+                        'flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-[13px] font-medium transition-all duration-200',
                         isActive
                           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
                       )
                     }
                   >
@@ -301,7 +307,7 @@ const Sidebar = () => {
                   item.disabled ? (
                     <div
                       key={item.name}
-                      className="flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-sm font-medium text-muted-foreground/50 cursor-not-allowed"
+                      className="flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-[13px] font-medium text-muted-foreground/50 cursor-not-allowed"
                     >
                       <item.icon className="h-4 w-4" />
                       {item.name}
@@ -314,10 +320,10 @@ const Sidebar = () => {
                       onClick={() => setMobileOpen(false)}
                       className={({ isActive }) =>
                         cn(
-                          'flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-sm font-medium transition-all duration-200',
+                          'flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-[13px] font-medium transition-all duration-200',
                           isActive
                             ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                            : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                            : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
                         )
                       }
                     >
@@ -332,10 +338,10 @@ const Sidebar = () => {
         )}
 
         {/* Minha Área Section */}
-        <Collapsible open={minhaAreaOpen} onOpenChange={setMinhaAreaOpen}>
+        <Collapsible open={openSection === 'minha-area'} onOpenChange={(o) => setOpenSection(o ? 'minha-area' : null)}>
           <CollapsibleTrigger asChild>
             <button type="button" className="w-full">
-              <SectionHeader icon={FolderOpen} label="Minha Área" open={minhaAreaOpen} onMouseDown={(e) => e.preventDefault()} />
+              <SectionHeader icon={FolderOpen} label="Minha Área" open={openSection === 'minha-area'} onMouseDown={(e) => e.preventDefault()} />
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
@@ -344,7 +350,7 @@ const Sidebar = () => {
                 item.disabled ? (
                   <div
                     key={item.name}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground/50 cursor-not-allowed"
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-muted-foreground/50 cursor-not-allowed"
                   >
                     <item.icon className="h-4 w-4" />
                     {item.name}
@@ -357,10 +363,10 @@ const Sidebar = () => {
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
                       cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                        'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
                         isActive
                           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
                       )
                     }
                   >
@@ -375,10 +381,10 @@ const Sidebar = () => {
 
         {/* Admin Section */}
         {isAdmin && (
-          <Collapsible open={adminOpen} onOpenChange={setAdminOpen}>
+          <Collapsible open={openSection === 'admin'} onOpenChange={(o) => setOpenSection(o ? 'admin' : null)}>
             <CollapsibleTrigger asChild>
               <button type="button" className="w-full">
-                <SectionHeader icon={Settings} label="Administração" open={adminOpen} onMouseDown={(e) => e.preventDefault()} />
+                <SectionHeader icon={Settings} label="Administração" open={openSection === 'admin'} onMouseDown={(e) => e.preventDefault()} />
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
@@ -390,10 +396,10 @@ const Sidebar = () => {
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
                       cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                        'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
                         isActive
                           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
                       )
                     }
                   >
