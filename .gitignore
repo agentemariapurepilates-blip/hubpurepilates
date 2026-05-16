@@ -35,3 +35,6 @@ dist-ssr
 .migration/
 .supabase-new-db-password.txt
 supabase/.temp/
+
+# Videos pesados — usar .mp4 comprimido em vez de .mov original
+*.mov

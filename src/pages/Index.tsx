@@ -72,7 +72,7 @@ const Index = () => {
       {/* Negative margins quebram o p-4/sm:p-6/lg:p-8 do MainLayout. h-screen pega 100vh. */}
       <section className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8 h-[55vh] md:h-[70vh] lg:h-[100dvh] overflow-hidden bg-black">
         <video
-          src="/leo-yang.mov"
+          src="/leo-yang.mp4"
           autoPlay
           loop
           muted
