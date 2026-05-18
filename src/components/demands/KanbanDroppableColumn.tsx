@@ -1,6 +1,6 @@
 import { useDroppable } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/badge';
-import { Demand } from '@/pages/PedidosDemanda';
+import { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
 import KanbanDraggableCard from './KanbanDraggableCard';
 
 interface KanbanDroppableColumnProps {

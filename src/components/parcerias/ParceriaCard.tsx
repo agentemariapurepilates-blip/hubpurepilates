@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreVertical, Trash2, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
-import { Parceria } from '@/pages/Parcerias';
+import { Parceria } from '@/features/geral/parcerias/Parcerias';
 
 interface ParceriaCardProps {
   parceria: Parceria;

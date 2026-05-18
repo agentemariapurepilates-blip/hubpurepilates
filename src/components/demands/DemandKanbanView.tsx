@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, CalendarPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
-import { Demand } from '@/pages/PedidosDemanda';
+import { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
 import KanbanDroppableColumn from './KanbanDroppableColumn';
 
 interface DemandKanbanViewProps {

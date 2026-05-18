@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, ImagePlus, X, Video } from 'lucide-react';
-import { Aviso } from '@/pages/Avisos';
+import { Aviso } from '@/features/geral/avisos/Avisos';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 
 interface EditAvisoDialogProps {

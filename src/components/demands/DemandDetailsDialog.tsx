@@ -44,7 +44,7 @@ import { ptBR } from 'date-fns/locale/pt-BR';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadFileToStorage } from '@/lib/upload';
 import { toast } from '@/hooks/use-toast';
-import { Demand } from '@/pages/PedidosDemanda';
+import { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
 import { useColaboradores } from '@/hooks/useColaboradores';
 import { CommentItem, Comment } from './detail/CommentItem';
 import { AssigneeSection } from './detail/AssigneeSection';

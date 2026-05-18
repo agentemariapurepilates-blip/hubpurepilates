@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreVertical, Pencil, Trash2, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
-import { Aviso } from '@/pages/Avisos';
+import { Aviso } from '@/features/geral/avisos/Avisos';
 
 interface AvisoCardProps {
   aviso: Aviso;

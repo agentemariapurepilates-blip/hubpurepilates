@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, CalendarPlus, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
-import { Demand } from '@/pages/PedidosDemanda';
+import { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
 
 const priorityConfig = {
   low: { label: 'Baixa', color: 'bg-gray-100 text-gray-700' },

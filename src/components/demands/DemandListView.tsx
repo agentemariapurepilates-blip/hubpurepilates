@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, CalendarPlus, ChevronRight, Users, ChevronDown, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
-import { Demand } from '@/pages/PedidosDemanda';
+import { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useState } from 'react';
 

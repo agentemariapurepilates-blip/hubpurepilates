@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
-import { Aviso } from '@/pages/Avisos';
+import { Aviso } from '@/features/geral/avisos/Avisos';
 
 interface AvisoDetailsDialogProps {
   aviso: Aviso | null;
