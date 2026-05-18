@@ -1,40 +1,57 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Feed from "./pages/Feed";
-import NovidadesDoMes from "./pages/NovidadesDoMes";
-import Perfil from "./pages/Perfil";
-import CalendarioMarketing from "./pages/CalendarioMarketing";
-import MidiasSociais from "./pages/MidiasSociais";
-import AdminUsuarios from "./pages/AdminUsuarios";
-import AguardandoAprovacao from "./pages/AguardandoAprovacao";
-import PedidosDemanda from "./pages/PedidosDemanda";
-import Notificacoes from "./pages/Notificacoes";
-import ArtesProntas from "./pages/ArtesProntas";
-import Avisos from "./pages/Avisos";
-import MateriaisImplantacao from "./pages/MateriaisImplantacao";
-import Parcerias from "./pages/Parcerias";
-import TutorialMarketing from "./pages/TutorialMarketing";
-import AutorizarMidiaAdicional from "./pages/AutorizarMidiaAdicional";
-import MidiaAdicionalUnidades from "./pages/MidiaAdicionalUnidades";
-import MinhasSolicitacoes from "./pages/MinhasSolicitacoes";
-import ManualSistema from "./pages/ManualSistema";
-import PureDesign from "./pages/PureDesign";
-import PureDesignEditor from "./pages/PureDesignEditor";
-import NotFound from "./pages/NotFound";
-import AgenteInstagramFacebook from "./pages/AgenteInstagramFacebook";
-import AgenteTikTok from "./pages/AgenteTikTok";
-import MemoriaAgente from "./pages/MemoriaAgente";
-import AgenteMonitoramentoMetricas from "./pages/AgenteMonitoramentoMetricas";
-import SaudeDeMarca from "./pages/SaudeDeMarca";
-import AuthCallbackMeta from "./pages/AuthCallbackMeta";
-import AuthCallbackTikTok from "./pages/AuthCallbackTikTok";
+
+// Páginas lazy-loaded — cada uma vira um chunk separado, baixado só ao visitar
+// Geral (todo mundo vê)
+const Index = lazy(() => import("./features/geral/home/Index"));
+const NovidadesDoMes = lazy(() => import("./features/geral/timeline/NovidadesDoMes"));
+const Avisos = lazy(() => import("./features/geral/avisos/Avisos"));
+const TutorialMarketing = lazy(() => import("./features/geral/marketing/TutorialMarketing"));
+const CalendarioMarketing = lazy(() => import("./features/geral/marketing/CalendarioMarketing"));
+const MidiasSociais = lazy(() => import("./features/geral/marketing/MidiasSociais"));
+const ArtesProntas = lazy(() => import("./features/geral/artes/ArtesProntas"));
+const MateriaisImplantacao = lazy(() => import("./features/geral/artes/MateriaisImplantacao"));
+const PureDesign = lazy(() => import("./features/geral/artes/PureDesign"));
+const PureDesignEditor = lazy(() => import("./features/geral/artes/PureDesignEditor"));
+const Parcerias = lazy(() => import("./features/geral/parcerias/Parcerias"));
+const ManualSistema = lazy(() => import("./features/geral/manual/ManualSistema"));
+const AutorizarMidiaAdicional = lazy(() => import("./features/geral/midia-adicional/AutorizarMidiaAdicional"));
+const MinhasSolicitacoes = lazy(() => import("./features/geral/midia-adicional/MinhasSolicitacoes"));
+const Perfil = lazy(() => import("./features/geral/conta/Perfil"));
+const Notificacoes = lazy(() => import("./features/geral/conta/Notificacoes"));
+const Auth = lazy(() => import("./features/geral/auth/Auth"));
+const AguardandoAprovacao = lazy(() => import("./features/geral/auth/AguardandoAprovacao"));
+const AuthCallbackMeta = lazy(() => import("./features/geral/auth/AuthCallbackMeta"));
+const AuthCallbackTikTok = lazy(() => import("./features/geral/auth/AuthCallbackTikTok"));
+
+// Colaborador (colab + admin)
+const Feed = lazy(() => import("./features/colaborador/feed-sede/Feed"));
+const PedidosDemanda = lazy(() => import("./features/colaborador/demandas/PedidosDemanda"));
+const MidiaAdicionalUnidades = lazy(() => import("./features/colaborador/unidades/MidiaAdicionalUnidades"));
+const AgenteInstagramFacebook = lazy(() => import("./features/colaborador/agentes/AgenteInstagramFacebook"));
+const AgenteTikTok = lazy(() => import("./features/colaborador/agentes/AgenteTikTok"));
+const MemoriaAgente = lazy(() => import("./features/colaborador/agentes/MemoriaAgente"));
+const AgenteMonitoramentoMetricas = lazy(() => import("./features/colaborador/monitoramento/AgenteMonitoramentoMetricas"));
+const SaudeDeMarca = lazy(() => import("./features/colaborador/monitoramento/SaudeDeMarca"));
+
+// Admin (só admin)
+const AdminUsuarios = lazy(() => import("./features/admin/usuarios/AdminUsuarios"));
+
+// Sistema
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const RouteFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -46,6 +63,7 @@ function App() {
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
@@ -81,12 +99,13 @@ function App() {
             />
             <Route
               path="/agente-monitoramento/saude-de-marca"
-              element={<ProtectedRoute requireAdmin><SaudeDeMarca /></ProtectedRoute>}
+              element={<ProtectedRoute><SaudeDeMarca /></ProtectedRoute>}
             />
             <Route path="/auth/callback/meta" element={<AuthCallbackMeta />} />
             <Route path="/auth/callback/tiktok" element={<AuthCallbackTikTok />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
