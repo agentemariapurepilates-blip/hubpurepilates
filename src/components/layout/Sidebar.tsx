@@ -34,6 +34,7 @@ import {
   ChevronDown,
   Globe,
   Inbox,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 const SectionHeader = ({
@@ -176,6 +177,12 @@ const Sidebar = () => {
     { name: 'Agente Tik Tok', href: '/agente-tiktok', icon: Video },
   ];
 
+  // Agente de Design - only for colaboradores and admins
+  const designNavigation = [
+    { name: 'Gerar Foto', href: '/agente-design/gerar-foto', icon: Sparkles, disabled: false },
+    { name: 'Avatares', href: '/agente-design/avatares', icon: User, disabled: false },
+  ];
+
   // Agente Monitoramento section - only for admins
   const monitoramentoNavigation = [
     { name: 'Métricas', href: '/agente-monitoramento/metricas', icon: BarChart3, disabled: false },
@@ -297,6 +304,41 @@ const Sidebar = () => {
                     {item.name}
                   </NavLink>
                 ))}
+
+                {/* Sub-grupo: Agente de Design */}
+                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
+                  <ImageIcon className="h-3 w-3" />
+                  Agente de Design
+                </p>
+                {designNavigation.map((item) =>
+                  item.disabled ? (
+                    <div
+                      key={item.name}
+                      className="flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-[13px] font-medium text-muted-foreground/50 cursor-not-allowed"
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.name}
+                      <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0">Em breve</Badge>
+                    </div>
+                  ) : (
+                    <NavLink
+                      key={item.name}
+                      to={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                          isActive
+                            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                            : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                        )
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.name}
+                    </NavLink>
+                  )
+                )}
 
                 {/* Sub-grupo: Agente Monitoramento */}
                 <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">

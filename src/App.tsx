@@ -38,6 +38,8 @@ const MidiaAdicionalUnidades = lazy(() => import("./features/colaborador/unidade
 const AgenteInstagramFacebook = lazy(() => import("./features/colaborador/agentes/AgenteInstagramFacebook"));
 const AgenteTikTok = lazy(() => import("./features/colaborador/agentes/AgenteTikTok"));
 const MemoriaAgente = lazy(() => import("./features/colaborador/agentes/MemoriaAgente"));
+const AgenteDesign = lazy(() => import("./features/colaborador/agentes/agente-design/AgenteDesign"));
+const GerarFoto = lazy(() => import("./features/colaborador/agentes/agente-design/GerarFoto"));
 const AgenteMonitoramentoMetricas = lazy(() => import("./features/colaborador/monitoramento/AgenteMonitoramentoMetricas"));
 const SaudeDeMarca = lazy(() => import("./features/colaborador/monitoramento/SaudeDeMarca"));
 
@@ -89,6 +91,11 @@ function App() {
             <Route path="/agente-instagram-facebook" element={<ProtectedRoute><AgenteInstagramFacebook /></ProtectedRoute>} />
             <Route path="/agente-instagram-facebook/memoria" element={<ProtectedRoute><MemoriaAgente /></ProtectedRoute>} />
             <Route path="/agente-tiktok" element={<ProtectedRoute><AgenteTikTok /></ProtectedRoute>} />
+            <Route path="/agente-design" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
+            <Route path="/agente-design/gerar-foto" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
+            <Route path="/agente-design/avatares" element={<ProtectedRoute><AgenteDesign /></ProtectedRoute>} />
+            {/* Backward compat — redireciona pra nova URL */}
+            <Route path="/agente-design/criacao-fotos" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
             {/* Backward compat: redirect legado */}
             <Route path="/agente-planejamento-editorial" element={<ProtectedRoute><AgenteInstagramFacebook /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />
