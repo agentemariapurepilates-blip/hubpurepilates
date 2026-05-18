@@ -18,16 +18,16 @@ export const APARELHOS: Aparelho[] = [
   {
     id: 'cadillac',
     nome: 'Cadillac',
-    referencias: ['/images/aparelhos/cadillac/01-frontal.webp'],
+    referencias: ['/images/aparelhos/cadillac/01-frontal.jpg'],
   },
   {
     id: 'chair',
     nome: 'Chair',
-    referencias: ['/images/aparelhos/chair/01-frontal.webp'],
+    referencias: ['/images/aparelhos/chair/01-frontal.jpg'],
   },
   {
     id: 'barrel',
     nome: 'Barrel',
-    referencias: ['/images/aparelhos/barrel/01-frontal.webp'],
+    referencias: ['/images/aparelhos/barrel/01-frontal.jpg'],
   },
 ];
