@@ -111,6 +111,7 @@ const AvatarMiniCard = ({ avatar, onClick }: AvatarMiniCardProps) => {
         <img
           src={thumb}
           alt={avatar.nome}
+          loading="lazy"
           className="h-full w-full object-cover transition-transform group-hover:scale-105"
         />
       ) : (
@@ -209,6 +210,7 @@ const AvatarDetailsDialog = ({ avatar, onClose, onOpenViewer }: AvatarDetailsDia
                 <img
                   src={url}
                   alt={`${avatar.nome} — referência ${i + 1}`}
+                  loading="lazy"
                   className="h-full w-full object-cover transition-transform group-hover:scale-105"
                 />
                 <div className="absolute top-2 left-2">

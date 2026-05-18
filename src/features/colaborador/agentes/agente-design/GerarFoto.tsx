@@ -1135,7 +1135,7 @@ const AvatarChip = ({ avatar, selected, onClick }: AvatarChipProps) => {
     >
       <div className="aspect-square bg-muted/40">
         {thumb ? (
-          <img src={thumb} alt={avatar.nome} className="w-full h-full object-cover" />
+          <img src={thumb} alt={avatar.nome} loading="lazy" className="w-full h-full object-cover" />
         ) : (
           <div className="flex items-center justify-center w-full h-full text-muted-foreground/40">
             <User className="h-6 w-6" />
@@ -1186,7 +1186,7 @@ const MarcaExtraChip = ({ chave, block, selected, onClick }: MarcaExtraChipProps
     >
       <div className="aspect-square bg-muted/40">
         {thumb ? (
-          <img src={thumb} alt={block.label} className="w-full h-full object-cover" />
+          <img src={thumb} alt={block.label} loading="lazy" className="w-full h-full object-cover" />
         ) : chave === 'cores-pure' ? (
           <div className="grid grid-cols-2 grid-rows-2 w-full h-full">
             <div style={{ background: '#722F37' }} />
@@ -1233,7 +1233,7 @@ const AparelhoChip = ({ aparelho, selected, onClick }: AparelhoChipProps) => {
     >
       <div className="aspect-square bg-muted/40">
         {thumb ? (
-          <img src={thumb} alt={aparelho.nome} className="w-full h-full object-contain p-1" />
+          <img src={thumb} alt={aparelho.nome} loading="lazy" className="w-full h-full object-contain p-1" />
         ) : (
           <div className="flex items-center justify-center w-full h-full text-muted-foreground/40">
             <ImageIcon className="h-6 w-6" />
@@ -1273,7 +1273,7 @@ const UniformeChip = ({ uniforme, selected, onClick }: UniformeChipProps) => {
     >
       <div className="aspect-square bg-muted/40">
         {thumb ? (
-          <img src={thumb} alt={uniforme.nome} className="w-full h-full object-cover" />
+          <img src={thumb} alt={uniforme.nome} loading="lazy" className="w-full h-full object-cover" />
         ) : (
           <div className="flex items-center justify-center w-full h-full text-muted-foreground/40">
             <ImageIcon className="h-6 w-6" />
