@@ -25,7 +25,6 @@ import {
   Globe,
   Upload,
   Lightbulb,
-  Cloud,
 } from 'lucide-react';
 import {
   AVATARES,
@@ -62,9 +61,9 @@ import {
   type ReferenceImage,
 } from './lib/generateImage';
 import { analyzePose } from './lib/analyzePose';
+import { fileToResizedBase64 } from './lib/resizeImage';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import { ToastAction } from '@/components/ui/toast';
 
 const tipoAccent: Record<AvatarTipo, string> = {
   franqueado: 'text-pure-red',
@@ -137,7 +136,6 @@ const GerarFoto = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultDataUrl, setResultDataUrl] = useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
-  const [isSavingToDrive, setIsSavingToDrive] = useState(false);
 
   const composedPrompt = useMemo(() => composePrompt(scene), [scene]);
 
@@ -222,24 +220,27 @@ const GerarFoto = () => {
       return;
     }
     const toUpload = Array.from(files).slice(0, remaining);
-    toUpload.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUrl = reader.result as string;
-        const base64 = dataUrl.split(',')[1];
+    toUpload.forEach(async (file) => {
+      try {
+        const resized = await fileToResizedBase64(file);
         const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         setUploadedAssets((prev) => [
           ...prev,
           {
             id,
             name: file.name,
-            previewUrl: URL.createObjectURL(file),
-            base64,
-            mimeType: file.type || 'image/jpeg',
+            previewUrl: resized.previewUrl,
+            base64: resized.data,
+            mimeType: resized.mime_type,
           },
         ]);
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        toast({
+          title: 'Erro ao processar imagem',
+          description: err instanceof Error ? err.message : String(err),
+          variant: 'destructive',
+        });
+      }
     });
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -253,23 +254,22 @@ const GerarFoto = () => {
   };
 
   // — Pose (analise por IA de uma imagem de referência) —————————————————
-  const handlePoseFileSelected = (file: File | null) => {
+  const handlePoseFileSelected = async (file: File | null) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      const base64 = dataUrl.split(',')[1];
+    try {
+      const resized = await fileToResizedBase64(file);
       setPoseRefImage((prev) => {
         if (prev) URL.revokeObjectURL(prev.previewUrl);
-        return {
-          mime_type: file.type || 'image/jpeg',
-          data: base64,
-          previewUrl: URL.createObjectURL(file),
-        };
+        return resized;
       });
       setPoseDraft('');
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      toast({
+        title: 'Erro ao processar imagem',
+        description: err instanceof Error ? err.message : String(err),
+        variant: 'destructive',
+      });
+    }
     if (poseInputRef.current) poseInputRef.current.value = '';
   };
 
@@ -394,51 +394,6 @@ const GerarFoto = () => {
   };
 
   const downloadName = `pure-design-${Date.now()}.png`;
-
-  const handleSaveToDrive = async () => {
-    if (!resultDataUrl) return;
-    const webhookUrl = import.meta.env.VITE_PURE_DESIGN_DRIVE_WEBHOOK_URL as string | undefined;
-    if (!webhookUrl) {
-      toast({
-        title: 'Salvar no Drive não configurado',
-        description: 'Defina VITE_PURE_DESIGN_DRIVE_WEBHOOK_URL no .env.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSavingToDrive(true);
-    try {
-      const blob = await (await fetch(resultDataUrl)).blob();
-      const formData = new FormData();
-      formData.append('file', blob, downloadName);
-      formData.append('fileName', downloadName);
-
-      const response = await fetch(webhookUrl, { method: 'POST', body: formData });
-      if (!response.ok) throw new Error(`webhook respondeu ${response.status}`);
-
-      const payload = await response.json().catch(() => null);
-      const link: string | undefined = payload?.webViewLink || payload?.[0]?.webViewLink;
-
-      toast({
-        title: 'Salvo no Drive',
-        description: 'A imagem foi adicionada na pasta Pure Design.',
-        action: link ? (
-          <ToastAction altText="Abrir no Drive" onClick={() => window.open(link, '_blank')}>
-            Abrir
-          </ToastAction>
-        ) : undefined,
-      });
-    } catch (err) {
-      toast({
-        title: 'Erro ao salvar no Drive',
-        description: err instanceof Error ? err.message : String(err),
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSavingToDrive(false);
-    }
-  };
 
   return (
     <MainLayout>
@@ -964,20 +919,6 @@ const GerarFoto = () => {
                       <Button type="button" size="sm" variant="outline" onClick={handleGenerate}>
                         <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                         Gerar de novo
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={handleSaveToDrive}
-                        disabled={isSavingToDrive}
-                      >
-                        {isSavingToDrive ? (
-                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                        ) : (
-                          <Cloud className="h-3.5 w-3.5 mr-1.5" />
-                        )}
-                        {isSavingToDrive ? 'Salvando…' : 'Salvar no Drive'}
                       </Button>
                       <Button
                         size="sm"

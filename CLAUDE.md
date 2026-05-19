@@ -16,6 +16,8 @@ O deploy é manual via `./deploy.sh` (faz upload via SFTP direto pro servidor de
 
 Motivo: o `deploy.sh` envia o build direto por SFTP, então é possível ter produção à frente do GitHub. Isso quebra o rastro de mudanças e atrapalha quem trabalha em outra máquina (que vai puxar do GitHub e não ter o código mais recente).
 
+**NÃO alterar o `deploy.sh`.** É a versão estável e validada em produção. Tentativas de "modernizar" (lftp mirror, deploy incremental, etc.) já quebraram o hub no passado. Qualquer mudança no `deploy.sh` requer aprovação explícita do usuário antes de implementar.
+
 ## Repositório
 
 GitHub: https://github.com/agentemariapurepilates-blip/hubpurepilates (branch `main`)
