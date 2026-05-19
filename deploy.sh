@@ -3,11 +3,12 @@
 # Hub Pure Pilates - Deploy Frontend para Produção (macOS/Linux)
 # =============================================================================
 # Uso:
-#   ./deploy.sh              -> build + deploy
+#   ./deploy.sh              -> build + deploy incremental (só arquivos mudados)
 #   ./deploy.sh --upload-only -> apenas upload (sem rebuild)
+#   ./deploy.sh --full        -> reenvia TUDO mesmo que não tenha mudado
 #
-# Na primeira vez, instale o sshpass:
-#   brew install hudochenkov/sshpass/sshpass
+# Pré-requisito (uma vez):
+#   brew install lftp
 # =============================================================================
 
 set -e
@@ -20,9 +21,13 @@ DEPLOY_REMOTE_PATH="/hub.purepilates.com.br/wwwroot"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 UPLOAD_ONLY=false
-if [ "$1" = "--upload-only" ]; then
-  UPLOAD_ONLY=true
-fi
+FULL=false
+for arg in "$@"; do
+  case "$arg" in
+    --upload-only) UPLOAD_ONLY=true ;;
+    --full) FULL=true ;;
+  esac
+done
 
 # — Build frontend ————————————————————————————————————————————
 if [ "$UPLOAD_ONLY" = false ]; then
@@ -47,36 +52,31 @@ if [ -f "$SCRIPT_DIR/publish/root-web.config" ]; then
   echo "      web.config copiado."
 fi
 
-# — Deploy Frontend ———————————————————————————————————————————
+# — Deploy via lftp mirror (sync incremental sobre SFTP) ——————————————
 echo ""
-echo "[2/2] Enviando frontend para o servidor..."
+echo "[2/2] Enviando frontend (incremental)..."
 
-# Converter path para Windows format
-WIN_REMOTE_PATH=$(echo "$DEPLOY_REMOTE_PATH" | sed 's|^/||' | sed 's|/|\\|g')
-
-if command -v sshpass &> /dev/null; then
-  # Limpar diretório remoto (servidor Windows)
-  sshpass -p "$DEPLOY_PASS" ssh -o StrictHostKeyChecking=no \
-    "${DEPLOY_USER}@${DEPLOY_HOST}" "powershell -Command \"Get-ChildItem -Path '${WIN_REMOTE_PATH}' -Recurse | Remove-Item -Recurse -Force\"" 2>/dev/null || true
-
-  # Enviar arquivos via scp
-  sshpass -p "$DEPLOY_PASS" scp -o StrictHostKeyChecking=no -r \
-    "$SCRIPT_DIR/dist/"* \
-    "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_REMOTE_PATH}/"
-else
+if ! command -v lftp &> /dev/null; then
   echo ""
-  echo "sshpass não encontrado."
-  echo "Instale com: brew install hudochenkov/sshpass/sshpass"
-  echo ""
-  echo "Senha para digitar manualmente: $DEPLOY_PASS"
-  echo ""
-  ssh -o StrictHostKeyChecking=no \
-    "${DEPLOY_USER}@${DEPLOY_HOST}" "powershell -Command \"Get-ChildItem -Path '${WIN_REMOTE_PATH}' -Recurse | Remove-Item -Recurse -Force\"" 2>/dev/null || true
-
-  scp -o StrictHostKeyChecking=no -r \
-    "$SCRIPT_DIR/dist/"* \
-    "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_REMOTE_PATH}/"
+  echo "ERRO: lftp não está instalado."
+  echo "Instale com: brew install lftp"
+  exit 1
 fi
+
+MIRROR_FLAGS="--reverse --delete --parallel=4 --verbose --use-cache --no-perms"
+if [ "$FULL" = true ]; then
+  MIRROR_FLAGS="$MIRROR_FLAGS --ignore-time"
+  echo "      Modo --full ativo: re-enviando todos os arquivos."
+fi
+
+lftp -u "${DEPLOY_USER},${DEPLOY_PASS}" "sftp://${DEPLOY_HOST}" <<LFTP_EOF
+set sftp:auto-confirm yes
+set net:timeout 30
+set net:max-retries 3
+set net:reconnect-interval-base 5
+mirror $MIRROR_FLAGS "$SCRIPT_DIR/dist/" "${DEPLOY_REMOTE_PATH}/"
+bye
+LFTP_EOF
 
 echo ""
 echo "============================================"
