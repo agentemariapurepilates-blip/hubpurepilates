@@ -25,6 +25,7 @@ import {
   Globe,
   Upload,
   Lightbulb,
+  Cloud,
 } from 'lucide-react';
 import {
   AVATARES,
@@ -62,6 +63,7 @@ import {
 } from './lib/generateImage';
 import { analyzePose } from './lib/analyzePose';
 import { fileToResizedBase64 } from './lib/resizeImage';
+import { ToastAction } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
@@ -136,6 +138,7 @@ const GerarFoto = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultDataUrl, setResultDataUrl] = useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+  const [isSavingToDrive, setIsSavingToDrive] = useState(false);
 
   const composedPrompt = useMemo(() => composePrompt(scene), [scene]);
 
@@ -394,6 +397,51 @@ const GerarFoto = () => {
   };
 
   const downloadName = `pure-design-${Date.now()}.png`;
+
+  const handleSaveToDrive = async () => {
+    if (!resultDataUrl) return;
+    const webhookUrl = import.meta.env.VITE_PURE_DESIGN_DRIVE_WEBHOOK_URL as string | undefined;
+    if (!webhookUrl) {
+      toast({
+        title: 'Salvar no Drive não configurado',
+        description: 'Defina VITE_PURE_DESIGN_DRIVE_WEBHOOK_URL no .env.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSavingToDrive(true);
+    try {
+      const blob = await (await fetch(resultDataUrl)).blob();
+      const formData = new FormData();
+      formData.append('file', blob, downloadName);
+      formData.append('fileName', downloadName);
+
+      const response = await fetch(webhookUrl, { method: 'POST', body: formData });
+      if (!response.ok) throw new Error(`webhook respondeu ${response.status}`);
+
+      const payload = await response.json().catch(() => null);
+      const link: string | undefined = payload?.webViewLink || payload?.[0]?.webViewLink;
+
+      toast({
+        title: 'Salvo no Drive',
+        description: 'A imagem foi adicionada na pasta Pure Design.',
+        action: link ? (
+          <ToastAction altText="Abrir no Drive" onClick={() => window.open(link, '_blank')}>
+            Abrir
+          </ToastAction>
+        ) : undefined,
+      });
+    } catch (err) {
+      toast({
+        title: 'Erro ao salvar no Drive',
+        description: err instanceof Error ? err.message : String(err),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingToDrive(false);
+    }
+  };
 
   return (
     <MainLayout>
@@ -919,6 +967,20 @@ const GerarFoto = () => {
                       <Button type="button" size="sm" variant="outline" onClick={handleGenerate}>
                         <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                         Gerar de novo
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSaveToDrive}
+                        disabled={isSavingToDrive}
+                      >
+                        {isSavingToDrive ? (
+                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                        ) : (
+                          <Cloud className="h-3.5 w-3.5 mr-1.5" />
+                        )}
+                        {isSavingToDrive ? 'Salvando…' : 'Salvar no Drive'}
                       </Button>
                       <Button
                         size="sm"
