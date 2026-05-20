@@ -63,16 +63,13 @@ export function AdSetPickerModal({ open, onOpenChange, unitId, currentAdSetId }:
 
   const linkMutation = useMutation({
     mutationFn: async ({ adSetId }: { adSetId: string }) => {
-      // Pega user atual pra passar como p_actor na RPC
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Sessão expirada');
-
-      const { error: rpcErr } = await supabase.rpc('dpp_relink_ad_set' as never, {
-        p_unit_id: unitId,
-        p_ad_set_id: adSetId,
-        p_actor: user.id,
+      const { data, error } = await supabase.functions.invoke('dpp-admin-relink-ad-set', {
+        body: { unit_id: unitId, ad_set_id: adSetId },
       });
-      if (rpcErr) throw rpcErr;
+      if (error) throw error;
+      if (data && typeof data === 'object' && 'error' in data && data.error) {
+        throw new Error(String(data.error));
+      }
 
       // Dispara backfill 180d em background via Edge Function (fire-and-forget)
       void supabase.functions
