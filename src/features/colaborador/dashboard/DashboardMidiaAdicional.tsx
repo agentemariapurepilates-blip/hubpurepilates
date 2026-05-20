@@ -13,11 +13,15 @@ import { ChartDaily } from './components/ChartDaily';
 import { PeriodSelector } from './components/PeriodSelector';
 import { LastUpdateBanner } from './components/LastUpdateBanner';
 import { UnitPicker, type UnitOption } from './components/UnitPicker';
+import { normalizeLink } from '@/lib/dpp-link';
 
 const VALID_PRESETS: Preset[] = ['ontem', '7d', '30d', '90d', '180d'];
 
+type LinkRow = { ad_set_id: string };
+
 type UnitWithLink = UnitOption & {
-  dpp_unit_ad_set_link: { ad_set_id: string }[] | null;
+  // PostgREST retorna objeto OU array — normalizar antes de usar.
+  dpp_unit_ad_set_link: LinkRow | LinkRow[] | null;
 };
 
 export default function DashboardMidiaAdicional() {
@@ -59,7 +63,7 @@ export default function DashboardMidiaAdicional() {
     return resolveRange({ preset });
   }, [sp]);
 
-  const adSetIds = selectedUnit?.dpp_unit_ad_set_link?.map((l) => l.ad_set_id) ?? [];
+  const adSetIds = normalizeLink(selectedUnit?.dpp_unit_ad_set_link).map((l) => l.ad_set_id);
 
   const { data: metrics } = useQuery({
     queryKey: ['dpp_dashboard_metrics', selectedUnit?.id, range.from, range.to],
