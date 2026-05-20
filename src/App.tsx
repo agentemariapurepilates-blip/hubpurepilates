@@ -45,6 +45,9 @@ const SaudeDeMarca = lazy(() => import("./features/colaborador/monitoramento/Sau
 
 // Admin (só admin)
 const AdminUsuarios = lazy(() => import("./features/admin/usuarios/AdminUsuarios"));
+const MidiaAdicional = lazy(() => import("./features/admin/midia-adicional/MidiaAdicional"));
+const MidiaAdicionalUnidade = lazy(() => import("./features/admin/midia-adicional/MidiaAdicionalUnidade"));
+const MidiaAdicionalSyncLogs = lazy(() => import("./features/admin/midia-adicional/MidiaAdicionalSyncLogs"));
 
 // Sistema
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -99,6 +102,9 @@ function App() {
             {/* Backward compat: redirect legado */}
             <Route path="/agente-planejamento-editorial" element={<ProtectedRoute><AgenteInstagramFacebook /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />
+            <Route path="/minha-area/midia-adicional" element={<ProtectedRoute requireAdmin><MidiaAdicional /></ProtectedRoute>} />
+            <Route path="/minha-area/midia-adicional/sync-logs" element={<ProtectedRoute requireAdmin><MidiaAdicionalSyncLogs /></ProtectedRoute>} />
+            <Route path="/minha-area/midia-adicional/:slug" element={<ProtectedRoute requireAdmin><MidiaAdicionalUnidade /></ProtectedRoute>} />
             {/* TODO: voltar para `requireAdmin` antes do release. Liberado temporariamente para preview. */}
             <Route
               path="/agente-monitoramento/metricas"

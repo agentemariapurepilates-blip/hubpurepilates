@@ -1,1 +1,12 @@
 project_id = "cydoyzuwsmmopxgjqszn"
+
+# Cron jobs do dashboard de Mídia Adicional: chamados por pg_cron via
+# pg_net, autenticam-se internamente com CRON_SECRET — sem JWT do usuário.
+[functions.dpp-cron-sync-units]
+verify_jwt = false
+
+[functions.dpp-cron-sync-ad-sets-catalog]
+verify_jwt = false
+
+[functions.dpp-cron-sync-meta]
+verify_jwt = false

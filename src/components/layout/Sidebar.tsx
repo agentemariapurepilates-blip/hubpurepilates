@@ -190,8 +190,11 @@ const Sidebar = () => {
   ];
 
   // Minha Área section
+  // 'Mídia adicional' só aparece pra admins (escopo v1; depois liberamos pra franqueado da unidade).
   const minhaAreaNavigation = [
-    { name: 'Relatórios', href: '#', icon: FileText, disabled: true },
+    ...(isAdmin
+      ? [{ name: 'Mídia adicional', href: '/minha-area/midia-adicional', icon: Megaphone, disabled: false }]
+      : []),
     { name: 'Minhas solicitações', href: '/minha-area/minhas-solicitacoes', icon: Inbox, disabled: false },
   ];
 
