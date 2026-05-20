@@ -10,3 +10,6 @@ verify_jwt = false
 
 [functions.dpp-cron-sync-meta]
 verify_jwt = false
+
+[functions.dpp-cron-instagram-snapshot]
+verify_jwt = false
