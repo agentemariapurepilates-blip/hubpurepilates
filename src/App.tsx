@@ -35,6 +35,7 @@ const AuthCallbackTikTok = lazy(() => import("./features/geral/auth/AuthCallback
 const Feed = lazy(() => import("./features/colaborador/feed-sede/Feed"));
 const PedidosDemanda = lazy(() => import("./features/colaborador/demandas/PedidosDemanda"));
 const MidiaAdicionalUnidades = lazy(() => import("./features/colaborador/unidades/MidiaAdicionalUnidades"));
+const DashboardMidiaAdicional = lazy(() => import("./features/colaborador/dashboard/DashboardMidiaAdicional"));
 const AgenteInstagramFacebook = lazy(() => import("./features/colaborador/agentes/AgenteInstagramFacebook"));
 const AgenteTikTok = lazy(() => import("./features/colaborador/agentes/AgenteTikTok"));
 const MemoriaAgente = lazy(() => import("./features/colaborador/agentes/MemoriaAgente"));
@@ -102,6 +103,7 @@ function App() {
             {/* Backward compat: redirect legado */}
             <Route path="/agente-planejamento-editorial" element={<ProtectedRoute><AgenteInstagramFacebook /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />
+            <Route path="/minha-area/dashboard" element={<ProtectedRoute><DashboardMidiaAdicional /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional" element={<ProtectedRoute requireAdmin><MidiaAdicional /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional/sync-logs" element={<ProtectedRoute requireAdmin><MidiaAdicionalSyncLogs /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional/:slug" element={<ProtectedRoute requireAdmin><MidiaAdicionalUnidade /></ProtectedRoute>} />
