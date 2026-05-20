@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdSetPickerModal } from './AdSetPickerModal';
+import { UsuariosComAcessoCard } from './UsuariosComAcessoCard';
 
 type UnitDetail = {
   id: string;
@@ -233,6 +234,8 @@ export default function MidiaAdicionalUnidade() {
             )}
           </CardContent>
         </Card>
+
+        <UsuariosComAcessoCard unitId={unit.id} />
 
         <Card>
           <CardHeader>
