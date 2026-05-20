@@ -22,7 +22,8 @@ import { toast } from 'sonner';
 type Assignment = {
   id: string;
   user_id: string;
-  profiles: { full_name: string | null; email: string | null } | null;
+  full_name: string | null;
+  email: string | null;
 };
 
 type Profile = {
@@ -35,15 +36,33 @@ export function UsuariosComAcessoCard({ unitId }: { unitId: string }) {
   const queryClient = useQueryClient();
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  // PostgREST não embute `profiles` direto porque não há FK entre
+  // dpp_user_units.user_id e profiles.user_id (ambos vão pra auth.users).
+  // Buscamos as atribuições e os profiles em duas queries e juntamos no cliente.
   const { data: assignments, isLoading } = useQuery({
     queryKey: ['dpp_user_units', unitId],
     queryFn: async (): Promise<Assignment[]> => {
-      const { data, error } = await supabase
+      const { data: links, error } = await supabase
         .from('dpp_user_units' as never)
-        .select('id, user_id, profiles!inner (full_name, email)')
+        .select('id, user_id')
         .eq('unit_id', unitId);
       if (error) throw error;
-      return (data ?? []) as unknown as Assignment[];
+      const rows = (links ?? []) as unknown as Array<{ id: string; user_id: string }>;
+      if (rows.length === 0) return [];
+
+      const { data: profs, error: pe } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email')
+        .in('user_id', rows.map((r) => r.user_id));
+      if (pe) throw pe;
+
+      const byId = new Map((profs as Profile[]).map((p) => [p.user_id, p]));
+      return rows.map((r) => ({
+        id: r.id,
+        user_id: r.user_id,
+        full_name: byId.get(r.user_id)?.full_name ?? null,
+        email: byId.get(r.user_id)?.email ?? null,
+      }));
     },
   });
 
@@ -116,8 +135,8 @@ export function UsuariosComAcessoCard({ unitId }: { unitId: string }) {
               {assignments!.map((a) => (
                 <div key={a.id} className="flex items-center justify-between border rounded-md px-3 py-2">
                   <div className="text-sm">
-                    <div className="font-medium">{a.profiles?.full_name ?? '(sem nome)'}</div>
-                    <div className="text-xs text-muted-foreground">{a.profiles?.email}</div>
+                    <div className="font-medium">{a.full_name ?? '(sem nome)'}</div>
+                    <div className="text-xs text-muted-foreground">{a.email}</div>
                   </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -129,7 +148,7 @@ export function UsuariosComAcessoCard({ unitId }: { unitId: string }) {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Remover acesso?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          {a.profiles?.full_name ?? a.profiles?.email} vai parar de ver o relatório dessa unidade.
+                          {a.full_name ?? a.email} vai parar de ver o relatório dessa unidade.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

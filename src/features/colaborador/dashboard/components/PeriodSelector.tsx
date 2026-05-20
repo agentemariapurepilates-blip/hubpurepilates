@@ -3,6 +3,7 @@
 
 import { useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -86,8 +87,8 @@ function CustomRange({ onApply }: { onApply: (from: string, to: string) => void 
         disabled={!range.from || !range.to}
         onClick={() =>
           range.from && range.to && onApply(
-            range.from.toISOString().slice(0, 10),
-            range.to.toISOString().slice(0, 10),
+            format(range.from, 'yyyy-MM-dd'),
+            format(range.to, 'yyyy-MM-dd'),
           )
         }
       >
