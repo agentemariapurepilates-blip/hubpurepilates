@@ -29,6 +29,19 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdSetPickerModal } from './AdSetPickerModal';
+import { UsuariosComAcessoCard } from './UsuariosComAcessoCard';
+import { normalizeLink } from '@/lib/dpp-link';
+
+type LinkDetail = {
+  ad_set_id: string;
+  dpp_ad_sets: {
+    id: string;
+    meta_ad_set_id: string;
+    nome: string;
+    status: string | null;
+    dpp_campaigns: { nome: string } | null;
+  } | null;
+};
 
 type UnitDetail = {
   id: string;
@@ -40,18 +53,8 @@ type UnitDetail = {
   latitude: number | null;
   longitude: number | null;
   ativa_dashboard: boolean;
-  dpp_unit_ad_set_link:
-    | {
-        ad_set_id: string;
-        dpp_ad_sets: {
-          id: string;
-          meta_ad_set_id: string;
-          nome: string;
-          status: string | null;
-          dpp_campaigns: { nome: string } | null;
-        } | null;
-      }[]
-    | null;
+  // PostgREST retorna como objeto único OU array — use normalizeLink().
+  dpp_unit_ad_set_link: LinkDetail | LinkDetail[] | null;
 };
 
 export default function MidiaAdicionalUnidade() {
@@ -77,7 +80,7 @@ export default function MidiaAdicionalUnidade() {
     enabled: !!slug,
   });
 
-  const link = unit?.dpp_unit_ad_set_link?.[0];
+  const link = normalizeLink(unit?.dpp_unit_ad_set_link)[0];
   const adSet = link?.dpp_ad_sets;
 
   const unlinkMutation = useMutation({
@@ -233,6 +236,8 @@ export default function MidiaAdicionalUnidade() {
             )}
           </CardContent>
         </Card>
+
+        <UsuariosComAcessoCard unitId={unit.id} />
 
         <Card>
           <CardHeader>

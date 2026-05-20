@@ -17,6 +17,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Megaphone, Search, ScrollText } from 'lucide-react';
+import { normalizeLink } from '@/lib/dpp-link';
+
+type LinkRow = { dpp_ad_sets: { nome: string; status: string | null } | null };
 
 type UnitRow = {
   id: string;
@@ -26,9 +29,9 @@ type UnitRow = {
   bairro: string | null;
   uf: string | null;
   ativa_dashboard: boolean;
-  dpp_unit_ad_set_link:
-    | { dpp_ad_sets: { nome: string; status: string | null } | null }[]
-    | null;
+  // PostgREST retorna como objeto único OU array, dependendo da versão.
+  // Use normalizeLink() pra acessar.
+  dpp_unit_ad_set_link: LinkRow | LinkRow[] | null;
 };
 
 function StatusBadge({ hasLink, ativa }: { hasLink: boolean; ativa: boolean }) {
@@ -78,7 +81,7 @@ export default function MidiaAdicional() {
 
   const total = units?.length ?? 0;
   const vinculadas = (units ?? []).filter(
-    (u) => (u.dpp_unit_ad_set_link ?? []).length > 0,
+    (u) => normalizeLink(u.dpp_unit_ad_set_link).length > 0,
   ).length;
 
   return (
@@ -172,7 +175,7 @@ export default function MidiaAdicional() {
                   </TableHeader>
                   <TableBody>
                     {filtered.map((u) => {
-                      const ad = u.dpp_unit_ad_set_link?.[0]?.dpp_ad_sets;
+                      const ad = normalizeLink(u.dpp_unit_ad_set_link)[0]?.dpp_ad_sets;
                       return (
                         <TableRow
                           key={u.id}

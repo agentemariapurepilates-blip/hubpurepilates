@@ -68,6 +68,7 @@ const SectionHeader = ({
 
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState, useEffect, useRef } from 'react';
+import { useHasUnitAccess } from '@/features/colaborador/dashboard/hooks/useHasUnitAccess';
 
 // Accordion: apenas uma seção aberta por vez. Abrir uma fecha a anterior.
 // Persistido em sessionStorage — sobrevive à navegação e ao reload; reseta ao fechar a aba.
@@ -107,6 +108,7 @@ const Sidebar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isFranqueado = userType === 'franqueado';
+  const hasUnitAccess = useHasUnitAccess();
 
   const [openSection, setOpenSectionState] = useState<SectionKey | null>(() => {
     if (typeof window === 'undefined') return sectionFromPath(location.pathname);
@@ -190,8 +192,12 @@ const Sidebar = () => {
   ];
 
   // Minha Área section
-  // 'Mídia adicional' só aparece pra admins (escopo v1; depois liberamos pra franqueado da unidade).
+  // 'Dashboard' aparece pra admin OU usuário com >=1 unidade atribuída.
+  // 'Mídia adicional' (gestão de vínculos) só pra admin.
   const minhaAreaNavigation = [
+    ...(hasUnitAccess
+      ? [{ name: 'Dashboard', href: '/minha-area/dashboard', icon: BarChart3, disabled: false }]
+      : []),
     ...(isAdmin
       ? [{ name: 'Mídia adicional', href: '/minha-area/midia-adicional', icon: Megaphone, disabled: false }]
       : []),
