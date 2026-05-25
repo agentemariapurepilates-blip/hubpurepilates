@@ -1436,14 +1436,19 @@ const ColumnLabel = ({ children }: { children: React.ReactNode }) => (
 
 const GuiaCopaPage = () => (
   <>
-    {/* Hero da aba */}
+    {/* Hero · poster */}
     <AnimatedSection variant="fade-in">
       <div className="rounded-2xl bg-gradient-to-br from-[#f3d7a7] to-white p-10 sm:p-14 relative overflow-hidden">
-        <div
-          aria-hidden
-          className="absolute -right-10 -bottom-10 h-56 w-56 rounded-full bg-primary/10 animate-pulse"
-          style={{ animationDuration: '4s' }}
-        />
+        {/* decor */}
+        <div aria-hidden className="absolute -right-16 -top-16 h-72 w-72 rounded-full bg-primary/10 animate-pulse" style={{ animationDuration: '4s' }} />
+        <div aria-hidden className="absolute -left-20 -bottom-24 h-64 w-64 rounded-full bg-primary/5" />
+        {/* bolinhas tipo confete */}
+        <div aria-hidden className="absolute top-8 right-32 grid grid-cols-3 gap-1 opacity-30">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <span key={i} className="block h-1.5 w-1.5 rounded-full bg-primary" />
+          ))}
+        </div>
+
         <div className="relative">
           <div className="flex items-center gap-2 mb-4">
             <Trophy className="h-5 w-5 text-primary" />
@@ -1469,68 +1474,132 @@ const GuiaCopaPage = () => (
           title="Torcida com identidade Pure Pilates"
           desc="Este guia define as regras para o uso de uniformes e a decoração das unidades Pure Pilates durante períodos de celebração, garantindo a preservação da identidade visual limpa, organizada e elegante da rede."
         />
-        <CardContent className="pt-6 grid lg:grid-cols-2 gap-6 sm:gap-8">
-          {/* UNIFORME DA EQUIPE */}
-          <div className="space-y-4">
+        <CardContent className="pt-6 grid lg:grid-cols-2 gap-8 sm:gap-10">
+          {/* UNIFORME DA EQUIPE · com foto */}
+          <div className="space-y-5">
             <ColumnLabel>
               <span className="inline-flex items-center gap-2">
                 <Shirt className="h-3 w-3" />
                 Uniforme da equipe
               </span>
             </ColumnLabel>
-            <RuleItem
-              variant="allow"
-              title="Uso obrigatório do uniforme oficial Pure Pilates"
-              desc="Professores devem vestir o padrão da rede em aulas, atendimentos e vídeos."
-              delay={0}
-            />
-            <RuleItem
-              variant="gift"
-              title="Camisetas promocionais são apenas brindes"
-              desc="Peças temáticas criadas pela unidade não substituem o uniforme oficial da equipe."
-              delay={120}
-            />
-            <RuleItem
-              variant="forbid"
-              title="Proibição de camisetas da seleção brasileira ou temáticas"
-              desc="Peças que descaracterizam o padrão visual da marca não são permitidas como uniforme."
-              delay={240}
-            />
+
+            {/* Foto dos modelos com uniforme oficial */}
+            <AnimatedSection variant="scale-up">
+              <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-muted/50 to-muted/20 aspect-[4/5] sm:aspect-[5/6] ring-1 ring-foreground/5">
+                <img
+                  src="/uniforme.png"
+                  alt="Uniforme oficial Pure Pilates"
+                  className="absolute inset-0 w-full h-full object-contain p-4"
+                />
+                <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 text-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider shadow">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Padrão da rede
+                </div>
+              </div>
+            </AnimatedSection>
+
+            <div className="space-y-3">
+              <RuleItem
+                variant="allow"
+                title="Uso obrigatório do uniforme oficial Pure Pilates"
+                desc="Professores devem vestir o padrão da rede em aulas, atendimentos e vídeos."
+                delay={0}
+              />
+              <RuleItem
+                variant="gift"
+                title="Camisetas promocionais são apenas brindes"
+                desc="Peças temáticas criadas pela unidade não substituem o uniforme oficial da equipe."
+                delay={120}
+              />
+              <RuleItem
+                variant="forbid"
+                title="Proibição de camisetas da seleção brasileira ou temáticas"
+                desc="Peças que descaracterizam o padrão visual da marca não são permitidas como uniforme."
+                delay={240}
+              />
+            </div>
           </div>
 
-          {/* DECORAÇÃO DA UNIDADE */}
-          <div className="space-y-4">
+          {/* DECORAÇÃO DA UNIDADE · sem foto, com painel ilustrativo */}
+          <div className="space-y-5">
             <ColumnLabel>
               <span className="inline-flex items-center gap-2">
                 <Sparkles className="h-3 w-3" />
                 Decoração da unidade
               </span>
             </ColumnLabel>
-            <RuleItem
-              variant="allow"
-              title="Foco em espaços instagramáveis e recepção"
-              desc="Priorize um cantinho para fotos ou painéis simples para não descaracterizar a experiência."
-              delay={0}
-            />
-            <RuleItem
-              variant="allow"
-              title="Decoração pontual e controlada"
-              desc="Elementos visuais não devem ocupar o estúdio inteiro ou poluir o ambiente."
-              delay={120}
-            />
-            <RuleItem
-              variant="balance"
-              title="Preservação da identidade visual Pure"
-              desc="O ambiente deve permanecer limpo, organizado, elegante e alinhado ao padrão."
-              delay={240}
-            />
+
+            {/* Comparativo visual · Assim sim vs Assim não
+                aspect-[4/5] sm:aspect-[5/6] alinhado com a coluna do uniforme — as duas imagens
+                ficam empilhadas dentro do mesmo container pra os bullets baterem nos dois lados */}
+            <AnimatedSection variant="scale-up">
+              <div className="aspect-[4/5] sm:aspect-[5/6] flex flex-col gap-3">
+                {/* PODE — estúdio clean */}
+                <div className="relative flex-1 rounded-2xl overflow-hidden ring-2 ring-emerald-200 shadow-sm group">
+                  <img
+                    src="/estudio-clean.png"
+                    alt="Estúdio Pure Pilates com decoração pontual e on-brand"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider shadow-md">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Assim sim
+                  </div>
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-emerald-900/70 to-transparent p-3">
+                    <p className="text-white text-xs font-semibold">
+                      Decoração só no balcão · padrão preservado
+                    </p>
+                  </div>
+                </div>
+
+                {/* NÃO PODE — estúdio todo decorado */}
+                <div className="relative flex-1 rounded-2xl overflow-hidden ring-2 ring-destructive/40 shadow-sm group">
+                  <img
+                    src="/estudio-decorado.png"
+                    alt="Estúdio Pure Pilates com decoração excessiva e fora do padrão"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-destructive text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider shadow-md">
+                    <X className="h-3.5 w-3.5" />
+                    Assim não
+                  </div>
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-destructive/80 to-transparent p-3">
+                    <p className="text-white text-xs font-semibold">
+                      Estúdio inteiro decorado · uniforme errado · identidade perdida
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </AnimatedSection>
+
+            <div className="space-y-3">
+              <RuleItem
+                variant="allow"
+                title="Foco em espaços instagramáveis e recepção"
+                desc="Priorize um cantinho para fotos ou painéis simples para não descaracterizar a experiência."
+                delay={0}
+              />
+              <RuleItem
+                variant="allow"
+                title="Decoração pontual e controlada"
+                desc="Elementos visuais não devem ocupar o estúdio inteiro ou poluir o ambiente."
+                delay={120}
+              />
+              <RuleItem
+                variant="balance"
+                title="Preservação da identidade visual Pure"
+                desc="O ambiente deve permanecer limpo, organizado, elegante e alinhado ao padrão."
+                delay={240}
+              />
+            </div>
           </div>
         </CardContent>
         <GuideFooter />
       </Card>
     </AnimatedSection>
 
-    {/* GUIA 2 — Guia de uso comercial */}
+    {/* GUIA 2 — Guia de uso comercial · painéis vermelho/verde */}
     <AnimatedSection variant="fade-up">
       <Card className="overflow-hidden">
         <GuideHeader
@@ -1538,74 +1607,67 @@ const GuiaCopaPage = () => (
           title="Copa do Mundo"
           desc="O que está proibido por restrições oficiais e o que dá pra explorar com criatividade genérica — para comunicar a marca sem cair em violação de direitos."
         />
-        <CardContent className="pt-6 grid lg:grid-cols-2 gap-6 sm:gap-8">
-          {/* O QUE É PROIBIDO */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <ColumnLabel>
-                <span className="inline-flex items-center gap-2">
-                  <Ban className="h-3 w-3" />
-                  O que é proibido
-                </span>
-              </ColumnLabel>
-              <span className="text-[10px] uppercase tracking-widest text-destructive font-bold">
-                Restrições oficiais
-              </span>
+
+        <div className="grid lg:grid-cols-2 relative">
+          {/* ───── PAINEL VERMELHO · NÃO PODE ───── */}
+          <div className="relative bg-destructive/5 p-6 sm:p-8 space-y-5 border-b-2 lg:border-b-0 lg:border-r-2 border-dashed border-destructive/25">
+            {/* Header do painel */}
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-destructive p-3 shadow-md">
+                <Ban className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-3xl sm:text-4xl font-heading font-black text-destructive uppercase leading-none">
+                  Não pode
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-destructive/70 font-bold mt-1.5">
+                  Restrições oficiais
+                </p>
+              </div>
             </div>
 
-            <AnimatedSection variant="fade-up" delay={0}>
-              <div className="rounded-xl border-2 border-destructive/30 bg-destructive/5 p-4 flex gap-3 hover:shadow-md transition-shadow">
-                <div className="rounded-full bg-destructive/10 p-1.5 shrink-0 mt-0.5 text-destructive">
-                  <Ban className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="font-heading font-bold text-sm mb-1 leading-snug text-destructive">
-                    Termos e marcas registradas
-                  </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    É proibido usar <strong>"FIFA"</strong>, <strong>"Copa do Mundo"</strong> ou <strong>"World Cup"</strong> em posts comerciais.
-                  </p>
-                </div>
-              </div>
-            </AnimatedSection>
-
-            <AnimatedSection variant="fade-up" delay={120}>
-              <div className="rounded-xl border-2 border-destructive/30 bg-destructive/5 p-4 flex gap-3 hover:shadow-md transition-shadow">
-                <div className="rounded-full bg-destructive/10 p-1.5 shrink-0 mt-0.5 text-destructive">
-                  <Hash className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="font-heading font-bold text-sm mb-1 leading-snug text-destructive">
-                    Identidade visual e símbolos
-                  </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Não utilize logotipos oficiais, hashtags da marca ou elementos visuais exclusivos do evento.
-                  </p>
-                </div>
-              </div>
-            </AnimatedSection>
-
-            <AnimatedSection variant="fade-up" delay={240}>
-              <div className="rounded-xl border-2 border-destructive/30 bg-destructive/5 p-4 flex gap-3 hover:shadow-md transition-shadow">
-                <div className="rounded-full bg-destructive/10 p-1.5 shrink-0 mt-0.5 text-destructive">
-                  <Ticket className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="font-heading font-bold text-sm mb-1 leading-snug text-destructive">
-                    Promoções e ingressos
-                  </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Proibido sortear ingressos ou sugerir que sua marca é parceira oficial do torneio.
-                  </p>
-                </div>
-              </div>
-            </AnimatedSection>
+            {/* Rules */}
+            <div className="space-y-3 pt-2">
+              {[
+                {
+                  icon: Ban,
+                  title: 'Termos e marcas registradas',
+                  desc: <>É proibido usar <strong>"FIFA"</strong>, <strong>"Copa do Mundo"</strong> ou <strong>"World Cup"</strong> em posts comerciais.</>,
+                },
+                {
+                  icon: Hash,
+                  title: 'Identidade visual e símbolos',
+                  desc: <>Não utilize logotipos oficiais, hashtags da marca ou elementos visuais exclusivos do evento.</>,
+                },
+                {
+                  icon: Ticket,
+                  title: 'Promoções e ingressos',
+                  desc: <>Proibido sortear ingressos ou sugerir que sua marca é parceira oficial do torneio.</>,
+                },
+              ].map((item, i) => (
+                <AnimatedSection key={item.title} variant="fade-up" delay={i * 120}>
+                  <div className="rounded-xl bg-card border-l-4 border-l-destructive shadow-sm p-4 flex gap-3 hover:shadow-md hover:translate-x-0.5 transition-all">
+                    <div className="relative rounded-lg bg-destructive/10 p-2 shrink-0 text-destructive">
+                      <item.icon className="h-4 w-4" />
+                      {/* Badge X · reforça "não pode" */}
+                      <span className="absolute -top-1.5 -right-1.5 rounded-full bg-destructive text-white w-4 h-4 flex items-center justify-center shadow-sm ring-2 ring-card">
+                        <X className="h-2.5 w-2.5" strokeWidth={4} />
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-heading font-bold text-sm mb-1 leading-snug">{item.title}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                    </div>
+                  </div>
+                </AnimatedSection>
+              ))}
+            </div>
 
             {/* Tabela de termos proibidos */}
-            <AnimatedSection variant="fade-up" delay={360}>
-              <div className="rounded-xl overflow-hidden border border-foreground/10 mt-2">
-                <div className="grid grid-cols-[140px_1fr] bg-foreground text-background text-[10px] uppercase tracking-widest font-bold">
-                  <div className="px-3 py-2.5 border-r border-background/15">Categoria</div>
+            <AnimatedSection variant="fade-up" delay={400}>
+              <div className="rounded-xl overflow-hidden ring-1 ring-destructive/20 bg-card shadow-sm">
+                <div className="grid grid-cols-[140px_1fr] bg-destructive text-white text-[10px] uppercase tracking-widest font-bold">
+                  <div className="px-3 py-2.5 border-r border-white/15">Categoria</div>
                   <div className="px-3 py-2.5">Termos proibidos</div>
                 </div>
                 {[
@@ -1617,10 +1679,10 @@ const GuiaCopaPage = () => (
                     key={row.cat}
                     className={cn(
                       'grid grid-cols-[140px_1fr] text-xs',
-                      i % 2 === 0 ? 'bg-card' : 'bg-muted/30'
+                      i % 2 === 0 ? 'bg-card' : 'bg-destructive/5'
                     )}
                   >
-                    <div className="px-3 py-2.5 border-r border-foreground/10 font-semibold text-muted-foreground">
+                    <div className="px-3 py-2.5 border-r border-destructive/10 font-semibold text-muted-foreground">
                       {row.cat}
                     </div>
                     <div className="px-3 py-2.5 flex items-center gap-2 text-foreground/85">
@@ -1631,25 +1693,34 @@ const GuiaCopaPage = () => (
                 ))}
               </div>
             </AnimatedSection>
+
+            {/* Watermark X */}
+            <div aria-hidden className="absolute -bottom-6 -right-6 opacity-[0.04] pointer-events-none">
+              <X className="h-48 w-48 text-destructive" strokeWidth={1} />
+            </div>
           </div>
 
-          {/* O QUE É PERMITIDO */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <ColumnLabel>
-                <span className="inline-flex items-center gap-2">
-                  <CheckCircle2 className="h-3 w-3" />
-                  O que é permitido
-                </span>
-              </ColumnLabel>
-              <span className="text-[10px] uppercase tracking-widest text-emerald-700 font-bold">
-                Criatividade genérica
-              </span>
+          {/* ───── PAINEL VERDE · PODE ───── */}
+          <div className="relative bg-emerald-50 p-6 sm:p-8 space-y-5">
+            {/* Header do painel */}
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-emerald-600 p-3 shadow-md">
+                <CheckCircle2 className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-3xl sm:text-4xl font-heading font-black text-emerald-700 uppercase leading-none">
+                  Pode
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-600 font-bold mt-1.5">
+                  Criatividade genérica
+                </p>
+              </div>
             </div>
 
+            {/* Rule 1 — Foco torcida */}
             <AnimatedSection variant="fade-up" delay={0}>
-              <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-4 flex gap-3 hover:shadow-md transition-shadow">
-                <div className="rounded-full bg-emerald-100 p-1.5 shrink-0 mt-0.5 text-emerald-700">
+              <div className="rounded-xl bg-card border-l-4 border-l-emerald-600 shadow-sm p-4 flex gap-3 hover:shadow-md hover:-translate-x-0.5 transition-all">
+                <div className="rounded-lg bg-emerald-100 p-2 shrink-0 text-emerald-700">
                   <PartyPopper className="h-4 w-4" />
                 </div>
                 <div>
@@ -1661,18 +1732,20 @@ const GuiaCopaPage = () => (
               </div>
             </AnimatedSection>
 
-            {/* Frases seguras como speech bubbles */}
+            {/* Frases seguras — speech bubbles verdes */}
             <AnimatedSection variant="fade-up" delay={120}>
-              <div className="rounded-xl border bg-card p-4">
+              <div className="rounded-xl bg-card border-l-4 border-l-emerald-600 shadow-sm p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <MessageSquare className="h-4 w-4 text-primary" />
-                  <p className="font-heading font-bold text-sm">Frases seguras para uso</p>
+                  <MessageSquare className="h-4 w-4 text-emerald-700" />
+                  <p className="font-heading font-bold text-sm uppercase tracking-wider">
+                    Frases seguras para uso
+                  </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {['Torcendo pelo Brasil', 'Entrando no ritmo', 'Dia de jogo'].map((phrase, i) => (
-                    <AnimatedSection key={phrase} variant="scale-up" delay={i * 100}>
-                      <span className="inline-flex items-center gap-1.5 rounded-2xl bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 hover:scale-105 transition-all cursor-default">
-                        <CheckCircle2 className="h-3 w-3" />
+                    <AnimatedSection key={phrase} variant="scale-up" delay={i * 120}>
+                      <span className="inline-flex items-center gap-1.5 rounded-2xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold shadow-sm hover:scale-105 transition-transform cursor-default">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
                         "{phrase}"
                       </span>
                     </AnimatedSection>
@@ -1681,9 +1754,10 @@ const GuiaCopaPage = () => (
               </div>
             </AnimatedSection>
 
+            {/* Rule 3 — Conteúdo amplo */}
             <AnimatedSection variant="fade-up" delay={240}>
-              <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-4 flex gap-3 hover:shadow-md transition-shadow">
-                <div className="rounded-full bg-emerald-100 p-1.5 shrink-0 mt-0.5 text-emerald-700">
+              <div className="rounded-xl bg-card border-l-4 border-l-emerald-600 shadow-sm p-4 flex gap-3 hover:shadow-md hover:-translate-x-0.5 transition-all">
+                <div className="rounded-lg bg-emerald-100 p-2 shrink-0 text-emerald-700">
                   <Trophy className="h-4 w-4" />
                 </div>
                 <div>
@@ -1695,17 +1769,30 @@ const GuiaCopaPage = () => (
               </div>
             </AnimatedSection>
 
-            {/* Resumo verde de boas práticas */}
+            {/* Dica final */}
             <AnimatedSection variant="fade-up" delay={360}>
-              <div className="rounded-xl bg-foreground text-background p-4 flex gap-3">
-                <Lightbulb className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div className="rounded-xl bg-foreground text-background p-4 flex gap-3 shadow-sm">
+                <Lightbulb className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
                 <p className="text-xs leading-relaxed opacity-90">
-                  Em caso de dúvida: <strong className="text-primary">se o termo é registrado, não use</strong>. Prefira sempre comunicar o <strong>sentimento</strong>, não o evento.
+                  Em caso de dúvida: <strong className="text-emerald-400">se o termo é registrado, não use</strong>. Prefira sempre comunicar o <strong>sentimento</strong>, não o evento.
                 </p>
               </div>
             </AnimatedSection>
+
+            {/* Watermark check */}
+            <div aria-hidden className="absolute -bottom-6 -right-6 opacity-[0.05] pointer-events-none">
+              <CheckCircle2 className="h-48 w-48 text-emerald-600" strokeWidth={1} />
+            </div>
           </div>
-        </CardContent>
+
+          {/* Bola de futebol central · separador (só lg+) */}
+          <div className="hidden lg:flex absolute top-6 left-1/2 -translate-x-1/2 z-20">
+            <div className="rounded-full bg-card shadow-xl ring-4 ring-background p-3">
+              <Trophy className="h-7 w-7 text-primary" />
+            </div>
+          </div>
+        </div>
+
         <GuideFooter />
       </Card>
     </AnimatedSection>
