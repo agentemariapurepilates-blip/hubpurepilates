@@ -929,14 +929,20 @@ const SaudeMarcaPage = () => (
    ══════════════════════════════════════════════════════════════ */
 const IndiquePage = () => (
   <>
-    {/* Hero · arte pronta da campanha Indique Pure */}
+    {/* Hero · vídeo da campanha Indique Pure */}
     <AnimatedSection variant="fade-in">
-      <div className="rounded-2xl overflow-hidden shadow-sm">
-        <img
-          src="/Arte%20pronta.jpeg"
-          alt="Indique Pure — quanto mais você indica, mais massagem você ganha"
-          className="block w-full h-auto"
-        />
+      <div className="rounded-2xl overflow-hidden shadow-sm bg-foreground">
+        <div className="relative aspect-video">
+          <iframe
+            src="https://drive.google.com/file/d/1U7xCrx4bTpkKjunuU-QrGrbd-EjA02Yp/preview"
+            title="Indique Pure — vídeo da campanha"
+            className="absolute inset-0 w-full h-full"
+            style={{ border: 0 }}
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            loading="lazy"
+          />
+        </div>
       </div>
     </AnimatedSection>
 
