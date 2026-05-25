@@ -40,6 +40,23 @@ const QUICK_LINKS = [
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 
+// Avisos vêm com conteúdo em HTML do editor rich-text. Para a prévia do card,
+// removemos as tags e decodificamos as entidades mais comuns.
+const stripHtml = (html: string | null | undefined): string => {
+  if (!html) return '';
+  return html
+    .replace(/<\/?(p|br|div|li|h[1-6]|tr|td)[^>]*>/gi, ' ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 const Index = () => {
   const { loading } = useAuth();
   const [avisos, setAvisos] = useState<AvisoTitle[]>([]);
@@ -219,7 +236,7 @@ const Index = () => {
                       {a.title}
                     </h4>
                     {a.content && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 leading-snug">{a.content}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2 leading-snug">{stripHtml(a.content)}</p>
                     )}
                   </div>
                 </Link>
