@@ -183,6 +183,7 @@ const Sidebar = () => {
   const designNavigation = [
     { name: 'Gerar Foto', href: '/agente-design/gerar-foto', icon: Sparkles, disabled: false },
     { name: 'Avatares', href: '/agente-design/avatares', icon: User, disabled: false },
+    { name: 'Criação de Layout', href: '/agente-design/criacao-layout', icon: Palette, disabled: false },
   ];
 
   // Agente Monitoramento section - only for admins

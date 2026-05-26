@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { CalendarDays, Brain } from 'lucide-react';
+import { CalendarDays, Brain, Table2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -442,12 +442,20 @@ const AgenteInstagramFacebook = () => {
               <p className="text-muted-foreground">Planeja o mês inteiro de Instagram + Facebook e gera roteiros, legendas, textos da arte e briefings de design — tudo de uma vez.</p>
             </div>
           </div>
-          <Link to="/agente-instagram-facebook/memoria">
-            <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
-              <Brain className="h-4 w-4" />
-              Memória do Agente
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link to="/agente-instagram-facebook/planilha">
+              <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
+                <Table2 className="h-4 w-4" />
+                Planilha Editorial
+              </Button>
+            </Link>
+            <Link to="/agente-instagram-facebook/memoria">
+              <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
+                <Brain className="h-4 w-4" />
+                Memória do Agente
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <PlanConfigCard
