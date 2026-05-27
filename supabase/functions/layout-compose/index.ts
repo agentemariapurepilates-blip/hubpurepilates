@@ -1,23 +1,30 @@
 import { getCorsHeaders } from '../_shared/cors.ts'
 
 // ============================================================================
-// Layout Compose · Designer (Claude)
+// Layout Compose · Designer (Claude Sonnet com vision)
 //
-// Recebe texto + formato + hierarquia + negative space e devolve um JSON com
-// as zonas de texto (posição, tamanho, estilo) pra renderização editável no
-// frontend (react-rnd). A foto é renderizada como background pelo frontend.
+// Recebe texto + formato + IMAGEM (base64) e devolve um JSON com as zonas
+// de texto. Claude VÊ a imagem e decide:
+//  - onde há espaço livre real (não obrigação, observação)
+//  - onde tem rosto/mãos/aparelho pra não cobrir
+//  - cor de texto que contrasta com a região específica
+//  - hierarquia textual (headline/apoio/remate) + underline na zona certa
+//
+// negativeSpaceSide vem como DICA (do layout-side), mas o Claude pode ajustar
+// vendo a imagem real.
 // ============================================================================
 
 interface ComposeRequest {
   textoArte: string
   format: 'feed-quadrado' | 'story-reels' | 'carrossel-feed'
-  textHierarchy: 'single-strong' | 'multi-block'
   negativeSpaceSide: 'right' | 'left' | 'bottom'
+  photoBase64: string
+  photoMimeType: string
 }
 
 interface Zone {
   id: string
-  kind: 'headline' | 'apoio' | 'pill' | 'remate'
+  kind: 'headline' | 'apoio' | 'remate'
   text: string
   x: number
   y: number
@@ -30,12 +37,15 @@ interface Zone {
   textAlign: 'left' | 'center' | 'right'
   lineHeight: number
   letterSpacing?: number
-  pill?: {
-    borderColor: string
-    borderWidth: number
-    borderRadius: number
-    paddingX: number
-    paddingY: number
+  // Sublinhado desenhado à mão (SVG). Aplicado opcionalmente à zona de maior
+  // peso visual da composição (normalmente headline).
+  underline?: {
+    variant: 'wave' | 'arch' | 'double'
+    color: string
+    thickness: number
+    widthRatio: number
+    position: 'above' | 'below'
+    gap: number
   }
 }
 
@@ -51,7 +61,32 @@ const FORMAT_DIMENSIONS: Record<ComposeRequest['format'], { w: number; h: number
   'carrossel-feed': { w: 1080, h: 1350 },
 }
 
-const SYSTEM_PROMPT = `Você é o designer editorial da Pure Pilates. Recebe um texto e devolve a estrutura de zonas de texto (posições, tamanhos, estilos) que vão sobrepor uma foto numa arte editorial premium.
+const SYSTEM_PROMPT = `Você é o designer editorial da Pure Pilates. Recebe a FOTO (imagem como input visual) + o texto que vai sobrepor a foto, e devolve a estrutura de zonas de texto (posições, tamanhos, estilos) que farão uma arte editorial premium.
+
+═══════════════════════════════════════════════════════════════════
+ANÁLISE VISUAL DA FOTO — FAÇA PRIMEIRO:
+═══════════════════════════════════════════════════════════════════
+
+Antes de propor zonas, examine a foto e identifique:
+
+1) ONDE ESTÁ A MODELO (e suas partes críticas):
+   - Rosto, mãos, contorno do corpo, aparelho que ela está usando.
+   - Essas áreas SÃO PROIBIDAS pra texto. NÃO sobreponha texto sobre o rosto,
+     mãos ou aparelho.
+
+2) ONDE HÁ ESPAÇO LIVRE REAL:
+   - Procure áreas de fundo limpo (parede, piso, ciclorama). Esse é o
+     território do texto.
+   - O parâmetro "negativeSpaceSide" do request é uma DICA do lado livre
+     esperado, mas confie no que VÊ. Se a foto ficou com espaço melhor em
+     outro lado, ajuste.
+
+3) TOM/LUMINOSIDADE DA ÁREA LIVRE:
+   - Fundo claro/bege/areia → texto deve ser ESCURO (#2b2b2b ou #a62436)
+     pra contraste.
+   - Fundo escuro/saturado → texto deve ser CLARO (#ffffff).
+   - Pense zona-por-zona — se a headline cai em região escura mas o apoio
+     cai em região clara, podem ter cores diferentes.
 
 ═══════════════════════════════════════════════════════════════════
 SISTEMA DE COORDENADAS:
@@ -68,47 +103,42 @@ DESIGN SYSTEM PURE PILATES:
 - Cor primária: #a62436 (vermelho vinho)
 - Cor secundária texto: #2b2b2b (cinza escuro) ou #ffffff (branco)
 - Peso 800 (ExtraBold) → headline e remate
-- Peso 500 (Medium) → apoio e texto da pill
-- Italic 500 → texto interno da pill
+- Peso 500 (Medium) → apoio (textos secundários/líricos)
+- Italic 500 → use apenas pra frases muito líricas/poéticas (raro)
 
 ═══════════════════════════════════════════════════════════════════
 TIPOS DE ZONA E TAMANHOS — REGRAS DE HIERARQUIA TIPOGRÁFICA
 ═══════════════════════════════════════════════════════════════════
 
 Hierarquia OBRIGATÓRIA (proporção entre tamanhos):
-- HEADLINE >> REMATE > APOIO ≥ PILL
-- Headline deve ser AO MENOS 3x maior que apoio/pill
+- HEADLINE >> REMATE > APOIO
+- Headline deve ser AO MENOS 3x maior que apoio
 - Headline deve ser AO MENOS 2.2x maior que remate
-- NUNCA fazer apoio/pill maior que headline
+- NUNCA fazer apoio maior que headline
 
 kind: "headline"
 - 1 a 3 palavras de impacto
 - fontWeight: 800, italic: false
-- fontSize: 10-14% da altura do canvas
-  · Canvas 1350h → 135-190px (use 150px como default)
-  · Canvas 1920h → 192-270px (use 220px como default)
+- fontSize: 8-12% da altura do canvas (mais conservador — vai estourar se for grande demais)
+  · Canvas 1350h → 110-160px (use 130px como default)
+  · Canvas 1920h → 155-230px (use 180px como default)
 - color: "#a62436"
 - lineHeight: 0.95
 - letterSpacing: -2 a -4 (apertado)
-- LIMITE MÁXIMO: 200px no feed, 280px no story. NUNCA passar disso.
+- LIMITE MÁXIMO: 180px no feed, 240px no story. NUNCA passar disso.
+- ANTES DE FIXAR fontSize, valide: qtd_letras_da_palavra_mais_longa * fontSize * 0.6 deve caber em (w - 40). Se não cabe, REDUZA fontSize OU quebre em 2 linhas via "\\n" no text.
 
 kind: "apoio"
-- Frase curta de complemento (3-6 palavras)
-- fontWeight: 500, italic: false
-- fontSize: ~2.5-3.2% da altura (32-44px em 1350h, use 38px default)
-- color: "#2b2b2b" ou "#a62436"
+- Frase curta-média de complemento (3-8 palavras). Pode ser conexão direta
+  com a headline OU frase lírico-explicativa secundária.
+- fontWeight: 500 ou 700 (medium/bold), italic: false (preferencial)
+- fontSize: ~3-4.5% da altura (40-60px em 1350h, use 48px default — apoio
+  precisa de peso visual suficiente pra carregar o underline com charme)
+- color: PREFIRA "#2b2b2b" (preto/cinza escuro) sobre fundo claro/bege;
+  use "#ffffff" só se foto for escura/saturada. EVITE "#a62436" (vermelho)
+  no apoio — vermelho é da headline, apoio é o contraste.
 - lineHeight: 1.2
-- Posicionar 8-16px ABAIXO da headline (gap pequeno mas visível, NÃO grudado)
-
-kind: "pill"
-- Frase secundária lírico-explicativa (5+ palavras)
-- fontWeight: 500, italic: TRUE
-- fontSize: ~2-2.8% da altura (28-38px em 1350h, use 32px default)
-- color: "#2b2b2b" (preferencial — bom em fundo bege/off-white) ou "#ffffff" (só se foto for escura)
-- lineHeight: 1.3
-- pill: { borderColor: "#2b2b2b" (combina com texto), borderWidth: 1.5, borderRadius: 999, paddingX: 28, paddingY: 12 }
-- Largura: ajustar pra texto caber idealmente em 1 linha (no máx 2). Calcular pelo nº de letras: w ≈ (qtd_letras_da_linha_mais_longa * fontSize * 0.5) + 2*paddingX
-- Posicionar 16-32px ABAIXO da headline/apoio
+- Posicionar 16-32px ABAIXO da headline
 
 kind: "remate"
 - Fechamento curto (2-3 mini-frases paralelas tipo "Menos X. Mais Y. Mais Z.")
@@ -118,6 +148,56 @@ kind: "remate"
 - lineHeight: 1.05
 - letterSpacing: -1 a -2
 - Posicionar no rodapé da área de texto, AO MENOS 80px de margem inferior
+
+═══════════════════════════════════════════════════════════════════
+SUBLINHADO MANUSCRITO (underline) — adorno decorativo
+═══════════════════════════════════════════════════════════════════
+
+A composição tem uma hierarquia clara:
+  1. HEADLINE (vermelho, bold, dominante) — SEM underline
+  2. APOIO (preto/escuro, peso médio-bold) — RECEBE o underline
+
+O underline é um traço SVG manuscrito que sublinha a frase de apoio,
+criando a sensação "mensagem chamativa escrita à mão". Esse adorno é o
+que dá charme à composição e é o que diferencia uma arte de campanha
+profissional de um template genérico.
+
+REGRA DE OURO:
+- Se a arte tem APOIO → underline VAI NO APOIO (sempre — esse é o padrão).
+- Se a arte tem SÓ headline (sem apoio) → underline pode ir na headline
+  como exceção.
+- NUNCA aplique underline em 2 zonas ao mesmo tempo (vira poluído).
+- NUNCA aplique underline no headline se já tiver apoio — vermelho-em-vermelho
+  dominante perde força.
+- Em remate (3 frases paralelas), NÃO use underline — o ritmo das frases
+  já é forte demais sozinho.
+- Em carrossel: cada slide tem 1 underline (no apoio do slide, em geral).
+
+Estrutura do underline:
+- variant: "wave" (curva ondulada sutil — mais elegante, default),
+           "arch" (arco ascendente simples — clássico manuscrito),
+           "double" (dois traços sobrepostos — mais peso, use raramente
+           pra forte ênfase em frases curtas)
+- color: MESMA cor do texto da zona (#2b2b2b preto se o apoio for preto,
+         #a62436 vermelho se a exceção for sublinhar a headline)
+- thickness: 4-6 (4 default; 5-6 pra apoio com fontSize > 50; 8 só pra
+             headline gigante na exceção)
+- widthRatio: 0.5-0.95 — fração da largura da zona que o traço ocupa.
+              Use 0.85 como default pra apoio (sublinhar quase toda a
+              frase). 0.5-0.7 pra ênfase pontual em headline.
+- position: "below" como default. "above" praticamente nunca (raríssimo).
+- gap: 4-10 (4 default; o frontend automaticamente adiciona clearance
+       extra pra descenders das letras, então valores baixos funcionam).
+
+EXEMPLOS:
+- "Sua aula experimental | está esperando."
+  → headline: "Sua aula experimental" (vermelho, bold, sem underline)
+  → apoio: "está esperando." (preto, medium, UNDERLINE no apoio)
+- "Mais leve | comece agora"
+  → headline: "Mais leve" (vermelho, bold, sem underline)
+  → apoio: "comece agora" (preto, medium, UNDERLINE no apoio)
+- "Pure" (1 palavra só, sem apoio)
+  → headline: "Pure" (vermelho, bold, UNDERLINE na headline como exceção)
 
 ═══════════════════════════════════════════════════════════════════
 DIMENSIONAMENTO CRÍTICO DA ZONA — APLICA A TODAS:
@@ -135,13 +215,13 @@ REGRA 2 · Limites do canvas:
 - Sempre deixar margem mínima de 60px de cada lado do canvas
 
 REGRA 3 · Altura (h):
-- h = fontSize * lineHeight * nº_de_linhas + (kind==='pill' ? 2*paddingY : 0) + 4px de folga
+- h = fontSize * lineHeight * nº_de_linhas + (underline ? max(thickness*4, 16) + gap : 0) + 4px de folga
 - Não ser GENEROSO no h sem motivo — h em excesso = espaço vazio dentro da zona = texto desalinhado
 
 REGRA 4 · Espaçamento entre zonas:
-- Entre headline e apoio: 8-16px
-- Entre apoio e pill: 16-32px
+- Entre headline e apoio: 8-24px
 - Antes do remate: pelo menos 60px de gap em relação à zona anterior
+- Se uma zona tem underline, adicione +8px de gap pra próxima zona (pra não grudar no traço)
 - Nada de "buracos" gigantes verticais no meio da composição.
 
 ═══════════════════════════════════════════════════════════════════
@@ -154,29 +234,21 @@ Identifique as partes do texto e classifique:
 → headline: palavra(s)/expressão curtíssima de impacto (1-3 palavras)
   Ex: "Mãe", "primeiro passo", "Mais leve", "Cuide-se"
 
-→ apoio: continuação MUITO CURTA da headline, conectando direto a ela (3-6 palavras, sem pontuação grande)
-  Ex: "você cuida de tudo.", "comece agora", "do seu jeito"
-  NÃO use apoio se a frase tem 7+ palavras OU é claramente um complemento lírico — use pill.
-
-→ pill (USE LIBERALMENTE pra frases secundárias lírico-explicativas, 5+ palavras):
-  Use pill SEMPRE QUE houver uma frase que NÃO é a headline E NÃO é um remate-trinca paralelo.
-  É o "default" pra qualquer frase complementar com 5+ palavras.
-  Ex: "Mas hoje, se vista para cuidar de você."
-       "para ter a melhor hora do seu dia!"
-       "respira fundo e começa de novo."
-       "porque autocuidado também é estilo."
-  Características: tom lírico/poético/explicativo, frase completa em si, geralmente termina em ponto ou exclamação.
+→ apoio: continuação/complemento da headline (3-8 palavras). Pode ser
+  conexão direta ("comece agora", "do seu jeito") OU frase lírico-explicativa
+  ("respira fundo e começa de novo.", "porque autocuidado também é estilo.").
+  Tom: completivo, pode ter pontuação.
 
 → remate: 2-3 mini-frases paralelas separadas por ponto (estrutura "X. Y. Z.")
   Ex: "Menos culpa. Mais Pilates. Mais estilo."
        "Mais foco. Menos pressa."
-  Só use remate quando ENXERGAR essa estrutura paralela. Caso contrário, a frase final vira pill.
+  Só use remate quando ENXERGAR essa estrutura paralela. Caso contrário, a frase final vira apoio.
 
 REGRAS DE PRIORIZAÇÃO:
-- Se o texto tem só 1 frase curta (≤4 palavras), gere SÓ headline.
-- Se tem 2 partes (uma curta + uma longa), use headline + pill (não apoio).
-- Se tem 2 partes ambas curtas, use headline + apoio.
-- Se tem 3+ partes, use headline + apoio + pill + remate conforme aplicável (cada um aparece no máx 1 vez).
+- Se o texto tem só 1 frase curta (≤4 palavras), gere SÓ headline (com underline pra dar charme).
+- Se tem 2 partes (uma curta + uma longa), use headline + apoio.
+- Se tem 3+ partes, use headline + apoio + remate conforme aplicável (cada um aparece no máx 1 vez).
+- SEMPRE escolha 1 zona (geralmente headline) pra receber "underline" — esse adorno é o que dá charme.
 - Mantenha pontuação, capitalização e acentuação EXATAS do textoArte.
 
 ═══════════════════════════════════════════════════════════════════
@@ -195,7 +267,7 @@ PROIBIÇÕES ABSOLUTAS:
 - NÃO crie zonas com texto que não esteja em textoArte.
 - NÃO escreva "PURE PILATES", "Pure", "Pilates" ou nome de marca se não estiver em textoArte.
 - NÃO inclua selo/logo/monograma de marca em nenhuma forma.
-- NÃO use background preenchido (rgba branca, etc) — só a pill outline é permitida.
+- NÃO use background preenchido (rgba branca, etc) — o ÚNICO elemento gráfico permitido é o underline manuscrito (SVG).
 
 ═══════════════════════════════════════════════════════════════════
 FORMATO DE SAÍDA (JSON exclusivo, sem markdown):
@@ -204,7 +276,7 @@ FORMATO DE SAÍDA (JSON exclusivo, sem markdown):
   "zones": [
     {
       "id": "z1",
-      "kind": "headline" | "apoio" | "pill" | "remate",
+      "kind": "headline" | "apoio" | "remate",
       "text": "string",
       "x": number,
       "y": number,
@@ -217,12 +289,12 @@ FORMATO DE SAÍDA (JSON exclusivo, sem markdown):
       "textAlign": "left" | "center" | "right",
       "lineHeight": number,
       "letterSpacing": number,
-      "pill": { "borderColor": "#hex", "borderWidth": 2, "borderRadius": 999, "paddingX": 32, "paddingY": 14 }
+      "underline": { "variant": "wave" | "arch" | "double", "color": "#hex", "thickness": 6, "widthRatio": 0.75, "position": "below", "gap": 6 }
     }
   ]
 }
 
-Inclua "pill" SÓ quando kind === "pill". Inclua "letterSpacing" só quando relevante (headline e remate). "id" deve ser único por zona.`
+Inclua "underline" em EXATAMENTE 1 zona por arte (a de maior peso visual). Inclua "letterSpacing" só quando relevante (headline e remate). "id" deve ser único por zona.`
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
@@ -255,19 +327,30 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    if (!body.photoBase64 || !body.photoMimeType) {
+      return new Response(JSON.stringify({ error: 'photoBase64 e photoMimeType obrigatórios' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     const dim = FORMAT_DIMENSIONS[body.format]
-    const userMessage = `Gere as zonas de texto da arte.
+    const userMessageText = `Analise a foto anexada e gere as zonas de texto da arte.
 
 Texto na arte: ${body.textoArte}
 
 Formato: ${body.format}
 canvasW: ${dim.w}
 canvasH: ${dim.h}
-Hierarquia: ${body.textHierarchy}
-Negative space (lado livre): ${body.negativeSpaceSide}
+Dica de lado livre (do step anterior): ${body.negativeSpaceSide}
 
-Responda APENAS com o JSON.`
+Lembre-se:
+1) Veja onde está a modelo/aparelho na foto e EVITE sobrepor texto lá.
+2) Decida a hierarquia (headline / apoio / remate) lendo o textoArte.
+3) Escolha as cores baseado no tom REAL do fundo onde cada zona cairá.
+4) Adicione "underline" em 1 zona (preferencialmente apoio quando existir).
+
+Responda APENAS com o JSON das zonas.`
 
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -280,7 +363,22 @@ Responda APENAS com o JSON.`
         model: 'claude-sonnet-4-6',
         max_tokens: 2500,
         system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userMessage }],
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: body.photoMimeType,
+                  data: body.photoBase64,
+                },
+              },
+              { type: 'text', text: userMessageText },
+            ],
+          },
+        ],
       }),
     })
 

@@ -16,33 +16,36 @@ import { ZoneContent, type Zone } from './EditableCanvas';
 
 interface StaticCanvasProps {
   zones: Zone[];
-  photoDataUrl: string;
+  photoDataUrl?: string;
+  backgroundColor?: string;
   canvasW: number;
   canvasH: number;
 }
 
 const StaticCanvas = forwardRef<HTMLDivElement, StaticCanvasProps>(
-  ({ zones, photoDataUrl, canvasW, canvasH }, ref) => (
+  ({ zones, photoDataUrl, backgroundColor, canvasW, canvasH }, ref) => (
     <div
       ref={ref}
       style={{
         width: canvasW,
         height: canvasH,
         position: 'relative',
-        background: '#ffffff',
+        background: backgroundColor ?? '#ffffff',
         overflow: 'hidden',
       }}
     >
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `url("${photoDataUrl}")`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      />
+      {photoDataUrl && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url("${photoDataUrl}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        />
+      )}
       {zones.map((zone) => (
         <div
           key={zone.id}

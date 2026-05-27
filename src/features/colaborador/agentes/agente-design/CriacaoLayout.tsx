@@ -56,6 +56,7 @@ import { composePrompt, INITIAL_SCENE_STATE, type SceneState } from './lib/compo
 import { urlToBase64, generateImage, type ReferenceImage } from './lib/generateImage';
 import { analyzePose } from './lib/analyzePose';
 import { fileToResizedBase64 } from './lib/resizeImage';
+import { fitZones } from './lib/fitZones';
 import EditableCanvas, { ZonePropertyPanel, findZone, type Zone } from './components/EditableCanvas';
 import StaticCanvas from './components/StaticCanvas';
 import { cn } from '@/lib/utils';
@@ -101,23 +102,15 @@ const FUNCTIONS_URL =
   (import.meta.env.VITE_FUNCTIONS_URL as string | undefined) ||
   `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
-interface PlanResult {
-  index?: number;
-  textHierarchy: 'single-strong' | 'multi-block';
-  negativeSpaceSide: 'right' | 'left' | 'bottom';
-  layoutHint: string;
-  poseOverride?: string;
-  enquadramentoOverride?: Enquadramento;
-  useAparelho?: boolean;
-  reasoning: string;
-}
-
 interface SlideResult {
   index: number; // 1-based pra ser amigável (Slide 1, Slide 2…)
   text: string;
-  plan: PlanResult;
-  photoPrompt: string; // prompt final enviado pro nano-banana (debug)
-  photoDataUrl: string;
+  // Slides com foto (estático ou capa do carrossel): photoDataUrl preenchido
+  // Slides HTML-only (carrossel slides 2+): backgroundColor preenchido
+  photoPrompt?: string;
+  photoDataUrl?: string;
+  backgroundColor?: string;
+  side: 'right' | 'left' | 'bottom';
   zones: Zone[];
   canvasSize: { w: number; h: number };
 }
@@ -167,21 +160,16 @@ type UploadedAsset = {
 
 const MAX_ASSETS = 5;
 
-// Regra imperativa de negative space — injetada no prompt da foto pra forçar o
-// nano-banana a respeitar o espaço livre. SEM essa regra explícita, o modelo
-// ignora o "deixe espaço pro texto" gentil do layoutHint.
+// Instrução leve de negative space — uma frase curta no final do prompt da foto.
+// Não força composição agressiva (que distorce proporção do aparelho/modelo),
+// apenas pede pro Gemini deixar o lado indicado com fundo limpo.
 function buildNegativeSpaceRule(side: 'right' | 'left' | 'bottom'): string {
   const where: Record<typeof side, string> = {
-    right:
-      'A METADE DIREITA do quadro (de 50% a 100% da largura horizontal) DEVE ficar TOTALMENTE VAZIA — apenas a parede de fundo neutra visível, NENHUM elemento da modelo, NENHUMA parte do aparelho, NENHUM objeto. A modelo e o aparelho devem ocupar EXCLUSIVAMENTE a metade ESQUERDA (0% a 50% da largura).',
-    left:
-      'A METADE ESQUERDA do quadro (de 0% a 50% da largura horizontal) DEVE ficar TOTALMENTE VAZIA — apenas a parede de fundo neutra visível, NENHUM elemento da modelo, NENHUMA parte do aparelho, NENHUM objeto. A modelo e o aparelho devem ocupar EXCLUSIVAMENTE a metade DIREITA (50% a 100% da largura).',
-    bottom:
-      'A METADE INFERIOR do quadro (de 50% a 100% da altura) DEVE ficar TOTALMENTE VAZIA — apenas piso de madeira e parte da parede de fundo visíveis, NENHUM elemento da modelo abaixo da linha do meio. A modelo e o aparelho devem ocupar EXCLUSIVAMENTE a metade SUPERIOR (0% a 50% da altura).',
+    right: 'a METADE DIREITA do quadro com fundo limpo (sem modelo, sem aparelho), pra acomodar texto depois',
+    left: 'a METADE ESQUERDA do quadro com fundo limpo (sem modelo, sem aparelho), pra acomodar texto depois',
+    bottom: 'a METADE INFERIOR do quadro com fundo limpo (sem modelo, sem aparelho), pra acomodar texto depois',
   };
-  return `NEGATIVE SPACE — INEGOCIÁVEL:
-${where[side]}
-Esse espaço VAZIO é onde o texto da arte vai ser sobreposto depois — sem ele, a arte é INUTILIZÁVEL. Reduza/recue/reenquadre a modelo o quanto precisar pra garantir esse espaço livre, MESMO se cortar parcialmente o aparelho. Prefira closeup ou plano mais fechado da modelo se necessário pra caber só na metade indicada.`;
+  return `COMPOSIÇÃO: enquadre a cena deixando ${where[side]}. Mantenha a modelo e o aparelho com proporções, anatomia e detalhes naturais — sem distorcer pra forçar o espaço livre. Se precisar, escolha um plano mais fechado ou ângulo lateral pra que tudo caiba naturalmente.`;
 }
 
 // Defensive clamp — garante que cada zona caiba dentro do canvas (algumas
@@ -371,8 +359,8 @@ const CriacaoLayout = () => {
 
   // Vistas derivadas do slide ativo
   const activeSlide = slideResults[activeSlideIndex] ?? null;
-  const plan = activeSlide?.plan ?? null;
   const photoDataUrl = activeSlide?.photoDataUrl ?? null;
+  const backgroundColor = activeSlide?.backgroundColor ?? null;
   const zones = activeSlide?.zones ?? [];
   const canvasSize = activeSlide?.canvasSize ?? null;
 
@@ -490,39 +478,7 @@ const CriacaoLayout = () => {
         : [{ index: 1, text: textoArte.trim() }];
 
     try {
-      // ───── 1. PLANNER ÚNICO (vê todos os slides + baseline da scene) ─────
-      // Capa (slide 1) respeita o designer; demais slides o Planner pode
-      // sugerir poseOverride / enquadramentoOverride / useAparelho.
-      setStage('planning');
-      setProgressLabel(
-        targets.length > 1
-          ? `Planejando ${targets.length} slides do carrossel…`
-          : 'Planejando layout…',
-      );
-
-      const baselineScene = {
-        avatarNome: scene.avatares.map((a) => a.nome).join(' + ') || undefined,
-        poseDesigner: scene.pose || undefined,
-        enquadramentoDesigner: scene.enquadramento ?? undefined,
-        aparelhos: scene.aparelhos.map((a) => a.nome),
-        uniformes: scene.uniformes.map((u) => u.nome),
-        notas: scene.notas || undefined,
-      };
-
-      const planResponse = await callEdgeFunction<{ plans: PlanResult[] }>(
-        'layout-plan',
-        {
-          format,
-          slides: targets,
-          baselineScene,
-        },
-      );
-      const plans = planResponse.plans;
-      if (!plans || plans.length !== targets.length) {
-        throw new Error(`Planner retornou ${plans?.length ?? 0} planos pra ${targets.length} slides`);
-      }
-
-      // ───── 2. REFERÊNCIAS DO NANO-BANANA (base — comuns a todos os slides) ─────
+      // ───── 1. REFERÊNCIAS DO NANO-BANANA (base — comuns a todos os slides) ─────
       const baseAvatarRefs: ReferenceImage[] = [];
       for (const av of scene.avatares) {
         for (const url of av.referencias) {
@@ -554,53 +510,81 @@ const CriacaoLayout = () => {
         mime_type: a.mimeType,
         data: a.base64,
       }));
+      const slideReferences: ReferenceImage[] = [
+        ...baseAvatarRefs,
+        ...baseAparelhoRefs,
+        ...baseUniformeRefs,
+        ...baseMarcaRefs,
+        ...uploadedRefs,
+      ];
 
       const aspect: '3:4' | '9:16' = format === 'story-reels' ? '9:16' : '3:4';
       const accumulated: SlideResult[] = [];
+      const scenePrompt = composePrompt(scene);
 
-      // Loop sequencial — uma slide de cada vez
+      // ───── 2. LOOP DE SLIDES ─────
+      // Carrossel: slide 1 (capa) tem foto, slides 2+ são HTML-only.
+      // Estático (feed/story): único slide com foto.
       for (let i = 0; i < targets.length; i++) {
         const slide = targets[i];
-        const planResult = plans[i];
         const slideLabel =
           targets.length > 1 ? `Slide ${slide.index}/${targets.length} · ` : '';
+        const isCarousel = format === 'carrossel-feed';
+        const isHtmlOnly = isCarousel && i > 0;
 
-        // Aplica overrides do Planner pra esse slide (capa não tem overrides)
-        const isCover = i === 0;
-        const slideScene: SceneState = {
-          ...scene,
-          pose: planResult.poseOverride && !isCover ? planResult.poseOverride : scene.pose,
-          enquadramento:
-            planResult.enquadramentoOverride && !isCover
-              ? planResult.enquadramentoOverride
-              : scene.enquadramento,
-          aparelhos:
-            planResult.useAparelho === false && !isCover ? [] : scene.aparelhos,
-        };
-        const includeAparelhoRefs = slideScene.aparelhos.length > 0;
-        const slideReferences: ReferenceImage[] = [
-          ...baseAvatarRefs,
-          ...(includeAparelhoRefs ? baseAparelhoRefs : []),
-          ...baseUniformeRefs,
-          ...baseMarcaRefs,
-          ...uploadedRefs,
-        ];
+        if (isHtmlOnly) {
+          // ─── Slide HTML-only (carrossel 2+): sem foto, só fundo+texto ───
+          setStage('composing');
+          setProgressLabel(`${slideLabel}compondo slide HTML…`);
+          const composeResult = await callEdgeFunction<{
+            zones: Zone[];
+            canvasW: number;
+            canvasH: number;
+            backgroundColor: string;
+          }>('layout-compose-html', {
+            textoArte: slide.text,
+            format,
+            slideIndex: slide.index,
+            totalSlides: targets.length,
+          });
 
-        // ───── 3. FOTO (nano-banana) ─────
+          const fittedZones = fitZones(composeResult.zones, {
+            canvasW: composeResult.canvasW,
+            canvasH: composeResult.canvasH,
+          });
+          const clampedZones = fittedZones.map((z) =>
+            clampZone(z, composeResult.canvasW, composeResult.canvasH),
+          );
+
+          accumulated.push({
+            index: slide.index,
+            text: slide.text,
+            backgroundColor: composeResult.backgroundColor,
+            side: 'bottom', // não importa em HTML-only, valor neutro
+            zones: clampedZones,
+            canvasSize: { w: composeResult.canvasW, h: composeResult.canvasH },
+          });
+          setSlideResults([...accumulated]);
+          continue;
+        }
+
+        // ─── Slide com foto (estático ou capa do carrossel) ───
+
+        // 2a) Decide lado livre via layout-side (Claude Haiku)
+        setStage('planning');
+        setProgressLabel(`${slideLabel}escolhendo lado livre…`);
+        const sideResp = await callEdgeFunction<{
+          side: 'right' | 'left' | 'bottom';
+          reasoning?: string;
+        }>('layout-side', { textoArte: slide.text, format });
+        const side = sideResp.side;
+
+        // 2b) Gera foto via Nano Banana — prompt idêntico ao GerarFoto +
+        //     UMA linha curta indicando o lado livre. Sem overrides.
         setStage('generating-photo');
         setProgressLabel(`${slideLabel}gerando foto…`);
-        const sideRule = buildNegativeSpaceRule(planResult.negativeSpaceSide);
-        const scenePromptForSlide = composePrompt(slideScene);
-        const fullPhotoPrompt = `═══════ REGRA CRÍTICA DE COMPOSIÇÃO — LEIA PRIMEIRO ═══════
-${sideRule}
-${planResult.layoutHint ? `\n${planResult.layoutHint}` : ''}
-═══════════════════════════════════════════════════════════════
-
-${scenePromptForSlide}
-
-═══════ REFORÇO FINAL — NEGATIVE SPACE OBRIGATÓRIO ═══════
-${sideRule}
-NÃO existe arte sem esse espaço livre. Composição diferente disso será REJEITADA.`;
+        const sideRule = buildNegativeSpaceRule(side);
+        const fullPhotoPrompt = `${scenePrompt}\n\n${sideRule}`;
 
         const imgResult = await generateImage({
           prompt: fullPhotoPrompt,
@@ -611,7 +595,7 @@ NÃO existe arte sem esse espaço livre. Composição diferente disso será REJE
           avatar_name: scene.avatares.map((a) => a.nome).join(' + '),
         });
 
-        // ───── 4. DESIGNER CLAUDE (zonas de texto) ─────
+        // 2c) Claude designer com vision lê a foto e decide as zonas
         setStage('composing');
         setProgressLabel(`${slideLabel}compondo texto…`);
         const composeResult = await callEdgeFunction<{
@@ -621,23 +605,28 @@ NÃO existe arte sem esse espaço livre. Composição diferente disso será REJE
         }>('layout-compose', {
           textoArte: slide.text,
           format,
-          textHierarchy: planResult.textHierarchy,
-          negativeSpaceSide: planResult.negativeSpaceSide,
+          negativeSpaceSide: side,
+          photoBase64: imgResult.image.data,
+          photoMimeType: imgResult.image.mime_type,
         });
 
-        const clampedZones = composeResult.zones.map((z) =>
+        const fittedZones = fitZones(composeResult.zones, {
+          canvasW: composeResult.canvasW,
+          canvasH: composeResult.canvasH,
+        });
+        const clampedZones = fittedZones.map((z) =>
           clampZone(z, composeResult.canvasW, composeResult.canvasH),
         );
+
         accumulated.push({
           index: slide.index,
           text: slide.text,
-          plan: planResult,
           photoPrompt: fullPhotoPrompt,
           photoDataUrl: `data:${imgResult.image.mime_type};base64,${imgResult.image.data}`,
+          side,
           zones: clampedZones,
           canvasSize: { w: composeResult.canvasW, h: composeResult.canvasH },
         });
-
         setSlideResults([...accumulated]);
       }
 
@@ -1422,7 +1411,7 @@ NÃO existe arte sem esse espaço livre. Composição diferente disso será REJE
         )}
 
         {/* ───── Resultado · Canvas editável ───── */}
-        {stage === 'done' && photoDataUrl && canvasSize && zones.length > 0 && dimensions && (
+        {stage === 'done' && (photoDataUrl || backgroundColor) && canvasSize && zones.length > 0 && dimensions && (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
@@ -1468,12 +1457,23 @@ NÃO existe arte sem esse espaço livre. Composição diferente disso será REJE
                           : 'border-foreground/10 hover:border-primary/40',
                       )}
                     >
-                      <div className="aspect-[4/5] rounded-md overflow-hidden bg-muted">
-                        <img
-                          src={s.photoDataUrl}
-                          alt={`Slide ${s.index}`}
-                          className="w-full h-full object-cover"
-                        />
+                      <div
+                        className="aspect-[4/5] rounded-md overflow-hidden bg-muted relative"
+                        style={s.backgroundColor ? { background: s.backgroundColor } : undefined}
+                      >
+                        {s.photoDataUrl ? (
+                          <img
+                            src={s.photoDataUrl}
+                            alt={`Slide ${s.index}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">
+                              HTML
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <p
                         className={cn(
@@ -1500,7 +1500,8 @@ NÃO existe arte sem esse espaço livre. Composição diferente disso será REJE
                     key={activeSlideIndex}
                     zones={zones}
                     onZonesChange={setActiveZones}
-                    photoDataUrl={photoDataUrl}
+                    photoDataUrl={photoDataUrl ?? undefined}
+                    backgroundColor={backgroundColor ?? undefined}
                     canvasW={canvasSize.w}
                     canvasH={canvasSize.h}
                     maxDisplayWidth={500}
@@ -1536,12 +1537,24 @@ NÃO existe arte sem esse espaço livre. Composição diferente disso será REJE
                     </pre>
                   </div>
                 )}
-                {plan && (
+                {activeSlide?.side && (
                   <div>
-                    <p className="font-bold text-foreground mb-1">Plano (Planner Claude)</p>
+                    <p className="font-bold text-foreground mb-1">Lado livre (decidido pelo layout-side)</p>
                     <pre className="text-[10px] overflow-x-auto whitespace-pre-wrap leading-relaxed">
-                      {JSON.stringify(plan, null, 2)}
+                      {activeSlide.side}
                     </pre>
+                  </div>
+                )}
+                {backgroundColor && (
+                  <div>
+                    <p className="font-bold text-foreground mb-1">Background (slide HTML-only)</p>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-6 h-6 rounded ring-1 ring-foreground/10"
+                        style={{ background: backgroundColor }}
+                      />
+                      <code className="text-[10px]">{backgroundColor}</code>
+                    </div>
                   </div>
                 )}
                 {photoDataUrl && (
@@ -1570,8 +1583,9 @@ NÃO existe arte sem esse espaço livre. Composição diferente disso será REJE
       </div>
 
       {/* StaticCanvas OCULTO — montado só durante export, captura limpa
-          em coordenadas nativas, sem react-rnd e sem CSS transforms. */}
-      {isExporting && activeSlide && canvasSize && photoDataUrl && (
+          em coordenadas nativas, sem react-rnd e sem CSS transforms.
+          Funciona pra slides com foto OU slides HTML-only (backgroundColor). */}
+      {isExporting && activeSlide && canvasSize && (photoDataUrl || backgroundColor) && (
         <div
           aria-hidden
           style={{
@@ -1585,7 +1599,8 @@ NÃO existe arte sem esse espaço livre. Composição diferente disso será REJE
           <StaticCanvas
             ref={staticExportRef}
             zones={zones}
-            photoDataUrl={photoDataUrl}
+            photoDataUrl={photoDataUrl ?? undefined}
+            backgroundColor={backgroundColor ?? undefined}
             canvasW={canvasSize.w}
             canvasH={canvasSize.h}
           />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Rnd } from 'react-rnd';
+import { HandDrawnUnderline, type UnderlineVariant } from './HandDrawnUnderline';
 
 // ============================================================================
 // EditableCanvas
@@ -11,7 +12,7 @@ import { Rnd } from 'react-rnd';
 
 export interface Zone {
   id: string;
-  kind: 'headline' | 'apoio' | 'pill' | 'remate';
+  kind: 'headline' | 'apoio' | 'remate';
   text: string;
   x: number;
   y: number;
@@ -24,19 +25,27 @@ export interface Zone {
   textAlign: 'left' | 'center' | 'right';
   lineHeight: number;
   letterSpacing?: number;
-  pill?: {
-    borderColor: string;
-    borderWidth: number;
-    borderRadius: number;
-    paddingX: number;
-    paddingY: number;
+  // Sublinhado desenhado à mão (SVG Bézier). Aplicado opcionalmente a
+  // qualquer zona — o LLM escolhe a zona de maior peso visual pra adicionar
+  // esse adorno. widthRatio: comprimento do traço em relação à largura
+  // natural do texto (0.4-1.0 ideal).
+  underline?: {
+    variant: UnderlineVariant;
+    color: string;
+    thickness: number;
+    widthRatio: number;
+    position: 'above' | 'below';
+    gap: number;
   };
 }
 
 interface EditableCanvasProps {
   zones: Zone[];
   onZonesChange: (zones: Zone[]) => void;
-  photoDataUrl: string;
+  // Pra slides com foto: photoDataUrl é o background.
+  // Pra slides HTML-only (carrossel slides 2+): backgroundColor é a cor sólida.
+  photoDataUrl?: string;
+  backgroundColor?: string;
   canvasW: number;
   canvasH: number;
   maxDisplayWidth?: number;
@@ -48,7 +57,6 @@ interface EditableCanvasProps {
 const ZONE_LABEL: Record<Zone['kind'], string> = {
   headline: 'Headline',
   apoio: 'Apoio',
-  pill: 'Pill',
   remate: 'Remate',
 };
 
@@ -85,25 +93,48 @@ export const ZoneContent = ({ zone }: { zone: Zone }) => {
     pointerEvents: 'none',
   };
 
-  if (zone.pill) {
+  if (zone.underline) {
+    const { variant, color, thickness, widthRatio, position, gap } = zone.underline;
+    const underlineWidth = Math.max(20, Math.round(zone.w * widthRatio));
+    const underlineAlign: React.CSSProperties =
+      zone.textAlign === 'center'
+        ? { marginLeft: 'auto', marginRight: 'auto' }
+        : zone.textAlign === 'right'
+          ? { marginLeft: 'auto' }
+          : { marginRight: 'auto' };
+    // Piso mínimo de gap pra acomodar descenders (p, g, j, q, y).
+    // Em Montserrat ~25% do fontSize já fica seguro. html2canvas ignora `gap`
+    // do flexbox em alguns casos — usamos `marginTop`/`marginBottom` explícito.
+    const descenderClearance = Math.ceil(zone.fontSize * 0.25);
+    const effectiveGap = Math.max(gap, descenderClearance);
+    const underlineMargin =
+      position === 'below'
+        ? { marginTop: effectiveGap }
+        : { marginBottom: effectiveGap };
+    const underline = (
+      <div style={{ flexShrink: 0, ...underlineAlign, ...underlineMargin }}>
+        <HandDrawnUnderline
+          variant={variant}
+          width={underlineWidth}
+          thickness={thickness}
+          color={color}
+        />
+      </div>
+    );
     return (
       <div
         style={{
           width: '100%',
           height: '100%',
-          border: `${zone.pill.borderWidth}px solid ${zone.pill.borderColor}`,
-          borderRadius: zone.pill.borderRadius,
-          paddingLeft: zone.pill.paddingX,
-          paddingRight: zone.pill.paddingX,
-          paddingTop: zone.pill.paddingY,
-          paddingBottom: zone.pill.paddingY,
-          background: 'transparent',
-          boxSizing: 'border-box',
           display: 'flex',
-          alignItems: 'center',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          boxSizing: 'border-box',
         }}
       >
+        {position === 'above' && underline}
         <div style={{ ...baseStyle, height: 'auto', alignItems: 'center' }}>{zone.text}</div>
+        {position === 'below' && underline}
       </div>
     );
   }
@@ -115,6 +146,7 @@ const EditableCanvas = ({
   zones,
   onZonesChange,
   photoDataUrl,
+  backgroundColor,
   canvasW,
   canvasH,
   maxDisplayWidth = 600,
@@ -175,26 +207,27 @@ const EditableCanvas = ({
             width: canvasW,
             height: canvasH,
             position: 'relative',
-            background: '#ffffff',
+            background: backgroundColor ?? '#ffffff',
             overflow: 'hidden',
           }}
         >
-        {/* Foto como background-image — html2canvas tem suporte ruim
-            a `object-fit: cover` em <img>. Background-image renderiza
-            identicamente entre preview e export. */}
-        <div
-          aria-label="foto base"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `url("${photoDataUrl}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            pointerEvents: 'none',
-            userSelect: 'none',
-          }}
-        />
+        {/* Foto como background-image (quando o slide tem foto). Slides
+            HTML-only (carrossel 2+) usam só backgroundColor. */}
+        {photoDataUrl && (
+          <div
+            aria-label="foto base"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `url("${photoDataUrl}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
+        )}
         {/* Camada invisível pra capturar cliques no fundo (desseleciona) */}
         <div
           onMouseDown={(e) => {
@@ -399,34 +432,87 @@ export const ZonePropertyPanel = ({ zone, onChange, onDelete }: ZonePanelProps) 
         </div>
       </div>
 
-      {zone.pill && (
+      {zone.underline && (
         <div className="rounded-md border border-foreground/10 p-2 space-y-2">
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-            Pill (cápsula)
+            Sublinhado manuscrito
           </p>
-          <div className="flex gap-2 items-center">
-            <label className="text-xs text-muted-foreground">Borda:</label>
-            <input
-              type="color"
-              value={zone.pill.borderColor}
-              onChange={(e) =>
-                onChange({ pill: { ...zone.pill!, borderColor: e.target.value } })
-              }
-              className="h-8 w-10 rounded-md border bg-background cursor-pointer"
-            />
-            <input
-              type="number"
-              value={zone.pill.borderWidth}
-              onChange={(e) =>
-                onChange({
-                  pill: { ...zone.pill!, borderWidth: parseFloat(e.target.value) || 0 },
-                })
-              }
-              className="w-16 rounded-md border bg-background px-2 py-1 text-xs"
-              step={0.5}
-              min={0}
-            />
-            <span className="text-xs text-muted-foreground">px</span>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] text-muted-foreground block mb-1">Estilo</label>
+              <select
+                value={zone.underline.variant}
+                onChange={(e) =>
+                  onChange({
+                    underline: { ...zone.underline!, variant: e.target.value as UnderlineVariant },
+                  })
+                }
+                className="w-full rounded-md border bg-background px-2 py-1 text-xs"
+              >
+                <option value="wave">Onda suave</option>
+                <option value="arch">Arco</option>
+                <option value="double">Duplo (rabiscado)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground block mb-1">Posição</label>
+              <select
+                value={zone.underline.position}
+                onChange={(e) =>
+                  onChange({
+                    underline: { ...zone.underline!, position: e.target.value as 'above' | 'below' },
+                  })
+                }
+                className="w-full rounded-md border bg-background px-2 py-1 text-xs"
+              >
+                <option value="below">Abaixo</option>
+                <option value="above">Acima</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground block mb-1">Cor</label>
+              <input
+                type="color"
+                value={zone.underline.color}
+                onChange={(e) =>
+                  onChange({ underline: { ...zone.underline!, color: e.target.value } })
+                }
+                className="h-8 w-full rounded-md border bg-background cursor-pointer"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground block mb-1">Espessura (px)</label>
+              <input
+                type="number"
+                value={zone.underline.thickness}
+                onChange={(e) =>
+                  onChange({
+                    underline: { ...zone.underline!, thickness: parseFloat(e.target.value) || 0 },
+                  })
+                }
+                className="w-full rounded-md border bg-background px-2 py-1 text-xs"
+                step={0.5}
+                min={0}
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="text-[10px] text-muted-foreground block mb-1">
+                Comprimento ({Math.round(zone.underline.widthRatio * 100)}% da zona)
+              </label>
+              <input
+                type="range"
+                value={zone.underline.widthRatio}
+                onChange={(e) =>
+                  onChange({
+                    underline: { ...zone.underline!, widthRatio: parseFloat(e.target.value) || 0 },
+                  })
+                }
+                className="w-full"
+                step={0.05}
+                min={0.2}
+                max={1}
+              />
+            </div>
           </div>
         </div>
       )}
