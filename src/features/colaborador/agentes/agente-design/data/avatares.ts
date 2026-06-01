@@ -56,6 +56,16 @@ export const AVATARES: Avatar[] = [
     ],
   },
   {
+    id: 'aluna-2',
+    nome: 'Aluna 2',
+    genero: 'feminino',
+    tipo: 'aluno',
+    referencias: [
+      '/images/aluna-2/01-frontal.jpeg',
+      '/images/aluna-2/02-perfil.jpeg',
+    ],
+  },
+  {
     id: 'joao-aluno',
     nome: 'João Aluno',
     genero: 'masculino',

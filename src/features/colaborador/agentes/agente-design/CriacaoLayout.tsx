@@ -39,7 +39,7 @@ import {
   contentTypeLabel,
 } from '@/components/agente/types';
 import { LAYOUT_FORMATS, LayoutFormat } from './data/layoutSystemPrompt';
-import { AVATARES, type Avatar } from './data/avatares';
+import { AVATARES, TIPO_SINGULAR, type Avatar } from './data/avatares';
 import { UNIFORMES, UNIFORME_CATEGORIA_LABEL, UNIFORME_CATEGORIA_ORDER, type Uniforme } from './data/uniformes';
 import { APARELHOS, type Aparelho } from './data/aparelhos';
 import {
@@ -373,8 +373,20 @@ const CriacaoLayout = () => {
     );
   };
 
-  // Prompt composto (preview da composePrompt) — não-editável aqui, mas mostrado em debug
+  // Prompt composto (preview da composePrompt) — editável, igual no Gerar Foto.
   const composedPrompt = useMemo(() => composePrompt(scene), [scene]);
+
+  // Prompt editável: sincroniza com composedPrompt até o usuário editar manualmente.
+  const [promptDraft, setPromptDraft] = useState(composedPrompt);
+  const [promptEdited, setPromptEdited] = useState(false);
+  useEffect(() => {
+    if (!promptEdited) setPromptDraft(composedPrompt);
+  }, [composedPrompt, promptEdited]);
+
+  const resetPromptDraft = () => {
+    setPromptDraft(composedPrompt);
+    setPromptEdited(false);
+  };
 
   const textoArteLocked = !!post;
   const parsedSlides = useMemo(() => parseSlides(textoArte), [textoArte]);
@@ -520,7 +532,8 @@ const CriacaoLayout = () => {
 
       const aspect: '3:4' | '9:16' = format === 'story-reels' ? '9:16' : '3:4';
       const accumulated: SlideResult[] = [];
-      const scenePrompt = composePrompt(scene);
+      // Usa o prompt editado se o designer mexeu; senão recompõe da cena.
+      const scenePrompt = promptDraft.trim() || composePrompt(scene);
 
       // ───── 2. LOOP DE SLIDES ─────
       // Carrossel: slide 1 (capa) tem foto, slides 2+ são HTML-only.
@@ -898,10 +911,10 @@ const CriacaoLayout = () => {
             </p>
           </div>
 
-          {/* Avatar — toggle aluna/aluno */}
+          {/* Avatar — todos disponíveis (franqueados, instrutores, alunos) */}
           <SubSection title="Avatar">
-            <div className="flex gap-2">
-              {AVATARES.filter((a) => a.tipo === 'aluno').map((a) => {
+            <div className="flex flex-wrap gap-2">
+              {AVATARES.map((a) => {
                 const isActive = scene.avatares.some((x) => x.id === a.id);
                 const thumb = a.referencias[0];
                 return (
@@ -930,7 +943,7 @@ const CriacaoLayout = () => {
                     <div>
                       <p className="text-sm font-semibold leading-tight">{a.nome}</p>
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                        {a.genero === 'feminino' ? 'Aluna' : 'Aluno'}
+                        {TIPO_SINGULAR[a.tipo][a.genero]}
                       </p>
                     </div>
                     {isActive && (
@@ -1306,16 +1319,45 @@ const CriacaoLayout = () => {
             </div>
           </SubSection>
 
-          {/* Prompt composto — preview */}
-          <details className="text-xs text-muted-foreground">
-            <summary className="cursor-pointer font-semibold hover:text-primary inline-flex items-center gap-1.5">
-              <Lightbulb className="h-3.5 w-3.5" />
-              Prompt composto (preview do que vai pro nano-banana)
-            </summary>
-            <pre className="mt-2 p-3 rounded-lg bg-muted/30 text-[10px] whitespace-pre-wrap leading-relaxed font-mono max-h-60 overflow-y-auto">
-              {composedPrompt || '— vazio —'}
-            </pre>
-          </details>
+          {/* Prompt composto — editável (igual no Gerar Foto) */}
+          <SubSection
+            title="Prompt composto"
+            subtitle={
+              promptEdited
+                ? 'Editado manualmente · será enviado como está pro nano-banana'
+                : 'Atualiza com os controles acima. Pode editar livremente antes de gerar.'
+            }
+          >
+            <Textarea
+              value={promptDraft}
+              onChange={(e) => {
+                setPromptDraft(e.target.value);
+                setPromptEdited(true);
+              }}
+              rows={12}
+              disabled={isBusy}
+              className="text-[11px] leading-relaxed font-mono"
+            />
+            {promptEdited && (
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                  <Lightbulb className="h-3 w-3" />
+                  Mexer nos controles acima não vai mais sobrescrever esse texto.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={resetPromptDraft}
+                  disabled={isBusy}
+                  className="h-7 text-[10px]"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1.5" />
+                  Voltar pro automático
+                </Button>
+              </div>
+            )}
+          </SubSection>
         </Card>
 
         {/* ───── 4 · Gerar ───── */}
