@@ -182,6 +182,29 @@ const a4InformativoFields: TemplateField[] = [
   { id: 'assinatura', label: 'Assinatura', placeholder: '{{assinatura}}', defaultValue: 'Pure Pilates Unidade X', maxLength: 80 },
 ];
 
+const feriadoCorpusChristiHTML = (bgUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feriado de Corpus Christi</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1350px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+<div style="position:absolute; left:0; right:0; top:660px; display:flex; flex-direction:column; align-items:center; gap:18px;">
+<div style="padding:14px 38px; background:#c41230; color:#ffffff; border-radius:999px; font-size:34px; font-weight:600; letter-spacing:1px; white-space:nowrap;">{{data1}}</div>
+<div style="padding:14px 38px; background:#c41230; color:#ffffff; border-radius:999px; font-size:34px; font-weight:600; letter-spacing:1px; white-space:nowrap;">{{data2}}</div>
+</div>
+</div>
+</body>
+</html>`;
+
+const feriadoCorpusChristiFields: TemplateField[] = [
+  { id: 'data1', label: 'Data 1 — status', placeholder: '{{data1}}', defaultValue: '04/06 - FECHADO', maxLength: 30 },
+  { id: 'data2', label: 'Data 2 — status', placeholder: '{{data2}}', defaultValue: '05/06 - ABERTO', maxLength: 30 },
+];
+
 export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'seja-instrutor',
@@ -252,6 +275,16 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     height: 2000,
     html: a4InformativoHTML('/images/pure-design/a4-base.png'),
     fields: a4InformativoFields,
+  },
+  {
+    id: 'feriado-corpus-christi',
+    name: 'Feriado — Corpus Christi',
+    category: 'Feriados',
+    thumbnail: '/images/pure-design/feriado-corpus-christi.png',
+    width: 1080,
+    height: 1350,
+    html: feriadoCorpusChristiHTML('/images/pure-design/feriado-corpus-christi.png'),
+    fields: feriadoCorpusChristiFields,
   },
 ];
 
