@@ -22,6 +22,7 @@ import {
 
 const SOURCE_LABEL: Record<string, string> = {
   instagram: 'Instagram', google: 'Google', x: 'X', noticias: 'Notícias',
+  reddit: 'Reddit', youtube: 'YouTube',
 };
 
 function healthColor(score: number) {

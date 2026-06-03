@@ -202,6 +202,80 @@ async function collectNews(): Promise<Mention[]> {
   return out;
 }
 
+// Reddit — busca via API oficial (OAuth app-only, grátis). Ativa com
+// REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET. Menções em comunidades. Canal: mídia.
+async function collectReddit(diag: Record<string, unknown>): Promise<Mention[]> {
+  const out: Mention[] = [];
+  const id = Deno.env.get('REDDIT_CLIENT_ID');
+  const secret = Deno.env.get('REDDIT_CLIENT_SECRET');
+  if (!id || !secret) { diag.reddit = 'sem REDDIT_CLIENT_ID/SECRET'; return out; }
+  const ua = 'PureMonitor/1.0 (brand monitoring)';
+  try {
+    const tokRes = await fetch('https://www.reddit.com/api/v1/access_token', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${btoa(`${id}:${secret}`)}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': ua,
+      },
+      body: 'grant_type=client_credentials',
+    });
+    if (!tokRes.ok) { diag.redditError = `auth HTTP ${tokRes.status}`; return out; }
+    const accessToken = (await tokRes.json()).access_token;
+    const url = `https://oauth.reddit.com/search?q=${encodeURIComponent(`"${BRAND_NAME}"`)}&sort=new&limit=25`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}`, 'User-Agent': ua } });
+    if (!res.ok) { diag.redditError = `HTTP ${res.status}`; return out; }
+    const json = await res.json();
+    const children = json?.data?.children ?? [];
+    diag.redditCount = children.length;
+    for (const c of children) {
+      const p = c.data || {};
+      const body = [p.title, p.selftext].filter(Boolean).join(' — ').slice(0, 600);
+      if (!body) continue;
+      out.push(mention({
+        id: `reddit:${p.id}`, source: 'reddit', channel: 'midia',
+        category: 'publicacao', subtype: `r/${p.subreddit}`, author: p.author ?? null,
+        body, url: p.permalink ? `https://www.reddit.com${p.permalink}` : null,
+        published_at: p.created_utc ? new Date(p.created_utc * 1000).toISOString() : new Date().toISOString(),
+        reach: (p.score || 0) + (p.num_comments || 0), rating: null,
+      }));
+    }
+  } catch (e) {
+    diag.redditError = (e as Error).message;
+  }
+  return out;
+}
+
+// YouTube — vídeos que citam a marca. Ativa só com YOUTUBE_API_KEY (grátis). Canal: mídia.
+async function collectYouTube(diag: Record<string, unknown>): Promise<Mention[]> {
+  const out: Mention[] = [];
+  const key = Deno.env.get('YOUTUBE_API_KEY');
+  if (!key) { diag.youtube = 'sem YOUTUBE_API_KEY'; return out; }
+  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&order=date&relevanceLanguage=pt&q=${encodeURIComponent(`"${BRAND_NAME}"`)}&key=${key}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) { diag.youtubeError = `HTTP ${res.status}`; return out; }
+    const json = await res.json();
+    const items = json?.items ?? [];
+    diag.youtubeCount = items.length;
+    for (const it of items) {
+      const s = it.snippet || {};
+      const vid = it.id?.videoId;
+      if (!vid) continue;
+      out.push(mention({
+        id: `youtube:${vid}`, source: 'youtube', channel: 'midia',
+        category: 'publicacao', subtype: 'vídeo', author: s.channelTitle ?? null,
+        body: [s.title, s.description].filter(Boolean).join(' — ').slice(0, 600),
+        url: `https://www.youtube.com/watch?v=${vid}`,
+        published_at: s.publishedAt ?? new Date().toISOString(), reach: 0, rating: null,
+      }));
+    }
+  } catch (e) {
+    diag.youtubeError = (e as Error).message;
+  }
+  return out;
+}
+
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
@@ -218,6 +292,8 @@ Deno.serve(async (req) => {
     const collected: Mention[] = [];
     if (token) collected.push(...(await collectInstagram(token, diag)));
     collected.push(...(await collectNews()));
+    collected.push(...(await collectReddit(diag)));
+    collected.push(...(await collectYouTube(diag)));
 
     let inserted = 0;
     if (collected.length) {
