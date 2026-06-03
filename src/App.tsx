@@ -45,6 +45,7 @@ const GerarFoto = lazy(() => import("./features/colaborador/agentes/agente-desig
 const CriacaoLayout = lazy(() => import("./features/colaborador/agentes/agente-design/CriacaoLayout"));
 const AgenteMonitoramentoMetricas = lazy(() => import("./features/colaborador/monitoramento/AgenteMonitoramentoMetricas"));
 const SaudeDeMarca = lazy(() => import("./features/colaborador/monitoramento/SaudeDeMarca"));
+const PureMonitor = lazy(() => import("./features/colaborador/monitoramento/PureMonitor"));
 
 // Admin (só admin)
 const AdminUsuarios = lazy(() => import("./features/admin/usuarios/AdminUsuarios"));
@@ -119,6 +120,10 @@ function App() {
             <Route
               path="/agente-monitoramento/saude-de-marca"
               element={<ProtectedRoute><SaudeDeMarca /></ProtectedRoute>}
+            />
+            <Route
+              path="/agente-monitoramento/pure-monitor"
+              element={<ProtectedRoute><PureMonitor /></ProtectedRoute>}
             />
             <Route path="/auth/callback/meta" element={<AuthCallbackMeta />} />
             <Route path="/auth/callback/tiktok" element={<AuthCallbackTikTok />} />

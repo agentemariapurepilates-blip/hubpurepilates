@@ -35,6 +35,7 @@ import {
   Globe,
   Inbox,
   Image as ImageIcon,
+  Radar,
 } from 'lucide-react';
 
 const SectionHeader = ({
@@ -189,7 +190,7 @@ const Sidebar = () => {
   // Agente Monitoramento section - only for admins
   const monitoramentoNavigation = [
     { name: 'Métricas', href: '/agente-monitoramento/metricas', icon: BarChart3, disabled: false },
-    { name: 'Saúde de marca', href: '/agente-monitoramento/saude-de-marca', icon: Heart, disabled: false },
+    { name: 'Pure Monitor', href: '/agente-monitoramento/pure-monitor', icon: Radar, disabled: false },
   ];
 
   // Minha Área section
