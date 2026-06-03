@@ -221,7 +221,7 @@ function ChannelView({ channel, mentions }: { channel: ChannelKey; mentions: Men
   });
 
   const intro: Record<ChannelKey, string> = {
-    terceiros: 'Menções da marca em publicações de outros perfis (Instagram via #purepilates).',
+    terceiros: 'Quando outros perfis marcam @purepilatesbr em publicações no Instagram.',
     nossas: 'Comentários nos posts das nossas contas oficiais.',
     midia: 'Menções na internet em geral — notícias e portais (Google Notícias).',
   };
@@ -237,8 +237,9 @@ function ChannelView({ channel, mentions }: { channel: ChannelKey; mentions: Men
       </div>
       {channel === 'terceiros' && (
         <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-900">
-          ℹ️ Pela API oficial da Meta cobrimos posts com <strong>#purepilates</strong>. Texto solto
-          "pure pilates" sem hashtag/marcação não é rastreável pela API do Instagram.
+          ℹ️ Aqui aparecem as publicações que <strong>marcam @purepilatesbr</strong>. Posts que usam
+          só a hashtag <strong>#purepilates</strong> (sem marcar a conta) exigem a aprovação
+          "Instagram Public Content Access" da Meta (App Review) — por isso ainda não entram.
         </div>
       )}
 

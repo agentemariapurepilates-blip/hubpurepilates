@@ -81,37 +81,66 @@ function mention(partial: Omit<Mention, 'sentiment_label' | 'sentiment_score' | 
 }
 
 // ── Coletores ──
-async function collectInstagram(token: string): Promise<Mention[]> {
+async function collectInstagram(token: string, diag: Record<string, unknown>): Promise<Mention[]> {
   const out: Mention[] = [];
   // 1) Posts de terceiros com a hashtag #purepilates
   try {
     const hs = await metaFetch<{ data?: { id: string }[] }>(
       '/ig_hashtag_search', { user_id: IG_USER_ID, q: 'purepilates' }, token,
     );
-    const hashtagId = hs.data?.[0]?.id;
+    const hashtagId = hs.data?.[0]?.id ?? null;
+    diag.hashtagId = hashtagId;
     if (hashtagId) {
-      const rec = await metaFetch<{ data?: any[] }>(
-        `/${hashtagId}/recent_media`,
-        { user_id: IG_USER_ID, fields: 'id,caption,permalink,timestamp,like_count,comments_count' },
-        token,
-      );
-      for (const p of rec.data ?? []) {
-        out.push(mention({
-          id: `instagram:${p.id}`, source: 'instagram', channel: 'terceiros',
-          category: 'publicacao', subtype: null, author: null, body: p.caption || '',
-          url: p.permalink ?? null, published_at: p.timestamp,
-          reach: (p.like_count || 0) + (p.comments_count || 0), rating: null,
-        }));
+      try {
+        const rec = await metaFetch<{ data?: any[] }>(
+          `/${hashtagId}/recent_media`,
+          { user_id: IG_USER_ID, fields: 'id,caption,permalink,timestamp,like_count,comments_count,media_type' },
+          token,
+        );
+        diag.recentCount = (rec.data ?? []).length;
+        for (const p of rec.data ?? []) {
+          out.push(mention({
+            id: `instagram:${p.id}`, source: 'instagram', channel: 'terceiros',
+            category: 'publicacao', subtype: 'hashtag', author: null, body: p.caption || '',
+            url: p.permalink ?? null, published_at: p.timestamp,
+            reach: (p.like_count || 0) + (p.comments_count || 0), rating: null,
+          }));
+        }
+      } catch (e) {
+        diag.recentError = (e as Error).message;
       }
     }
   } catch (e) {
-    console.error('[ig-hashtag]', (e as Error).message);
+    diag.hashtagError = (e as Error).message;
   }
-  // 2) Comentários nos posts da nossa conta oficial
+
+  // 2) @menções: publicações de terceiros que MARCARAM @purepilatesbr
+  try {
+    const tags = await metaFetch<{ data?: any[] }>(
+      `/${IG_USER_ID}/tags`,
+      { fields: 'id,caption,permalink,timestamp,like_count,comments_count,username', limit: 50 },
+      token,
+    );
+    diag.tagsCount = (tags.data ?? []).length;
+    for (const p of tags.data ?? []) {
+      out.push(mention({
+        id: `ig-tag:${p.id}`, source: 'instagram', channel: 'terceiros',
+        category: 'publicacao', subtype: 'menção', author: p.username ?? null,
+        body: p.caption || '', url: p.permalink ?? null, published_at: p.timestamp,
+        reach: (p.like_count || 0) + (p.comments_count || 0), rating: null,
+      }));
+    }
+  } catch (e) {
+    diag.tagsError = (e as Error).message;
+  }
+
+  // 3) Comentários nos posts da nossa conta oficial
   try {
     const media = await metaFetch<{ data?: any[] }>(
       `/${IG_USER_ID}/media`, { fields: 'id,permalink,timestamp,comments_count', limit: MAX_OWN_POSTS }, token,
     );
+    diag.ownMediaCount = (media.data ?? []).length;
+    let commentsCount = 0;
     for (const post of media.data ?? []) {
       if (!post.comments_count) continue;
       const cs = await metaFetch<{ data?: any[] }>(
@@ -119,6 +148,7 @@ async function collectInstagram(token: string): Promise<Mention[]> {
       );
       for (const c of cs.data ?? []) {
         if (!c.text) continue;
+        commentsCount++;
         out.push(mention({
           id: `ig-comment:${c.id || `${post.id}:${c.timestamp}`}`, source: 'instagram',
           channel: 'nossas', category: 'comentario', subtype: 'comentário',
@@ -127,8 +157,9 @@ async function collectInstagram(token: string): Promise<Mention[]> {
         }));
       }
     }
+    diag.commentsCount = commentsCount;
   } catch (e) {
-    console.error('[ig-comments]', (e as Error).message);
+    diag.ownMediaError = (e as Error).message;
   }
   return out;
 }
@@ -183,8 +214,9 @@ Deno.serve(async (req) => {
 
   try {
     const token = Deno.env.get('INSTAGRAM_GRAPH_TOKEN') ?? '';
+    const diag: Record<string, unknown> = {};
     const collected: Mention[] = [];
-    if (token) collected.push(...(await collectInstagram(token)));
+    if (token) collected.push(...(await collectInstagram(token, diag)));
     collected.push(...(await collectNews()));
 
     let inserted = 0;
@@ -204,6 +236,7 @@ Deno.serve(async (req) => {
         collected: collected.length,
         inserted,
         instagram: Boolean(token),
+        diag,
       }),
       { headers: { ...cors, 'Content-Type': 'application/json' } },
     );
