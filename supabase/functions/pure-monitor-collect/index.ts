@@ -263,7 +263,7 @@ async function collectYouTube(diag: Record<string, unknown>): Promise<Mention[]>
       const vid = it.id?.videoId;
       if (!vid) continue;
       out.push(mention({
-        id: `youtube:${vid}`, source: 'youtube', channel: 'midia',
+        id: `youtube:${vid}`, source: 'youtube', channel: 'youtube',
         category: 'publicacao', subtype: 'vídeo', author: s.channelTitle ?? null,
         body: [s.title, s.description].filter(Boolean).join(' — ').slice(0, 600),
         url: `https://www.youtube.com/watch?v=${vid}`,

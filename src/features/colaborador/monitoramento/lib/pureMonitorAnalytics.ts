@@ -25,6 +25,7 @@ export const CHANNELS = {
   terceiros: { label: 'Redes sociais de terceiros', icon: '🌐' },
   nossas: { label: 'Nossas redes sociais', icon: '📲' },
   midia: { label: 'Pure na Mídia', icon: '📰' },
+  youtube: { label: 'YouTube', icon: '▶️' },
 } as const;
 
 export type ChannelKey = keyof typeof CHANNELS;
@@ -87,9 +88,10 @@ export function brandHealthScore(mentions: Mention[]): Health {
 }
 
 export function channelOf(m: Mention): ChannelKey {
-  if (m.channel === 'terceiros' || m.channel === 'nossas' || m.channel === 'midia') {
+  if (m.channel === 'terceiros' || m.channel === 'nossas' || m.channel === 'midia' || m.channel === 'youtube') {
     return m.channel;
   }
+  if (m.source === 'youtube') return 'youtube';
   if (m.source === 'noticias') return 'midia';
   if (m.source === 'google') return 'nossas';
   if (m.source === 'instagram' && m.category === 'comentario') return 'nossas';
@@ -97,7 +99,7 @@ export function channelOf(m: Mention): ChannelKey {
 }
 
 export function channelCounts(mentions: Mention[]): Record<ChannelKey, number> {
-  const c: Record<ChannelKey, number> = { terceiros: 0, nossas: 0, midia: 0 };
+  const c: Record<ChannelKey, number> = { terceiros: 0, nossas: 0, midia: 0, youtube: 0 };
   for (const m of mentions) c[channelOf(m)]++;
   return c;
 }

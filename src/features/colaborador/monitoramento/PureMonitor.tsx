@@ -125,6 +125,7 @@ export default function PureMonitor() {
               <TabsTrigger value="terceiros">Redes de terceiros {counts.terceiros > 0 && <Badge variant="secondary" className="ml-1">{counts.terceiros}</Badge>}</TabsTrigger>
               <TabsTrigger value="nossas">Nossas redes {counts.nossas > 0 && <Badge variant="secondary" className="ml-1">{counts.nossas}</Badge>}</TabsTrigger>
               <TabsTrigger value="midia">Pure na Mídia {counts.midia > 0 && <Badge variant="secondary" className="ml-1">{counts.midia}</Badge>}</TabsTrigger>
+              <TabsTrigger value="youtube">YouTube {counts.youtube > 0 && <Badge variant="secondary" className="ml-1">{counts.youtube}</Badge>}</TabsTrigger>
               <TabsTrigger value="alertas">Alertas {openAlerts > 0 && <Badge variant="destructive" className="ml-1">{openAlerts}</Badge>}</TabsTrigger>
             </TabsList>
 
@@ -218,7 +219,7 @@ export default function PureMonitor() {
               </Card>
             </TabsContent>
 
-            {(['terceiros', 'nossas', 'midia'] as ChannelKey[]).map((ch) => (
+            {(['terceiros', 'nossas', 'midia', 'youtube'] as ChannelKey[]).map((ch) => (
               <TabsContent key={ch} value={ch} className="mt-4">
                 <ChannelView channel={ch} mentions={mentions.filter((m) => channelOf(m) === ch)} />
               </TabsContent>
@@ -251,6 +252,7 @@ function ChannelView({ channel, mentions }: { channel: ChannelKey; mentions: Men
     terceiros: 'Quando outros perfis marcam @purepilatesbr em publicações no Instagram.',
     nossas: 'Comentários nos posts das nossas contas oficiais.',
     midia: 'Menções na internet em geral — notícias e portais (Google Notícias).',
+    youtube: 'Vídeos que citam "Pure Pilates" no YouTube.',
   };
 
   return (
