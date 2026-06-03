@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import html2canvas from 'html2canvas';
+import { domToBlob } from 'modern-screenshot';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -152,19 +152,16 @@ const PureDesignEditor = () => {
 
       await Promise.all(collectBackgroundImageUrls(target).map(preloadImage));
 
-      const canvas = await html2canvas(target, {
+      // modern-screenshot usa SVG foreignObject pra delegar o rendering pro browser
+      // nativo (em vez de reimplementar como html2canvas faz). Isso garante que o
+      // PNG exportado fica pixel-perfect com o preview — sem drift de baseline de
+      // texto em pills/badges.
+      const blob = await domToBlob(target, {
+        type: 'image/png',
         scale: 1,
-        useCORS: true,
-        allowTaint: true,
         backgroundColor: null,
       });
-
-      const blob: Blob = await new Promise((resolve, reject) => {
-        canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error('falha ao gerar PNG'))),
-          'image/png',
-        );
-      });
+      if (!blob) throw new Error('falha ao gerar PNG');
 
       const formData = new FormData();
       formData.append('file', blob, `${template.id}.png`);

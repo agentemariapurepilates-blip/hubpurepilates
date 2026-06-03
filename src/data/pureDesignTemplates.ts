@@ -192,9 +192,9 @@ const feriadoCorpusChristiHTML = (bgUrl: string) => `<!DOCTYPE html>
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1350px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
-<div style="position:absolute; left:170px; right:140px; top:700px; display:flex; flex-direction:column; align-items:center; gap:12px;">
-<div style="padding:8px 26px; background:#c41230; color:#ffffff; border-radius:999px; font-size:24px; font-weight:600; letter-spacing:1px; white-space:nowrap;">{{data1}}</div>
-<div style="padding:8px 26px; background:#c41230; color:#ffffff; border-radius:999px; font-size:24px; font-weight:600; letter-spacing:1px; white-space:nowrap;">{{data2}}</div>
+<div style="position:absolute; left:170px; right:140px; top:700px; text-align:center;">
+<div style="margin-bottom:12px;"><span style="display:inline-block; height:46px; line-height:46px; padding:0 26px; background:#c41230; color:#ffffff; border-radius:999px; font-size:24px; font-weight:600; letter-spacing:1px; white-space:nowrap; box-sizing:border-box; vertical-align:top;">{{data1}}</span></div>
+<div><span style="display:inline-block; height:46px; line-height:46px; padding:0 26px; background:#c41230; color:#ffffff; border-radius:999px; font-size:24px; font-weight:600; letter-spacing:1px; white-space:nowrap; box-sizing:border-box; vertical-align:top;">{{data2}}</span></div>
 </div>
 </div>
 </body>
