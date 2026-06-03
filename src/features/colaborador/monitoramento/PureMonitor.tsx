@@ -12,9 +12,12 @@ import {
 import { Radar, RefreshCw, ExternalLink, Loader2, CheckCircle2, Undo2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid,
+} from 'recharts';
+import {
   type Mention, type ChannelKey, CHANNELS, SENTIMENT_COLOR,
   brandHealthScore, sentimentBreakdown, netSentiment, channelCounts, channelOf,
-  buildAlerts, filterMentions, type Alert,
+  buildAlerts, filterMentions, volumeTimeline, type Alert,
 } from './lib/pureMonitorAnalytics';
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -78,6 +81,7 @@ export default function PureMonitor() {
   const nss = useMemo(() => netSentiment(mentions), [mentions]);
   const counts = useMemo(() => channelCounts(mentions), [mentions]);
   const openAlerts = useMemo(() => buildAlerts(mentions).length, [mentions]);
+  const timeline = useMemo(() => volumeTimeline(mentions, 30), [mentions]);
 
   return (
     <MainLayout>
@@ -187,6 +191,28 @@ export default function PureMonitor() {
                     <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">65–79 saudável</span>
                     <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">80–100 excelente</span>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Tendência — volume por dia</CardTitle></CardHeader>
+                <CardContent>
+                  {timeline.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Sem dados suficientes ainda.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={timeline} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
+                        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="positivo" name="Positivo" stackId="s" fill={SENTIMENT_COLOR.positivo} />
+                        <Bar dataKey="neutro" name="Neutro" stackId="s" fill={SENTIMENT_COLOR.neutro} />
+                        <Bar dataKey="negativo" name="Negativo" stackId="s" fill={SENTIMENT_COLOR.negativo} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

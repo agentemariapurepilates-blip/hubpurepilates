@@ -169,3 +169,22 @@ export const SENTIMENT_COLOR: Record<SentimentLabel, string> = {
   neutro: '#DB9828',
   negativo: '#C12030',
 };
+
+export interface DayPoint { date: string; label: string; positivo: number; neutro: number; negativo: number; total: number }
+
+// Volume diário por sentimento (para o gráfico de tendência).
+export function volumeTimeline(mentions: Mention[], days = 30): DayPoint[] {
+  const byDay: Record<string, DayPoint> = {};
+  for (const m of mentions) {
+    const date = (m.published_at || '').slice(0, 10);
+    if (!date) continue;
+    if (!byDay[date]) {
+      byDay[date] = { date, label: `${date.slice(8, 10)}/${date.slice(5, 7)}`, positivo: 0, neutro: 0, negativo: 0, total: 0 };
+    }
+    const lbl: SentimentLabel = m.sentiment_label === 'positivo' ? 'positivo'
+      : m.sentiment_label === 'negativo' ? 'negativo' : 'neutro';
+    byDay[date][lbl]++;
+    byDay[date].total++;
+  }
+  return Object.values(byDay).sort((a, b) => a.date.localeCompare(b.date)).slice(-days);
+}
