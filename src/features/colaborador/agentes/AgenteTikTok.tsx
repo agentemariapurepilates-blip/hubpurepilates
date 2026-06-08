@@ -141,7 +141,20 @@ const AgenteTikTok = () => {
       setGeneratedContents((current) => current.map((it) => it.id === expandedItem.id ? updated : it));
       setExpandedItem(updated);
       toast.success('Conteúdo gerado a partir do tema aprovado.');
-    } catch (err) { console.error('Approve theme failed:', err); toast.error('Falha ao gerar o conteúdo. Tenta de novo.'); }
+    } catch (err) {
+      console.error('Approve theme failed:', err);
+      // DEBUG TEMPORARIO 2026-06-03: extrai detalhe do FunctionsHttpError pra ver no toast
+      let detail = (err as Error)?.message ?? String(err);
+      try {
+        // deno-lint-ignore no-explicit-any
+        const ctx = (err as any)?.context;
+        if (ctx && typeof ctx.text === 'function') {
+          const body = await ctx.text();
+          detail += ` | body: ${body.slice(0, 400)}`;
+        }
+      } catch { /* segue */ }
+      toast.error(`DEBUG: ${detail}`, { duration: 60000 });
+    }
     finally { setGeneratingContent(false); }
   };
 
