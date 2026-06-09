@@ -205,6 +205,27 @@ const feriadoCorpusChristiFields: TemplateField[] = [
   { id: 'data2', label: 'Data 2 — status', placeholder: '{{data2}}', defaultValue: '05/06 - ABERTO', maxLength: 30 },
 ];
 
+const comunicadoCopaHTML = (bgUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comunicado Copa — Clima de Torcida</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1350px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+<div style="position:absolute; left:0; right:0; top:740px; height:56px; line-height:56px; text-align:center; font-family:'Montserrat', sans-serif; color:#c10230; font-size:40px; font-weight:500; letter-spacing:0.5px;">{{data}}</div>
+<div style="position:absolute; left:0; right:0; top:798px; height:56px; line-height:56px; text-align:center; font-family:'Montserrat', sans-serif; color:#c10230; font-size:40px; font-weight:700; letter-spacing:0.5px;">{{horario}}</div>
+</div>
+</body>
+</html>`;
+
+const comunicadoCopaFields: TemplateField[] = [
+  { id: 'data', label: 'Data', placeholder: '{{data}}', defaultValue: 'Dia 13/06', maxLength: 30 },
+  { id: 'horario', label: 'Horário', placeholder: '{{horario}}', defaultValue: 'Das 19:00 às 22:00', maxLength: 40 },
+];
+
 export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'seja-instrutor',
@@ -285,6 +306,16 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     height: 1350,
     html: feriadoCorpusChristiHTML('/images/pure-design/feriado-corpus-christi.png'),
     fields: feriadoCorpusChristiFields,
+  },
+  {
+    id: 'comunicado-copa',
+    name: 'Copa — Clima de Torcida',
+    category: 'Comunicados',
+    thumbnail: '/images/pure-design/comunicado-copa.png',
+    width: 1080,
+    height: 1350,
+    html: comunicadoCopaHTML('/images/pure-design/comunicado-copa.png'),
+    fields: comunicadoCopaFields,
   },
 ];
 
