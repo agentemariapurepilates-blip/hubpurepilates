@@ -88,9 +88,7 @@ export const MobileMenuButton = ({ mobileOpen, setMobileOpen }: { mobileOpen: bo
 );
 
 const AGENTES_DE_IA_ROUTE_PREFIXES = [
-  '/agente-instagram-facebook',
-  '/agente-tiktok',
-  '/agente-planejamento-editorial',
+  '/agente-design',
   '/agente-monitoramento',
 ];
 
@@ -172,12 +170,6 @@ const Sidebar = () => {
     { name: 'Feed da Sede', href: '/feed', icon: Newspaper },
     { name: 'Solicitação de demandas', href: '/pedidos-demanda', icon: ClipboardList },
     { name: 'Visão Geral das Unidades', href: '/midia-adicional/unidades', icon: Building2 },
-  ];
-
-  // Agente Pure Studio section - only for colaboradores and admins
-  const socialMediaNavigation = [
-    { name: 'Agente Instagram e Facebook', href: '/agente-instagram-facebook', icon: Video },
-    { name: 'Agente Tik Tok', href: '/agente-tiktok', icon: Video },
   ];
 
   // Agente de Design - only for colaboradores and admins
@@ -292,30 +284,6 @@ const Sidebar = () => {
             </CollapsibleTrigger>
             <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
               <div className="space-y-0.5 pb-1">
-                {/* Sub-grupo: Agente Pure Studio */}
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
-                  <Video className="h-3 w-3" />
-                  Agente Pure Studio
-                </p>
-                {socialMediaNavigation.map((item) => (
-                  <NavLink
-                    key={item.name}
-                    to={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-[13px] font-medium transition-all duration-200',
-                        isActive
-                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
-                      )
-                    }
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.name}
-                  </NavLink>
-                ))}
-
                 {/* Sub-grupo: Agente de Design */}
                 <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
                   <ImageIcon className="h-3 w-3" />

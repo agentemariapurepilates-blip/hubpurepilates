@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/card';
@@ -33,11 +33,6 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  GeneratedContent,
-  contentTypeBadgeColor,
-  contentTypeLabel,
-} from '@/components/agente/types';
 import { LAYOUT_FORMATS, LayoutFormat } from './data/layoutSystemPrompt';
 import { AVATARES, TIPO_SINGULAR, type Avatar } from './data/avatares';
 import { UNIFORMES, UNIFORME_CATEGORIA_LABEL, UNIFORME_CATEGORIA_ORDER, type Uniforme } from './data/uniformes';
@@ -76,9 +71,6 @@ const parseSlides = (text: string | null | undefined): Array<{ index: number; te
   }
   return result;
 };
-
-const getTextoArte = (post: GeneratedContent): string =>
-  post.versao_editada?.texto_arte ?? post.texto_arte ?? '';
 
 const formatPostDate = (iso: string) => {
   try {
@@ -201,12 +193,6 @@ const initialScene = (): SceneState => {
 
 const CriacaoLayout = () => {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
-  const postId = searchParams.get('postId');
-
-  // Briefing (vindo da Planilha · opcional)
-  const [post, setPost] = useState<GeneratedContent | null>(null);
-  const [loadingPost, setLoadingPost] = useState(false);
 
   // Form state
   const [format, setFormat] = useState<LayoutFormat>('feed-quadrado');
@@ -388,66 +374,9 @@ const CriacaoLayout = () => {
     setPromptEdited(false);
   };
 
-  const textoArteLocked = !!post;
+  const textoArteLocked = false;
   const parsedSlides = useMemo(() => parseSlides(textoArte), [textoArte]);
   const isCarrossel = format === 'carrossel-feed';
-
-  // Busca o post quando vem com ?postId=
-  useEffect(() => {
-    if (!postId || !user) return;
-    setLoadingPost(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from('editorial_posts' as never) as any)
-      .select('*')
-      .eq('id', postId)
-      .eq('user_id', user.id)
-      .single()
-      .then(({ data, error }: { data: unknown; error: unknown }) => {
-        if (error || !data) {
-          setPost(null);
-        } else {
-          const row = data as {
-            id: string;
-            post_date: string;
-            network: string;
-            title: string;
-            description: string;
-            status: GeneratedContent['status'];
-            content_type?: string | null;
-            legenda?: string | null;
-            texto_arte?: string | null;
-            briefing_arte?: string | null;
-            versao_editada?: GeneratedContent['versao_editada'];
-          };
-          setPost({
-            id: row.id,
-            date: row.post_date,
-            network: row.network as GeneratedContent['network'],
-            title: row.title,
-            description: row.description,
-            status: row.status,
-            content_type: (row.content_type as GeneratedContent['content_type']) ?? null,
-            legenda: row.legenda ?? null,
-            texto_arte: row.texto_arte ?? null,
-            briefing_arte: row.briefing_arte ?? null,
-            versao_editada: row.versao_editada ?? null,
-          });
-        }
-      })
-      .then(() => setLoadingPost(false))
-      .catch(() => setLoadingPost(false));
-  }, [postId, user]);
-
-  // Quando o post carrega, ajusta formato + texto na arte
-  useEffect(() => {
-    if (!post) return;
-    if (post.content_type === 'carrossel') {
-      setFormat('carrossel-feed');
-    } else {
-      setFormat('feed-quadrado');
-    }
-    setTextoArte(getTextoArte(post));
-  }, [post]);
 
   // Reset estado de geração quando muda texto ou formato
   useEffect(() => {
@@ -735,11 +664,11 @@ const CriacaoLayout = () => {
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Voltar */}
         <Link
-          to={postId ? '/agente-instagram-facebook/planilha' : '/agente-design'}
+          to="/agente-design"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          {postId ? 'Voltar pra Planilha Editorial' : 'Voltar pro Agente Design'}
+          Voltar pro Agente Design
         </Link>
 
         {/* Header */}
@@ -754,53 +683,6 @@ const CriacaoLayout = () => {
             </p>
           </div>
         </div>
-
-        {/* Loading do briefing */}
-        {loadingPost && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Carregando briefing do post…
-          </div>
-        )}
-
-        {/* Briefing card */}
-        {!loadingPost && post && (
-          <Card className="overflow-hidden border-l-4 border-l-primary">
-            <div className="bg-primary/5 px-5 py-3 flex items-center gap-3 flex-wrap">
-              <FileText className="h-4 w-4 text-primary" />
-              <span className="text-[10px] uppercase tracking-widest text-primary font-bold">
-                Briefing da Planilha Editorial
-              </span>
-              <span className="font-mono text-xs text-muted-foreground tabular-nums ml-auto">
-                {formatPostDate(post.date)}
-              </span>
-              {post.content_type && (
-                <span
-                  className={cn(
-                    'text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full',
-                    contentTypeBadgeColor[post.content_type],
-                  )}
-                >
-                  {contentTypeLabel[post.content_type]}
-                </span>
-              )}
-            </div>
-            <div className="p-5">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-1">
-                Título do post
-              </p>
-              <p className="font-heading font-bold text-base">{post.title}</p>
-            </div>
-          </Card>
-        )}
-
-        {!loadingPost && postId && !post && (
-          <Card className="p-4 bg-amber-50 border-amber-200 text-amber-900 text-sm">
-            Não consegui encontrar o post{' '}
-            <code className="font-mono text-xs bg-amber-100 px-1 py-0.5 rounded">{postId}</code>.
-            Você pode usar o gerador standalone abaixo.
-          </Card>
-        )}
 
         {/* ───── 1 · Formato ───── */}
         <Card className="p-5 space-y-4">

@@ -36,10 +36,6 @@ const Feed = lazy(() => import("./features/colaborador/feed-sede/Feed"));
 const PedidosDemanda = lazy(() => import("./features/colaborador/demandas/PedidosDemanda"));
 const MidiaAdicionalUnidades = lazy(() => import("./features/colaborador/unidades/MidiaAdicionalUnidades"));
 const DashboardMidiaAdicional = lazy(() => import("./features/colaborador/dashboard/DashboardMidiaAdicional"));
-const AgenteInstagramFacebook = lazy(() => import("./features/colaborador/agentes/AgenteInstagramFacebook"));
-const PlanilhaEditorial = lazy(() => import("./features/colaborador/agentes/PlanilhaEditorial"));
-const AgenteTikTok = lazy(() => import("./features/colaborador/agentes/AgenteTikTok"));
-const MemoriaAgente = lazy(() => import("./features/colaborador/agentes/MemoriaAgente"));
 const AgenteDesign = lazy(() => import("./features/colaborador/agentes/agente-design/AgenteDesign"));
 const GerarFoto = lazy(() => import("./features/colaborador/agentes/agente-design/GerarFoto"));
 const CriacaoLayout = lazy(() => import("./features/colaborador/agentes/agente-design/CriacaoLayout"));
@@ -95,18 +91,12 @@ function App() {
             <Route path="/manual-sistema" element={<ProtectedRoute><ManualSistema /></ProtectedRoute>} />
             <Route path="/pure-design" element={<ProtectedRoute><PureDesign /></ProtectedRoute>} />
             <Route path="/pure-design/:id" element={<ProtectedRoute><PureDesignEditor /></ProtectedRoute>} />
-            <Route path="/agente-instagram-facebook" element={<ProtectedRoute><AgenteInstagramFacebook /></ProtectedRoute>} />
-            <Route path="/agente-instagram-facebook/memoria" element={<ProtectedRoute><MemoriaAgente /></ProtectedRoute>} />
-            <Route path="/agente-instagram-facebook/planilha" element={<ProtectedRoute><PlanilhaEditorial /></ProtectedRoute>} />
-            <Route path="/agente-tiktok" element={<ProtectedRoute><AgenteTikTok /></ProtectedRoute>} />
             <Route path="/agente-design" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
             <Route path="/agente-design/gerar-foto" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
             <Route path="/agente-design/avatares" element={<ProtectedRoute><AgenteDesign /></ProtectedRoute>} />
             <Route path="/agente-design/criacao-layout" element={<ProtectedRoute><CriacaoLayout /></ProtectedRoute>} />
             {/* Backward compat — redireciona pra nova URL */}
             <Route path="/agente-design/criacao-fotos" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
-            {/* Backward compat: redirect legado */}
-            <Route path="/agente-planejamento-editorial" element={<ProtectedRoute><AgenteInstagramFacebook /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />
             <Route path="/minha-area/dashboard" element={<ProtectedRoute><DashboardMidiaAdicional /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional" element={<ProtectedRoute requireAdmin><MidiaAdicional /></ProtectedRoute>} />
