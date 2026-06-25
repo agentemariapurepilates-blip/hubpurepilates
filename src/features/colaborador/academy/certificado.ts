@@ -102,5 +102,5 @@ export function certFileName(nome: string): string {
     .replace(/[\\/:*?"<>|]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
-  return `Certificado - ${clean}.png`;
+  return `Certificado - ${clean}.pdf`;
 }

@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { domToBlob } from 'modern-screenshot';
 import { GraduationCap, Upload, Download, FileSpreadsheet, ChevronLeft, ChevronRight, Loader2, AlertTriangle } from 'lucide-react';
 import JSZip from 'jszip';
+import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,14 @@ import { parsePlanilha, certFileName, BASE_W, BASE_H, type CertRow } from './cer
 import { getMontserratFontFaceCss } from './montserratEmbed';
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+
+const blobToDataURL = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -109,10 +118,16 @@ const GerarCertificados = () => {
         const blob = await domToBlob(node, { type: 'image/png', scale: 1, backgroundColor: '#ffffff' });
         if (!blob) throw new Error('falha ao gerar PNG');
 
+        // Embute o PNG numa página PDF A4 paisagem (mesma proporção 3508×2480).
+        const dataUrl = await blobToDataURL(blob);
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [BASE_W, BASE_H] });
+        pdf.addImage(dataUrl, 'PNG', 0, 0, BASE_W, BASE_H, undefined, 'FAST');
+        const pdfBlob = pdf.output('blob');
+
         let name = certFileName(rows[i].nome);
-        if (used.has(name)) name = name.replace(/\.png$/, ` (${i + 1}).png`);
+        if (used.has(name)) name = name.replace(/\.pdf$/, ` (${i + 1}).pdf`);
         used.add(name);
-        zip.file(name, blob);
+        zip.file(name, pdfBlob);
         setProgress({ done: i + 1, total: rows.length });
       }
 
