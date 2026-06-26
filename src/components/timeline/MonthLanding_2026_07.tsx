@@ -238,7 +238,12 @@ const PaginaInicial = ({ goTo }: { goTo: (tab: TabKey) => void }) => (
 /* ══════════════════════════════════════════════════════════════
    RESULTADOS JUNHO — performance (parcial) + saúde de marca
    ══════════════════════════════════════════════════════════════ */
-const FUNIL_ROWS = ['Aula Experimental', 'Presença Aula Experimental', 'Matrículas', 'PurePass'];
+const FUNIL_ROWS = [
+  { label: 'Aula Experimental', maio: 7436, junho: 6453 },
+  { label: 'Presença Aula Experimental', maio: 5146, junho: 4688 },
+  { label: 'Matrículas', maio: 1330, junho: 1163 },
+  { label: 'PurePass', maio: 219, junho: 53 },
+];
 
 const ResultadosPage = () => (
   <>
@@ -287,24 +292,25 @@ const ResultadosPage = () => (
 
           {/* Linhas */}
           <div className="space-y-2 mt-1">
-            {FUNIL_ROWS.map((row) => (
-              <div key={row} className="grid grid-cols-[1.4fr_1fr_1fr] gap-2 sm:gap-3 items-stretch">
-                <div className="flex items-center rounded-lg bg-muted/40 px-3 sm:px-4 py-3 text-sm font-semibold text-foreground/80">
-                  {row}
+            {FUNIL_ROWS.map((row) => {
+              const delta = row.maio > 0 ? ((row.junho - row.maio) / row.maio) * 100 : 0;
+              return (
+                <div key={row.label} className="grid grid-cols-[1.4fr_1fr_1fr] gap-2 sm:gap-3 items-stretch">
+                  <div className="flex items-center rounded-lg bg-muted/40 px-3 sm:px-4 py-3 text-sm font-semibold text-foreground/80">
+                    {row.label}
+                  </div>
+                  <div className="flex items-center justify-center rounded-lg bg-[#e9c688]/15 border border-[#e9c688]/30 py-3 text-base sm:text-lg font-heading font-bold text-foreground/70 tabular-nums">
+                    {row.maio.toLocaleString('pt-BR')}
+                  </div>
+                  <div className="flex flex-col items-center justify-center rounded-lg bg-primary/5 border border-primary/20 py-2.5 text-base sm:text-lg font-heading font-bold text-primary tabular-nums">
+                    {row.junho.toLocaleString('pt-BR')}
+                    <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
+                      {delta >= 0 ? '+' : ''}{delta.toFixed(0)}% vs maio
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-center rounded-lg bg-[#e9c688]/15 border border-[#e9c688]/30 py-3 text-base font-heading font-bold text-muted-foreground tabular-nums">
-                  —
-                </div>
-                <div className="flex items-center justify-center rounded-lg bg-primary/5 border border-primary/20 py-3 text-base font-heading font-bold text-muted-foreground tabular-nums">
-                  —
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800">
-            <Clock className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>Os números deste comparativo estão em consolidação para o fechamento parcial de junho (até 24/06).</span>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
