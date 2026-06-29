@@ -1,16 +1,25 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import {
+  ChevronLeft,
+  ChevronRight,
   Plus,
   Video,
   Image,
   Target,
   LayoutGrid,
+  Instagram,
+  Download,
+  Copy,
+  ExternalLink,
   LucideIcon,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, parseISO, addMonths, subMonths } from 'date-fns';
@@ -19,6 +28,9 @@ import CreateSocialMediaDialog from '@/components/social-media/CreateContentDial
 import ContentDetailsDialog from '@/components/social-media/ContentDetailsDialog';
 import EditContentDialog from '@/components/social-media/EditContentDialog';
 import { cn } from '@/lib/utils';
+
+// instagram_feed ainda não está no types.ts gerado (regenerar após a migration).
+const db = supabase as unknown as SupabaseClient;
 
 interface SocialMediaContent {
   id: string;
@@ -32,10 +44,21 @@ interface SocialMediaContent {
   end_date: string;
   user_id: string;
   created_at: string;
-  profiles?: {
-    full_name: string | null;
-    email: string;
-  } | null;
+  profiles?: { full_name: string | null; email: string } | null;
+}
+
+// Espelho do Instagram oficial (já publicado), puxado por instagram-feed-sync.
+interface FeedChild { media_type?: string; media_url: string | null }
+interface FeedItem {
+  id: string;
+  ig_media_id: string;
+  media_type: string | null;        // IMAGE | VIDEO | CAROUSEL_ALBUM
+  caption: string | null;
+  permalink: string | null;
+  ig_timestamp: string | null;
+  media_url: string | null;
+  thumbnail_url: string | null;
+  children: FeedChild[];
 }
 
 const TAG_LABELS: Record<string, string> = {
@@ -66,93 +89,105 @@ const TAG_ICONS: Record<string, LucideIcon> = {
   estatico: Image,
 };
 
+// tipo (e cor) de um post publicado no Instagram
+const feedTag = (it: FeedItem): 'reels' | 'carrossel' | 'estatico' =>
+  it.media_type === 'VIDEO' ? 'reels' : it.media_type === 'CAROUSEL_ALBUM' ? 'carrossel' : 'estatico';
+
+const feedThumb = (it: FeedItem): string | null =>
+  it.media_type === 'CAROUSEL_ALBUM' ? (it.children?.[0]?.media_url ?? it.media_url)
+    : it.media_type === 'VIDEO' ? (it.thumbnail_url ?? it.media_url)
+    : it.media_url;
+
+async function downloadFile(url: string, filename: string) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+  } catch {
+    window.open(url, '_blank');
+  }
+}
+
 const MidiasSociais = () => {
   const { isColaborador, isAdmin } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [content, setContent] = useState<SocialMediaContent[]>([]);
+  const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedContent, setSelectedContent] = useState<SocialMediaContent | null>(null);
+  const [selectedFeed, setSelectedFeed] = useState<FeedItem | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isFeedOpen, setIsFeedOpen] = useState(false);
 
   const fetchContent = async () => {
-    setLoading(true);
     const { data, error } = await supabase
       .from('social_media_content')
       .select('*')
       .order('start_date', { ascending: true });
+    if (error) { console.error('Error fetching content:', error); return; }
 
-    if (error) {
-      console.error('Error fetching content:', error);
-      setLoading(false);
-      return;
-    }
-
-    // Fetch profiles for creators
     if (data && data.length > 0) {
       const userIds = [...new Set(data.map((c) => c.user_id))];
       const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email')
-        .in('user_id', userIds);
-
-      const profilesMap = new Map(
-        (profilesData || []).map((p) => [p.user_id, { full_name: p.full_name, email: p.email }])
-      );
-
-      const contentWithProfiles = data.map((c) => ({
-        ...c,
-        profiles: profilesMap.get(c.user_id) || null,
-      }));
-
-      setContent(contentWithProfiles);
+        .from('profiles').select('user_id, full_name, email').in('user_id', userIds);
+      const profilesMap = new Map((profilesData || []).map((p) => [p.user_id, { full_name: p.full_name, email: p.email }]));
+      setContent(data.map((c) => ({ ...c, profiles: profilesMap.get(c.user_id) || null })));
     } else {
       setContent([]);
     }
+  };
 
-    setLoading(false);
+  const fetchFeed = async () => {
+    const { data, error } = await db
+      .from('instagram_feed').select('*')
+      .order('ig_timestamp', { ascending: false, nullsFirst: false });
+    if (error) { console.error('Error fetching instagram feed:', error); return; }
+    setFeed((data ?? []) as FeedItem[]);
   };
 
   useEffect(() => {
-    fetchContent();
+    Promise.all([fetchContent(), fetchFeed()]).finally(() => setLoading(false));
   }, []);
 
-  // Realtime subscription with debounce
   useEffect(() => {
-    let debounceTimer: ReturnType<typeof setTimeout>;
+    let t1: ReturnType<typeof setTimeout>;
+    let t2: ReturnType<typeof setTimeout>;
     const channel = supabase
-      .channel('social-media-realtime')
+      .channel('midias-sociais-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'social_media_content' }, () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => fetchContent(), 1500);
+        clearTimeout(t1); t1 = setTimeout(() => fetchContent(), 1500);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'instagram_feed' }, () => {
+        clearTimeout(t2); t2 = setTimeout(() => fetchFeed(), 1500);
       })
       .subscribe();
-
-    return () => {
-      clearTimeout(debounceTimer);
-      supabase.removeChannel(channel);
-    };
+    return () => { clearTimeout(t1); clearTimeout(t2); supabase.removeChannel(channel); };
   }, []);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-  // Add padding days for proper calendar alignment
   const startDayOfWeek = monthStart.getDay();
   const paddingDays = Array.from({ length: startDayOfWeek }, (_, i) => null);
 
   const handlePreviousMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
-  const getContentForDay = (date: Date) => {
-    return content.filter((c) => {
-      const contentDate = c.posting_date ? parseISO(c.posting_date) : parseISO(c.start_date);
-      return isSameDay(date, contentDate);
+  const getContentForDay = (date: Date) =>
+    content.filter((c) => {
+      const d = c.posting_date ? parseISO(c.posting_date) : parseISO(c.start_date);
+      return isSameDay(date, d);
     });
-  };
+
+  const getFeedForDay = (date: Date) =>
+    feed.filter((f) => f.ig_timestamp && isSameDay(date, parseISO(f.ig_timestamp)));
 
   const handleContentClick = (e: React.MouseEvent, item: SocialMediaContent) => {
     e.stopPropagation();
@@ -160,9 +195,14 @@ const MidiasSociais = () => {
     setIsDetailsDialogOpen(true);
   };
 
+  const handleFeedClick = (e: React.MouseEvent, item: FeedItem) => {
+    e.stopPropagation();
+    setSelectedFeed(item);
+    setIsFeedOpen(true);
+  };
+
   const handleDayClick = (date: Date) => {
-    const dayContent = getContentForDay(date);
-    if (dayContent.length === 0 && (isColaborador || isAdmin)) {
+    if (getContentForDay(date).length === 0 && (isColaborador || isAdmin)) {
       setSelectedDate(date);
       setIsCreateDialogOpen(true);
     }
@@ -171,6 +211,11 @@ const MidiasSociais = () => {
   const handleEditClick = () => {
     setIsDetailsDialogOpen(false);
     setIsEditDialogOpen(true);
+  };
+
+  const copyCaption = async (text: string) => {
+    try { await navigator.clipboard.writeText(text); toast.success('Legenda copiada!'); }
+    catch { toast.error('Não foi possível copiar'); }
   };
 
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -182,7 +227,7 @@ const MidiasSociais = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-xl sm:text-3xl font-bold text-foreground">Mídias Sociais</h1>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1">Calendário de conteúdos para redes sociais</p>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">Calendário de conteúdos — com o que já foi publicado no Instagram oficial</p>
           </div>
           {(isColaborador || isAdmin) && (
             <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="w-full sm:w-auto">
@@ -200,6 +245,10 @@ const MidiasSociais = () => {
               <span className="text-xs sm:text-sm text-muted-foreground">{label}</span>
             </div>
           ))}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Instagram className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-600" />
+            <span className="text-xs sm:text-sm text-muted-foreground">Publicado no Instagram</span>
+          </div>
         </div>
 
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
@@ -233,7 +282,8 @@ const MidiasSociais = () => {
             ))}
             {daysInMonth.map(day => {
               const dayContent = getContentForDay(day);
-              const hasContent = dayContent.length > 0;
+              const dayFeed = getFeedForDay(day);
+              const hasContent = dayContent.length > 0 || dayFeed.length > 0;
               const isDayToday = isToday(day);
 
               return (
@@ -246,14 +296,12 @@ const MidiasSociais = () => {
                     isDayToday && "bg-primary/5"
                   )}
                 >
-                  <div className={cn(
-                    "text-xs sm:text-sm font-medium mb-0.5 sm:mb-1",
-                    isDayToday && "text-primary font-bold"
-                  )}>
+                  <div className={cn("text-xs sm:text-sm font-medium mb-0.5 sm:mb-1", isDayToday && "text-primary font-bold")}>
                     {format(day, 'd')}
                   </div>
                   {hasContent && (
                     <div className="space-y-0.5 sm:space-y-1">
+                      {/* Planejamento (social_media_content) */}
                       {dayContent.map(c => {
                         const tag = c.tag || c.content_type;
                         const colorClass = tag && TAG_COLORS[tag] ? TAG_COLORS[tag] : 'bg-primary text-primary-foreground';
@@ -262,14 +310,27 @@ const MidiasSociais = () => {
                           <div
                             key={c.id}
                             onClick={(e) => handleContentClick(e, c)}
-                            className={cn(
-                              "text-[10px] sm:text-xs p-1 sm:p-1.5 rounded font-medium flex items-center gap-0.5 sm:gap-1 cursor-pointer hover:opacity-80 transition-opacity",
-                              colorClass
-                            )}
+                            className={cn("text-[10px] sm:text-xs p-1 sm:p-1.5 rounded font-medium flex items-center gap-0.5 sm:gap-1 cursor-pointer hover:opacity-80 transition-opacity", colorClass)}
                             title={c.title}
                           >
                             <TagIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />
                             <span className="truncate hidden sm:inline">{c.title}</span>
+                          </div>
+                        );
+                      })}
+                      {/* Espelho do Instagram (já publicado) */}
+                      {dayFeed.map(f => {
+                        const tag = feedTag(f);
+                        const colorClass = TAG_COLORS[tag];
+                        return (
+                          <div
+                            key={f.id}
+                            onClick={(e) => handleFeedClick(e, f)}
+                            className={cn("text-[10px] sm:text-xs p-1 sm:p-1.5 rounded font-medium flex items-center gap-0.5 sm:gap-1 cursor-pointer hover:opacity-80 transition-opacity ring-1 ring-inset ring-white/40", colorClass)}
+                            title={f.caption ?? 'Publicação Instagram'}
+                          >
+                            <Instagram className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />
+                            <span className="truncate hidden sm:inline">{f.caption || TAG_LABELS[tag]}</span>
                           </div>
                         );
                       })}
@@ -282,30 +343,68 @@ const MidiasSociais = () => {
         </div>
       </div>
 
-      {/* Create Dialog */}
-      <CreateSocialMediaDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        selectedDate={selectedDate}
-        onContentCreated={fetchContent}
-      />
+      {/* Dialogs do planejamento (inalterados) */}
+      <CreateSocialMediaDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} selectedDate={selectedDate} onContentCreated={fetchContent} />
+      <ContentDetailsDialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen} content={selectedContent} onDeleted={fetchContent} onEditClick={handleEditClick} />
+      <EditContentDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} content={selectedContent} onContentUpdated={fetchContent} />
 
-      {/* Details Dialog */}
-      <ContentDetailsDialog
-        open={isDetailsDialogOpen}
-        onOpenChange={setIsDetailsDialogOpen}
-        content={selectedContent}
-        onDeleted={fetchContent}
-        onEditClick={handleEditClick}
-      />
+      {/* Detalhe do post publicado no Instagram — baixar + copiar legenda */}
+      <Dialog open={isFeedOpen} onOpenChange={setIsFeedOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Instagram className="h-4 w-4 text-pink-600" />
+              {selectedFeed && TAG_LABELS[feedTag(selectedFeed)]}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedFeed && (
+            <div className="space-y-3">
+              {selectedFeed.media_type === 'CAROUSEL_ALBUM' ? (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {selectedFeed.children.map((c, i) => (
+                    <img key={i} src={c.media_url ?? ''} alt="" className="h-56 rounded-lg object-cover flex-shrink-0" />
+                  ))}
+                </div>
+              ) : selectedFeed.media_type === 'VIDEO' ? (
+                <video src={selectedFeed.media_url ?? ''} poster={selectedFeed.thumbnail_url ?? undefined} controls className="w-full rounded-lg max-h-[60vh]" />
+              ) : (
+                <img src={selectedFeed.media_url ?? ''} alt="" className="w-full rounded-lg object-contain max-h-[60vh]" />
+              )}
 
-      {/* Edit Dialog */}
-      <EditContentDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        content={selectedContent}
-        onContentUpdated={fetchContent}
-      />
+              {selectedFeed.ig_timestamp && (
+                <p className="text-xs text-muted-foreground">
+                  Publicado em {format(new Date(selectedFeed.ig_timestamp), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                </p>
+              )}
+              {selectedFeed.caption && <p className="text-sm whitespace-pre-wrap">{selectedFeed.caption}</p>}
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                {selectedFeed.media_type === 'CAROUSEL_ALBUM' ? (
+                  <Button variant="outline" size="sm" onClick={() => selectedFeed.children.forEach((c, i) => c.media_url && downloadFile(c.media_url, `carrossel_${selectedFeed.ig_media_id}_${i + 1}.jpg`))}>
+                    <Download className="h-4 w-4 mr-2" /> Baixar carrossel ({selectedFeed.children.length})
+                  </Button>
+                ) : selectedFeed.media_url ? (
+                  <Button variant="outline" size="sm" onClick={() => downloadFile(selectedFeed.media_url!, `post_${selectedFeed.ig_media_id}.${selectedFeed.media_type === 'VIDEO' ? 'mp4' : 'jpg'}`)}>
+                    <Download className="h-4 w-4 mr-2" /> Baixar conteúdo
+                  </Button>
+                ) : null}
+                {selectedFeed.caption && (
+                  <Button variant="outline" size="sm" onClick={() => copyCaption(selectedFeed.caption!)}>
+                    <Copy className="h-4 w-4 mr-2" /> Copiar legenda
+                  </Button>
+                )}
+                {selectedFeed.permalink && (
+                  <Button asChild size="sm">
+                    <a href={selectedFeed.permalink} target="_blank" rel="noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-2" /> Ver no Instagram
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

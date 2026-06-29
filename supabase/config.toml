@@ -1,4 +1,4 @@
-project_id = "cydoyzuwsmmopxgjqszn"
+project_id = "evprrtvbvjnjixogjsmn"
 
 # Cron jobs do dashboard de Mídia Adicional: chamados por pg_cron via
 # pg_net, autenticam-se internamente com CRON_SECRET — sem JWT do usuário.
@@ -12,4 +12,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.dpp-cron-instagram-snapshot]
+verify_jwt = false
+
+# Sync do espelho do Instagram oficial (posts publicados): chamado por pg_cron
+# via pg_net, autentica-se com INSTAGRAM_CRON_SECRET (header x-cron-secret).
+[functions.instagram-feed-sync]
 verify_jwt = false
