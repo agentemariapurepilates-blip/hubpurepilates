@@ -35,6 +35,7 @@ const AuthCallbackTikTok = lazy(() => import("./features/geral/auth/AuthCallback
 const Feed = lazy(() => import("./features/colaborador/feed-sede/Feed"));
 const PedidosDemanda = lazy(() => import("./features/colaborador/demandas/PedidosDemanda"));
 const MidiaAdicionalUnidades = lazy(() => import("./features/colaborador/unidades/MidiaAdicionalUnidades"));
+const ColabMidiasSociais = lazy(() => import("./features/colaborador/marketing/ColabMidiasSociais"));
 const DashboardMidiaAdicional = lazy(() => import("./features/colaborador/dashboard/DashboardMidiaAdicional"));
 const AgenteDesign = lazy(() => import("./features/colaborador/agentes/agente-design/AgenteDesign"));
 const GerarFoto = lazy(() => import("./features/colaborador/agentes/agente-design/GerarFoto"));
@@ -97,6 +98,7 @@ function App() {
             <Route path="/agente-design/avatares" element={<ProtectedRoute><AgenteDesign /></ProtectedRoute>} />
             <Route path="/agente-design/criacao-layout" element={<ProtectedRoute><CriacaoLayout /></ProtectedRoute>} />
             <Route path="/academy/gerar-certificados" element={<ProtectedRoute requireColaborador><GerarCertificados /></ProtectedRoute>} />
+            <Route path="/colaborador/midias-sociais/:brand" element={<ProtectedRoute requireColaborador><ColabMidiasSociais /></ProtectedRoute>} />
             {/* Backward compat — redireciona pra nova URL */}
             <Route path="/agente-design/criacao-fotos" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />

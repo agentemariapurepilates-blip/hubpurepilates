@@ -95,7 +95,7 @@ const AGENTES_DE_IA_ROUTE_PREFIXES = [
 
 const sectionFromPath = (path: string): SectionKey | null => {
   if (AGENTES_DE_IA_ROUTE_PREFIXES.some((p) => path.startsWith(p))) return 'agentes';
-  if (['/feed', '/pedidos-demanda', '/academy'].some((p) => path.startsWith(p))) return 'colaboradores';
+  if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais'].some((p) => path.startsWith(p))) return 'colaboradores';
   if (path.startsWith('/minha-area')) return 'minha-area';
   if (path.startsWith('/admin')) return 'admin';
   return null;
@@ -176,6 +176,13 @@ const Sidebar = () => {
   // Sub-grupo Academy (dentro de Colaboradores)
   const academyNavigation = [
     { name: 'Gerar certificados', href: '/academy/gerar-certificados', icon: GraduationCap, disabled: false },
+  ];
+
+  // Sub-grupo Mídias Sociais (calendários por marca, dentro de Colaboradores)
+  const midiasSociaisColabNavigation = [
+    { name: 'Studios', href: '/colaborador/midias-sociais/studios', icon: Video },
+    { name: 'Academy', href: '/colaborador/midias-sociais/academy', icon: GraduationCap },
+    { name: 'Franchising', href: '/colaborador/midias-sociais/franchising', icon: Building2 },
   ];
 
   // Agente de Design - only for colaboradores and admins
@@ -265,6 +272,30 @@ const Sidebar = () => {
                     className={({ isActive }) =>
                       cn(
                         'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                      )
+                    }
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </NavLink>
+                ))}
+
+                {/* Sub-grupo: Mídias Sociais */}
+                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
+                  <Video className="h-3 w-3" />
+                  Mídias Sociais
+                </p>
+                {midiasSociaisColabNavigation.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-[13px] font-medium transition-all duration-200',
                         isActive
                           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                           : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'

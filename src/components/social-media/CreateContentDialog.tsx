@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+// social_media_content.brand ainda não está no types.ts gerado.
+const db = supabase as unknown as SupabaseClient;
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
@@ -27,6 +31,7 @@ interface CreateSocialMediaDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedDate: Date | null;
   onContentCreated: () => void;
+  brand?: string;   // 'studios' | 'academy' | 'franchising' — calendários de marca (colaboradores)
 }
 
 const contentTypes: { value: string; label: string; color: string; icon: LucideIcon }[] = [
@@ -41,6 +46,7 @@ const CreateSocialMediaDialog = ({
   onOpenChange,
   selectedDate,
   onContentCreated,
+  brand,
 }: CreateSocialMediaDialogProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -73,7 +79,7 @@ const CreateSocialMediaDialog = ({
 
     setLoading(true);
 
-    const { error } = await supabase.from('social_media_content').insert({
+    const { error } = await db.from('social_media_content').insert({
       title,
       description: description || null,
       google_drive_url: googleDriveUrl || null,
@@ -83,6 +89,7 @@ const CreateSocialMediaDialog = ({
       end_date: postingDate,
       tag: contentType as 'reels' | 'desafio_semana' | 'carrossel' | 'estatico',
       user_id: user.id,
+      brand: brand ?? null,
     });
 
     setLoading(false);

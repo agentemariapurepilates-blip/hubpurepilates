@@ -127,9 +127,10 @@ const MidiasSociais = () => {
   const [isFeedOpen, setIsFeedOpen] = useState(false);
 
   const fetchContent = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('social_media_content')
       .select('*')
+      .is('brand', null)
       .order('start_date', { ascending: true });
     if (error) { console.error('Error fetching content:', error); return; }
 
