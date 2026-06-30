@@ -20,6 +20,7 @@ import {
   Download,
   Copy,
   ExternalLink,
+  Loader2,
   LucideIcon,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, parseISO, addMonths, subMonths } from 'date-fns';
@@ -98,17 +99,51 @@ const feedThumb = (it: FeedItem): string | null =>
     : it.media_type === 'VIDEO' ? (it.thumbnail_url ?? it.media_url)
     : it.media_url;
 
-async function downloadFile(url: string, filename: string) {
+// O navegador do celular suporta compartilhar arquivos? (iOS/Android)
+function canShareFiles(): boolean {
   try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(a.href);
+    const probe = new File([new Uint8Array([255, 216, 255])], 'p.jpg', { type: 'image/jpeg' });
+    return typeof navigator !== 'undefined' && !!navigator.canShare && navigator.canShare({ files: [probe] });
   } catch {
-    window.open(url, '_blank');
+    return false;
+  }
+}
+
+async function urlToFile(url: string, filename: string): Promise<File> {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+}
+
+// Celular: abre o menu Compartilhar → "Salvar em Fotos" (salva TODAS as imagens
+// na galeria de uma vez). Desktop: baixa cada arquivo.
+async function saveMedia(items: { url: string; filename: string }[]) {
+  if (!items.length) return;
+  if (canShareFiles()) {
+    try {
+      const files = await Promise.all(items.map((it) => urlToFile(it.url, it.filename)));
+      if (navigator.canShare({ files })) {
+        await navigator.share({ files });
+        return;
+      }
+    } catch (e) {
+      if ((e as Error)?.name === 'AbortError') return; // usuário fechou o menu
+      // outros erros: cai pro download abaixo
+    }
+  }
+  for (const it of items) {
+    try {
+      const res = await fetch(it.url);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = it.filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(a.href);
+      await new Promise((r) => setTimeout(r, 400));
+    } catch {
+      window.open(it.url, '_blank');
+    }
   }
 }
 
@@ -125,6 +160,7 @@ const MidiasSociais = () => {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isFeedOpen, setIsFeedOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const fetchContent = async () => {
     const { data, error } = await db
@@ -381,12 +417,28 @@ const MidiasSociais = () => {
 
               <div className="flex flex-wrap gap-2 pt-1">
                 {selectedFeed.media_type === 'CAROUSEL_ALBUM' ? (
-                  <Button variant="outline" size="sm" onClick={() => selectedFeed.children.forEach((c, i) => c.media_url && downloadFile(c.media_url, `carrossel_${selectedFeed.ig_media_id}_${i + 1}.jpg`))}>
-                    <Download className="h-4 w-4 mr-2" /> Baixar carrossel ({selectedFeed.children.length})
+                  <Button variant="outline" size="sm" disabled={saving}
+                    onClick={async () => {
+                      setSaving(true);
+                      await saveMedia(
+                        selectedFeed.children
+                          .filter((c) => c.media_url)
+                          .map((c, i) => ({ url: c.media_url as string, filename: `carrossel_${selectedFeed.ig_media_id}_${i + 1}.jpg` })),
+                      );
+                      setSaving(false);
+                    }}>
+                    {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                    Salvar carrossel ({selectedFeed.children.length})
                   </Button>
                 ) : selectedFeed.media_url ? (
-                  <Button variant="outline" size="sm" onClick={() => downloadFile(selectedFeed.media_url!, `post_${selectedFeed.ig_media_id}.${selectedFeed.media_type === 'VIDEO' ? 'mp4' : 'jpg'}`)}>
-                    <Download className="h-4 w-4 mr-2" /> Baixar conteúdo
+                  <Button variant="outline" size="sm" disabled={saving}
+                    onClick={async () => {
+                      setSaving(true);
+                      await saveMedia([{ url: selectedFeed.media_url as string, filename: `post_${selectedFeed.ig_media_id}.${selectedFeed.media_type === 'VIDEO' ? 'mp4' : 'jpg'}` }]);
+                      setSaving(false);
+                    }}>
+                    {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                    Salvar conteúdo
                   </Button>
                 ) : null}
                 {selectedFeed.caption && (
