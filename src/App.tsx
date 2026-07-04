@@ -16,6 +16,7 @@ const Avisos = lazy(() => import("./features/geral/avisos/Avisos"));
 const TutorialMarketing = lazy(() => import("./features/geral/marketing/TutorialMarketing"));
 const CalendarioMarketing = lazy(() => import("./features/geral/marketing/CalendarioMarketing"));
 const MidiasSociais = lazy(() => import("./features/geral/marketing/MidiasSociais"));
+const QuantoValeDomingo = lazy(() => import("./features/geral/domingos/QuantoValeDomingo"));
 const ArtesProntas = lazy(() => import("./features/geral/artes/ArtesProntas"));
 const MateriaisImplantacao = lazy(() => import("./features/geral/artes/MateriaisImplantacao"));
 const PureDesign = lazy(() => import("./features/geral/artes/PureDesign"));
@@ -121,6 +122,8 @@ function App() {
             />
             <Route path="/auth/callback/meta" element={<AuthCallbackMeta />} />
             <Route path="/auth/callback/tiktok" element={<AuthCallbackTikTok />} />
+            {/* Landing pública do estudo "Quanto vale um domingo?" (linkada de um aviso) */}
+            <Route path="/teste-quanto-vale-domingo" element={<QuantoValeDomingo />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
