@@ -1,5 +1,16 @@
 # Hub Pure Pilates — Regras do projeto
 
+## Antes de começar QUALQUER alteração (regra fundamental)
+
+**SEMPRE sincronizar com o GitHub ANTES de codar.** Antes de escrever qualquer linha de código ou tocar em arquivos:
+
+1. `git fetch origin`
+2. `git status` — garantir que não há surpresas no working tree.
+3. Integrar o mais recente: `git pull --rebase origin main` (rebase do que houver local em cima de `origin/main`).
+4. Só então alterar — **sempre em cima da última versão do `main`**.
+
+Motivo: trabalhar (ou deployar) a partir de uma cópia **antiga** sobrescreve o trabalho de outras pessoas. Já aconteceu de alguém com um checkout desatualizado rodar `./deploy.sh` e **reverter a produção pra uma versão velha, apagando features recentes**. Como o `./deploy.sh` NÃO checa o git (é upload SFTP puro), essa disciplina é a **única** proteção — a ferramenta não impõe nada. Portanto: nunca comece a mexer sem sincronizar primeiro, e nunca deploye sem ter certeza de que o local está igual ao `origin/main`.
+
 ## Deploy
 
 O deploy é manual via `./deploy.sh` (faz upload via SFTP direto pro servidor de produção `hub.purepilates.com.br`, independente do git).
