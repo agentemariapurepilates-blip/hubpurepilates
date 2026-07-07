@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { domToBlob } from 'modern-screenshot';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft, Mail, Trash2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   buildRenderedHTML,
+  fieldIsRemovable,
   pureDesignTemplates,
   type PureDesignTemplate,
 } from '@/data/pureDesignTemplates';
@@ -71,6 +72,7 @@ const PureDesignEditor = () => {
   const [values, setValues] = useState<Record<string, string>>(() =>
     template ? defaultValues(template) : {},
   );
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [zoom, setZoom] = useState(0.4);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailTo, setEmailTo] = useState('');
@@ -108,10 +110,19 @@ const PureDesignEditor = () => {
     );
   }
 
-  const renderedHTML = buildRenderedHTML(template, values);
+  const renderedHTML = buildRenderedHTML(template, values, removed);
 
   const handleFieldChange = (fieldId: string, value: string) => {
     setValues((prev) => ({ ...prev, [fieldId]: value }));
+  };
+
+  const toggleRemoved = (fieldId: string) => {
+    setRemoved((prev) => {
+      const next = new Set(prev);
+      if (next.has(fieldId)) next.delete(fieldId);
+      else next.add(fieldId);
+      return next;
+    });
   };
 
   const openEmailDialog = () => {
@@ -217,21 +228,56 @@ const PureDesignEditor = () => {
             {template.fields.map((field) => {
               const currentValue = values[field.id] ?? '';
               const atLimit = field.maxLength !== undefined && currentValue.length >= field.maxLength;
+              const removable = fieldIsRemovable(template, field.id);
+              const isRemoved = removed.has(field.id);
               return (
                 <div key={field.id} className="space-y-1.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <label className="text-sm font-medium text-muted-foreground">{field.label}</label>
-                    {field.maxLength !== undefined && (
-                      <span
-                        className={`text-xs tabular-nums ${
-                          atLimit ? 'text-destructive font-medium' : 'text-muted-foreground'
-                        }`}
-                      >
-                        {currentValue.length}/{field.maxLength}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {field.maxLength !== undefined && !isRemoved && (
+                        <span
+                          className={`text-xs tabular-nums ${
+                            atLimit ? 'text-destructive font-medium' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {currentValue.length}/{field.maxLength}
+                        </span>
+                      )}
+                      {removable && (
+                        <button
+                          type="button"
+                          onClick={() => toggleRemoved(field.id)}
+                          title={isRemoved ? 'Restaurar campo' : 'Excluir campo (texto e forma)'}
+                          aria-label={isRemoved ? 'Restaurar campo' : 'Excluir campo'}
+                          className={`h-6 w-6 inline-flex items-center justify-center rounded-md transition-colors ${
+                            isRemoved
+                              ? 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                              : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+                          }`}
+                        >
+                          {isRemoved ? (
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  {field.inputType === 'textarea' ? (
+                  {isRemoved ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleRemoved(field.id)}
+                      className="w-full flex items-center justify-between gap-2 rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-left text-xs text-muted-foreground hover:bg-muted/70 transition-colors"
+                    >
+                      <span>Campo removido da arte</span>
+                      <span className="inline-flex items-center gap-1 font-medium">
+                        <RotateCcw className="h-3 w-3" />
+                        Restaurar
+                      </span>
+                    </button>
+                  ) : field.inputType === 'textarea' ? (
                     <Textarea
                       value={currentValue}
                       maxLength={field.maxLength}

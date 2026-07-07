@@ -226,6 +226,55 @@ const comunicadoCopaFields: TemplateField[] = [
   { id: 'horario', label: 'Horário', placeholder: '{{horario}}', defaultValue: 'Das 19:00 às 22:00', maxLength: 40 },
 ];
 
+const feriadoAvisoHTML = (logoUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aviso de Feriado</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1350px; background:linear-gradient(180deg,#ffffff 0%,#f1f1f1 100%); overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+
+<!-- Forma pétala decorativa (marca) -->
+<svg width="440" height="440" viewBox="0 0 250 250" style="position:absolute; top:-150px; right:-140px;"><path d="M 125 0 L 125 0 A 125 125 0 0 1 250 125 L 250 250 L 125 250 A 125 125 0 0 1 0 125 L 0 125 A 125 125 0 0 1 125 0 Z" fill="none" stroke="#C12030" stroke-width="3" opacity="0.30"/></svg>
+<svg width="440" height="440" viewBox="0 0 250 250" style="position:absolute; bottom:-150px; left:-140px;"><path d="M 0 0 L 125 0 A 125 125 0 0 1 250 125 L 250 125 A 125 125 0 0 1 125 250 L 0 250 L 0 0 Z" fill="none" stroke="#DB9828" stroke-width="3" opacity="0.35"/></svg>
+<svg width="300" height="300" viewBox="0 0 250 250" style="position:absolute; top:150px; left:-130px;"><path d="M 125 0 L 125 0 A 125 125 0 0 1 250 125 L 250 250 L 125 250 A 125 125 0 0 1 0 125 L 0 125 A 125 125 0 0 1 125 0 Z" fill="none" stroke="#C12030" stroke-width="3" opacity="0.22"/></svg>
+<svg width="260" height="260" viewBox="0 0 250 250" style="position:absolute; bottom:120px; right:-110px;"><path d="M 0 0 L 125 0 A 125 125 0 0 1 250 125 L 250 125 A 125 125 0 0 1 125 250 L 0 250 L 0 0 Z" fill="none" stroke="#DB9828" stroke-width="3" opacity="0.25"/></svg>
+
+<!-- Logo -->
+<img src="${logoUrl}" alt="Pure Pilates" style="position:absolute; top:36px; left:50%; transform:translateX(-50%); width:180px; height:auto; display:block;"/>
+
+<!-- AVISO! -->
+<!--fld:aviso--><div style="position:absolute; top:220px; left:0; right:0; text-align:center; font-size:132px; font-weight:800; color:#C12030; letter-spacing:2px; line-height:1;">{{aviso}}</div><!--/fld:aviso-->
+
+<!-- Card (forma-assinatura Pure: 3 cantos arredondados + 1 reto) -->
+<div style="position:absolute; left:165px; top:445px; width:750px; height:460px; box-sizing:border-box; border:7px solid #C12030; border-radius:58px 58px 0 58px; background:rgba(255,255,255,0.55);"></div>
+
+<!-- Conteúdo do card (centralizado) -->
+<div style="position:absolute; left:165px; top:445px; width:750px; height:460px; box-sizing:border-box; padding:0 56px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+  <!--fld:titulo--><div style="margin-bottom:24px;"><span style="display:inline-block; background:#1a1a1a; color:#ffffff; padding:13px 32px; border-radius:30px 30px 0 30px; font-size:28px; font-weight:700; letter-spacing:1px; text-transform:uppercase; line-height:1.25;">{{titulo}}</span></div><!--/fld:titulo-->
+  <!--fld:subtitulo--><div style="font-size:25px; font-weight:700; color:#C12030; text-transform:uppercase; letter-spacing:0.5px; line-height:1.35; margin-bottom:36px;">{{subtitulo}}</div><!--/fld:subtitulo-->
+  <!--fld:data1--><div style="margin-bottom:18px;"><span style="display:inline-block; width:330px; box-sizing:border-box; text-align:center; background:#C12030; color:#ffffff; padding:13px 16px; border-radius:999px; font-size:27px; font-weight:700; letter-spacing:0.5px; white-space:nowrap;">{{data1}}</span></div><!--/fld:data1-->
+  <!--fld:data2--><div><span style="display:inline-block; width:330px; box-sizing:border-box; text-align:center; background:#ffffff; color:#C12030; border:3px solid #C12030; padding:10px 16px; border-radius:999px; font-size:27px; font-weight:700; letter-spacing:0.5px; white-space:nowrap;">{{data2}}</span></div><!--/fld:data2-->
+</div>
+
+<!-- Barra inferior -->
+<div style="position:absolute; left:0; right:0; bottom:0; height:70px; background:#C12030;"></div>
+
+</div>
+</body>
+</html>`;
+
+const feriadoAvisoFields: TemplateField[] = [
+  { id: 'aviso', label: 'Chamada (AVISO!)', placeholder: '{{aviso}}', defaultValue: 'AVISO!', inputType: 'input', maxLength: 18 },
+  { id: 'titulo', label: 'Título do feriado', placeholder: '{{titulo}}', defaultValue: 'FERIADO REVOLUÇÃO CONSTITUCIONALISTA', inputType: 'input', maxLength: 60 },
+  { id: 'subtitulo', label: 'Subtítulo', placeholder: '{{subtitulo}}', defaultValue: 'Confira nosso horário de funcionamento!', inputType: 'input', maxLength: 80 },
+  { id: 'data1', label: 'Data 1 — status', placeholder: '{{data1}}', defaultValue: '09/07 - Fechado', maxLength: 30 },
+  { id: 'data2', label: 'Data 2 — status', placeholder: '{{data2}}', defaultValue: '10/07 - Aberto', maxLength: 30 },
+];
+
 export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'seja-instrutor',
@@ -308,6 +357,16 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     fields: feriadoCorpusChristiFields,
   },
   {
+    id: 'feriado-aviso',
+    name: 'Feriado — Aviso de Horário',
+    category: 'Feriados',
+    thumbnail: '/images/pure-design/feriado-aviso.png',
+    width: 1080,
+    height: 1350,
+    html: feriadoAvisoHTML('/images/pure-design/pure-pilates-logo.png'),
+    fields: feriadoAvisoFields,
+  },
+  {
     id: 'comunicado-copa',
     name: 'Copa — Clima de Torcida',
     category: 'Comunicados',
@@ -319,13 +378,28 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   },
 ];
 
+// Fica true quando o template demarca o bloco removível do campo (forma + texto)
+// via <!--fld:ID-->...<!--/fld:ID-->. Só nesses campos o editor mostra a lixeira.
+export function fieldIsRemovable(template: PureDesignTemplate, fieldId: string): boolean {
+  return template.html.includes(`<!--fld:${fieldId}-->`);
+}
+
 export function buildRenderedHTML(
   template: PureDesignTemplate,
   values: Record<string, string>,
+  removed?: ReadonlySet<string>,
 ): string {
   let html = template.html;
+  // Remove o bloco inteiro (forma + texto) dos campos marcados como excluídos.
+  if (removed) {
+    removed.forEach((id) => {
+      const re = new RegExp(`<!--fld:${id}-->[\\s\\S]*?<!--/fld:${id}-->`, 'g');
+      html = html.replace(re, '');
+    });
+  }
   template.fields.forEach((field) => {
-    const value = values[field.id] ?? field.defaultValue;
+    // Campo removido sem marcador de bloco: pelo menos zera o texto.
+    const value = removed?.has(field.id) ? '' : (values[field.id] ?? field.defaultValue);
     html = html.split(field.placeholder).join(value);
   });
   return html;
