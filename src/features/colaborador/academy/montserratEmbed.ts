@@ -7,6 +7,7 @@
 // Usamos os arquivos do @fontsource/montserrat (mesma origem, sem CORS).
 import url400 from '@fontsource/montserrat/files/montserrat-latin-400-normal.woff2';
 import url700 from '@fontsource/montserrat/files/montserrat-latin-700-normal.woff2';
+import url800 from '@fontsource/montserrat/files/montserrat-latin-800-normal.woff2';
 
 let cache: string | null = null;
 let pending: Promise<string> | null = null;
@@ -31,10 +32,11 @@ export function getMontserratFontFaceCss(): Promise<string> {
   if (cache) return Promise.resolve(cache);
   if (!pending) {
     pending = (async () => {
-      const [b400, b700] = await Promise.all([toBase64(url400), toBase64(url700)]);
+      const [b400, b700, b800] = await Promise.all([toBase64(url400), toBase64(url700), toBase64(url800)]);
       cache =
         `@font-face{font-family:'Montserrat';font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,${b400}) format('woff2');}` +
-        `@font-face{font-family:'Montserrat';font-style:normal;font-weight:700;font-display:swap;src:url(data:font/woff2;base64,${b700}) format('woff2');}`;
+        `@font-face{font-family:'Montserrat';font-style:normal;font-weight:700;font-display:swap;src:url(data:font/woff2;base64,${b700}) format('woff2');}` +
+        `@font-face{font-family:'Montserrat';font-style:normal;font-weight:800;font-display:swap;src:url(data:font/woff2;base64,${b800}) format('woff2');}`;
       return cache;
     })();
   }

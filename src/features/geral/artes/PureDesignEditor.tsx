@@ -22,6 +22,7 @@ import {
   pureDesignTemplates,
   type PureDesignTemplate,
 } from '@/data/pureDesignTemplates';
+import { getMontserratFontFaceCss } from '@/features/colaborador/academy/montserratEmbed';
 
 const WEBHOOK_URL = import.meta.env.VITE_PURE_DESIGN_WEBHOOK_URL as string | undefined;
 
@@ -77,6 +78,14 @@ const PureDesignEditor = () => {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailTo, setEmailTo] = useState('');
   const [sending, setSending] = useState(false);
+  // @font-face do Montserrat embutido (data-URI). Fontes de <link> cross-origin
+  // não são embutidas no SVG do modern-screenshot — sem isso o PNG sai com fonte
+  // de fallback. Injetamos esse CSS dentro do nó capturado.
+  const [fontFaceCss, setFontFaceCss] = useState('');
+
+  useEffect(() => {
+    getMontserratFontFaceCss().then(setFontFaceCss).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!template) return;
@@ -145,6 +154,18 @@ const PureDesignEditor = () => {
 
     setSending(true);
     try {
+      // Garante o @font-face embutido dentro do nó capturado (caso o carregamento
+      // assíncrono ainda não tenha populado o state antes do clique).
+      if (!fontFaceCss) {
+        const css = await getMontserratFontFaceCss().catch(() => '');
+        if (css && !target.querySelector('style[data-montserrat]')) {
+          const styleEl = document.createElement('style');
+          styleEl.setAttribute('data-montserrat', '');
+          styleEl.textContent = css;
+          target.insertBefore(styleEl, target.firstChild);
+        }
+      }
+
       if (document.fonts?.ready) {
         await document.fonts.ready;
       }
@@ -359,7 +380,9 @@ const PureDesignEditor = () => {
           overflow: 'hidden',
           fontFamily: 'Montserrat, sans-serif',
         }}
-        dangerouslySetInnerHTML={{ __html: extractBody(renderedHTML) }}
+        dangerouslySetInnerHTML={{
+          __html: `<style>${fontFaceCss}</style>${extractBody(renderedHTML)}`,
+        }}
       />
 
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
