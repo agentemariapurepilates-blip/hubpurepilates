@@ -7,6 +7,39 @@ export interface TemplateField {
   maxLength?: number;
 }
 
+/** Uma linha da tabela editável (ex.: Pure Store — produto + preço). */
+export interface TableRow {
+  item: string;
+  preco: string;
+}
+
+/**
+ * Descreve uma tabela de linhas dinâmicas (adicionar/excluir sem limite).
+ * O usuário escolhe o item num dropdown do catálogo e digita o preço.
+ */
+export interface TableConfig {
+  /** Token no HTML trocado pelas linhas geradas. */
+  rowsToken: string;
+  /** Catálogo de produtos do dropdown (já ordenado). */
+  catalog: string[];
+  /** Texto do item quando nada foi escolhido. */
+  placeholder: string;
+  /** Valor default do preço (só números; o "R$" já está no layout). */
+  priceDefault: string;
+  /** Quantas linhas começam preenchidas. */
+  initialRows: number;
+  /** HTML de UMA linha, com tokens {{bg}}, {{item}} e {{preco}}. */
+  rowHtml: string;
+  /** Cores do zebrado (linha par / ímpar). */
+  zebra: [string, string];
+  /** Altura de cada linha em px (o canvas cresce com o nº de linhas). */
+  rowHeight: number;
+  /** Altura do canvas SEM nenhuma linha (header + cabeçalho + PIX + rodapé). */
+  baseHeight: number;
+  /** Altura do bloco PIX — subtraída do canvas quando o PIX é removido. */
+  pixHeight: number;
+}
+
 export interface PureDesignTemplate {
   id: string;
   name: string;
@@ -16,6 +49,8 @@ export interface PureDesignTemplate {
   height: number;
   html: string;
   fields: TemplateField[];
+  /** Presente só em templates com tabela de linhas dinâmicas (Pure Store). */
+  table?: TableConfig;
 }
 
 const sejaInstrutorHTML = (bgUrl: string) => `<!DOCTYPE html>
@@ -275,7 +310,140 @@ const feriadoAvisoFields: TemplateField[] = [
   { id: 'data2', label: 'Data 2 — status', placeholder: '{{data2}}', defaultValue: '10/07 - Aberto', maxLength: 30 },
 ];
 
+// Catálogo de produtos da Pure Store (dropdown da tabela de preços). Deduplicado
+// e ordenado alfabeticamente (pt-BR) em tempo de carga. Para atualizar a lista,
+// é só editar este array — a ordem é resolvida sozinha.
+const pureStoreCatalogRaw: string[] = [
+  'Conjunto Fitness (Top + Legging)',
+  'Top Fitness Alça Poliamida',
+  'Legging Fitness Alta Compressão',
+  'Jaqueta Fitness em Poliamida',
+  'Corta Vento Cinza - Impermeável',
+  'Camiseta Fitness Feminina - Cinza',
+  'Legging - Burgundy',
+  'Top Nadador - Burgundy',
+  'Macaquinho - Burgundy',
+  'Camiseta Feminina - Burgundy',
+  'Coração Pilateiro',
+  'Regata Batidas',
+  'Regata Palavras',
+  'Regata Posições',
+  'Moletom Pure Pilates Canguru',
+  'Moletom "A Melhor Hora do Seu Dia"',
+  'Camiseta Fitness Masculina Preta',
+  'Jaqueta de Moletom - Pulse',
+  'Calça de Moletom Masculina - Pulse',
+  'Camiseta Aparelhos - Masculina',
+  'Camiseta Pilates Lateral - Feminina',
+  'Camiseta Pilates Lateral - Masculina',
+  'Lancheira Cinza',
+  'Lancheira Preta',
+  'Garrafa Prata',
+  'Garrafa Preta',
+  'Meia Boneco',
+  'Meia Logo',
+  'Sapatilha Logo',
+  'Sapatilha Boneco',
+  'Bodie Baby',
+  'Bolsa/Mochila - Preta',
+  'Bolsa/Mochila - Vermelha',
+];
+
+const pureStoreCatalog: string[] = Array.from(new Set(pureStoreCatalogRaw)).sort((a, b) =>
+  a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }),
+);
+
+// Formas aprovadas da marca (repo pure-pilates-brand). Pétala sólida (forma-3)
+// sangrando no topo-direito como âncora de marca + pétala contornada (forma-3),
+// laranja e delicada, sangrando embaixo-esquerda. Paths dos SVGs oficiais.
+const pureStoreShapes = `
+  <svg width="520" height="520" viewBox="0 0 250 250" style="position:absolute; top:-190px; right:-170px; z-index:0;"><path d="M 125 0 L 125 0 A 125 125 0 0 1 250 125 L 250 250 L 125 250 A 125 125 0 0 1 0 125 L 0 125 A 125 125 0 0 1 125 0 Z" fill="#C12030"/></svg>
+  <svg width="380" height="380" viewBox="-5 -5 260 260" style="position:absolute; bottom:-130px; left:-130px; z-index:0;"><path d="M 125 0 L 125 0 A 125 125 0 0 1 250 125 L 250 250 L 125 250 A 125 125 0 0 1 0 125 L 0 125 A 125 125 0 0 1 125 0 Z" fill="none" stroke="#DB9828" stroke-width="4" opacity="0.5"/></svg>`;
+
+// Uma linha de produto: item à esquerda, "R$ preço" à direita (vermelho, negrito),
+// separadas por uma divisória fina. Sem zebrado pesado — leitura editorial.
+const pureStoreRowHtml = `<div style="display:flex; align-items:center; height:66px; border-bottom:1px solid #E7DFD5;">
+  <div style="flex:1; padding-right:24px; font-size:31px; font-weight:400; color:#231F20; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">{{item}}</div>
+  <div style="width:320px; text-align:right; font-size:31px; font-weight:700; color:#C12030;">R$ {{preco}}</div>
+</div>`;
+
+const pureStoreHTML = () => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pure Store — Tabela de Preços</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:flex-start; background:#e9e6e1;">
+<div style="position:relative; width:1488px; background:#FBF8F4; font-family:Montserrat, Arial, sans-serif; box-sizing:border-box; overflow:hidden;">
+
+  ${pureStoreShapes}
+
+  <div style="position:relative; z-index:1; padding:0 120px;">
+
+    <!-- Cabeçalho: logo + título + acento -->
+    <div style="height:436px; box-sizing:border-box; padding-top:88px;">
+      <img src="/images/pure-design/pure-store-logo.png" alt="Pure Store" style="height:104px; width:auto; display:block;"/>
+      <div style="margin-top:52px; font-size:72px; font-weight:800; color:#231F20; letter-spacing:-1px; line-height:0.98;">Tabela de<br>preços</div>
+      <div style="margin-top:26px; width:132px; height:9px; background:#DB9828; border-radius:5px;"></div>
+    </div>
+
+    <!-- Rótulos das colunas -->
+    <div style="height:64px; box-sizing:border-box; display:flex; align-items:flex-end; padding-bottom:16px; border-bottom:3px solid #231F20;">
+      <div style="flex:1; font-size:23px; font-weight:700; letter-spacing:4px; color:#C12030;">PRODUTO</div>
+      <div style="width:320px; text-align:right; font-size:23px; font-weight:700; letter-spacing:4px; color:#C12030;">VALOR</div>
+    </div>
+
+    <!-- Linhas de produto (geradas) --><!--ROWS-->
+
+    <!-- PIX (card removível) -->
+    <!--fld:pix--><div style="height:204px; box-sizing:border-box; padding-top:48px;">
+      <div style="height:156px; box-sizing:border-box; background:#231F20; border-radius:44px 44px 0 44px; padding:32px 48px; color:#ffffff;">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <span style="display:inline-block; background:#C12030; color:#ffffff; font-size:22px; font-weight:700; letter-spacing:3px; padding:9px 22px; border-radius:999px;">PIX</span>
+          <span style="font-size:26px; font-weight:700; letter-spacing:2px;">PAGAMENTO</span>
+        </div>
+        <div style="margin-top:26px; font-size:28px; font-weight:400; color:#F2ECE4;">Chave PIX:&nbsp;<span style="font-weight:700; color:#ffffff;">{{chave1}}</span></div>
+      </div>
+    </div><!--/fld:pix-->
+
+    <!-- Espaço inferior -->
+    <div style="height:96px;"></div>
+
+  </div>
+
+</div>
+</body>
+</html>`;
+
+const pureStoreFields: TemplateField[] = [
+  { id: 'chave1', label: 'Chave PIX', placeholder: '{{chave1}}', defaultValue: '', maxLength: 60 },
+];
+
 export const pureDesignTemplates: PureDesignTemplate[] = [
+  {
+    id: 'pure-store-tabela-precos',
+    name: 'Pure Store — Tabela de Preços',
+    category: 'Pure Store',
+    thumbnail: '/images/pure-design/pure-store-tabela.png',
+    width: 1488, // A4 retrato; a altura real cresce com o nº de linhas (ver table)
+    height: 800, // baseHeight (com PIX)
+    html: pureStoreHTML(),
+    fields: pureStoreFields,
+    table: {
+      rowsToken: '<!--ROWS-->',
+      catalog: pureStoreCatalog,
+      placeholder: 'Selecionar',
+      priceDefault: '000,00',
+      initialRows: 8,
+      rowHtml: pureStoreRowHtml,
+      zebra: ['#FBF8F4', '#FBF8F4'],
+      rowHeight: 66,
+      baseHeight: 800,
+      pixHeight: 204,
+    },
+  },
   {
     id: 'seja-instrutor',
     name: 'Seja Instrutor',
@@ -388,6 +556,7 @@ export function buildRenderedHTML(
   template: PureDesignTemplate,
   values: Record<string, string>,
   removed?: ReadonlySet<string>,
+  rows?: readonly TableRow[],
 ): string {
   let html = template.html;
   // Remove o bloco inteiro (forma + texto) dos campos marcados como excluídos.
@@ -402,5 +571,20 @@ export function buildRenderedHTML(
     const value = removed?.has(field.id) ? '' : (values[field.id] ?? field.defaultValue);
     html = html.split(field.placeholder).join(value);
   });
+  // Tabela de linhas dinâmicas (Pure Store): gera uma linha por item escolhido.
+  if (template.table) {
+    const t = template.table;
+    const generated = (rows ?? [])
+      .map((row, i) => {
+        const item = (row.item ?? '').trim() || t.placeholder;
+        const preco = (row.preco ?? '').trim() || t.priceDefault;
+        return t.rowHtml
+          .split('{{bg}}').join(t.zebra[i % 2])
+          .split('{{item}}').join(item)
+          .split('{{preco}}').join(preco);
+      })
+      .join('');
+    html = html.split(t.rowsToken).join(generated);
+  }
   return html;
 }
