@@ -37,6 +37,7 @@ import {
   Image as ImageIcon,
   Radar,
   GraduationCap,
+  PlayCircle,
 } from 'lucide-react';
 
 const SectionHeader = ({
@@ -75,7 +76,6 @@ import { useHasUnitAccess } from '@/features/colaborador/dashboard/hooks/useHasU
 // Accordion: apenas uma seção aberta por vez. Abrir uma fecha a anterior.
 // Persistido em sessionStorage — sobrevive à navegação e ao reload; reseta ao fechar a aba.
 type SectionKey = 'geral' | 'colaboradores' | 'agentes' | 'minha-area' | 'admin';
-const OPEN_SECTION_STORAGE_KEY = 'sidebar:openSection';
 
 export const MobileMenuButton = ({ mobileOpen, setMobileOpen }: { mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) => (
   <Button
@@ -91,6 +91,14 @@ export const MobileMenuButton = ({ mobileOpen, setMobileOpen }: { mobileOpen: bo
 const AGENTES_DE_IA_ROUTE_PREFIXES = [
   '/agente-design',
   '/agente-monitoramento',
+];
+
+// Página-hub de Tutoriais + as filhas (usadas pra abrir o dropdown sozinho).
+const TUTORIAIS_PATHS = [
+  '/tutoriais',
+  '/tutorial-marketing',
+  '/materiais-implantacao',
+  '/manual-sistema',
 ];
 
 const sectionFromPath = (path: string): SectionKey | null => {
@@ -110,24 +118,19 @@ const Sidebar = () => {
   const isFranqueado = userType === 'franqueado';
   const hasUnitAccess = useHasUnitAccess();
 
-  const [openSection, setOpenSectionState] = useState<SectionKey | null>(() => {
-    if (typeof window === 'undefined') return sectionFromPath(location.pathname);
-    const stored = window.sessionStorage.getItem(OPEN_SECTION_STORAGE_KEY);
-    if (stored !== null) return stored === '' ? null : (stored as SectionKey);
-    return sectionFromPath(location.pathname);
-  });
+  // Dropdown "Tutoriais" — abre sozinho quando a rota atual é a página-hub ou uma das filhas.
+  const [tutoriaisOpen, setTutoriaisOpen] = useState(() =>
+    TUTORIAIS_PATHS.includes(location.pathname),
+  );
 
-  const setOpenSection = (next: SectionKey | null) => {
-    setOpenSectionState(next);
-    try {
-      window.sessionStorage.setItem(OPEN_SECTION_STORAGE_KEY, next ?? '');
-    } catch {
-      // ignore storage failures
-    }
-  };
+  // A cada carga/reload: abre a seção da rota atual; se a rota não pertencer a
+  // nenhuma seção específica (páginas "Geral"), a seção "Geral" já vem aberta.
+  const [openSection, setOpenSection] = useState<SectionKey | null>(
+    () => sectionFromPath(location.pathname) ?? 'geral',
+  );
 
   // Ao mudar de rota (não no mount inicial), se a nova rota pertencer a uma seção,
-  // abre essa seção e fecha as outras. No mount, a escolha salva em sessionStorage manda.
+  // abre essa seção e fecha as outras.
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
@@ -136,6 +139,7 @@ const Sidebar = () => {
     }
     const auto = sectionFromPath(location.pathname);
     if (auto) setOpenSection(auto);
+    if (TUTORIAIS_PATHS.includes(location.pathname)) setTutoriaisOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
@@ -154,14 +158,18 @@ const Sidebar = () => {
   const mainNavigation = [
     { name: 'Comece aqui', href: '/', icon: Home },
     { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
-    { name: 'Tutorial do Marketing', href: '/tutorial-marketing', icon: ScrollText },
     { name: 'Mídia adicional', href: '/autorizar-midia-adicional', icon: Megaphone },
     { name: 'Avisos', href: '/avisos', icon: Megaphone },
     { name: 'Parcerias', href: '/parcerias', icon: Handshake },
     { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
-    { name: 'Artes Prontas', href: '/artes-prontas', icon: Palette },
     { name: 'Pure Design', href: '/pure-design', icon: Paintbrush },
+  ];
+
+  // Sub-grupo Tutoriais (dropdown dentro de Geral) — o header "Tutoriais" leva
+  // pra página-hub /tutoriais, com botões pra cada um destes.
+  const tutoriaisNavigation = [
+    { name: 'Tutorial do Marketing', href: '/tutorial-marketing', icon: ScrollText },
     { name: 'Materiais de Implantação', href: '/materiais-implantacao', icon: Package },
     { name: 'Manual do Sistema', href: '/manual-sistema', icon: BookOpen },
   ];
@@ -250,6 +258,60 @@ const Sidebar = () => {
                   {item.name}
                 </NavLink>
               ))}
+
+              {/* Tutoriais — dropdown delicado; o header leva pra página-hub */}
+              <Collapsible open={tutoriaisOpen} onOpenChange={setTutoriaisOpen}>
+                <div className="flex items-center gap-1">
+                  <NavLink
+                    to="/tutoriais"
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                      )
+                    }
+                  >
+                    <PlayCircle className="h-4 w-4" />
+                    Tutoriais
+                  </NavLink>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={tutoriaisOpen ? 'Recolher tutoriais' : 'Expandir tutoriais'}
+                      className="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+                    >
+                      <ChevronDown
+                        className={cn('h-4 w-4 transition-transform duration-200', tutoriaisOpen && 'rotate-180')}
+                      />
+                    </button>
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+                  <div className="mt-0.5 ml-4 pl-2 border-l border-sidebar-border/60 space-y-0.5">
+                    {tutoriaisNavigation.map((item) => (
+                      <NavLink
+                        key={item.name}
+                        to={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                            isActive
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                              : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                          )
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.name}
+                      </NavLink>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </CollapsibleContent>
         </Collapsible>

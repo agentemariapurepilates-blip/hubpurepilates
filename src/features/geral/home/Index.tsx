@@ -5,7 +5,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Sparkles, CalendarDays, Video, User, Palette, Megaphone, ArrowRight,
+  Sparkles, CalendarDays, Video, User, Megaphone, ArrowRight,
   Handshake, BookOpen, ScrollText, Paintbrush, Package, Zap,
 } from 'lucide-react';
 
@@ -22,7 +22,6 @@ const CHECKLIST = [
   { icon: Megaphone, text: 'Avisos e comunicados oficiais' },
   { icon: CalendarDays, text: 'Calendário de marketing' },
   { icon: Video, text: 'Mídias sociais e vídeos prontos' },
-  { icon: Palette, text: 'Artes prontas pra usar' },
   { icon: Paintbrush, text: 'Pure Design — gerador de artes' },
   { icon: Handshake, text: 'Parcerias e benefícios' },
   { icon: Package, text: 'Materiais de implantação' },

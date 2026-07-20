@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -17,12 +17,12 @@ const TutorialMarketing = lazy(() => import("./features/geral/marketing/Tutorial
 const CalendarioMarketing = lazy(() => import("./features/geral/marketing/CalendarioMarketing"));
 const MidiasSociais = lazy(() => import("./features/geral/marketing/MidiasSociais"));
 const QuantoValeDomingo = lazy(() => import("./features/geral/domingos/QuantoValeDomingo"));
-const ArtesProntas = lazy(() => import("./features/geral/artes/ArtesProntas"));
 const MateriaisImplantacao = lazy(() => import("./features/geral/artes/MateriaisImplantacao"));
 const PureDesign = lazy(() => import("./features/geral/artes/PureDesign"));
 const PureDesignEditor = lazy(() => import("./features/geral/artes/PureDesignEditor"));
 const Parcerias = lazy(() => import("./features/geral/parcerias/Parcerias"));
 const ManualSistema = lazy(() => import("./features/geral/manual/ManualSistema"));
+const Tutoriais = lazy(() => import("./features/geral/tutoriais/Tutoriais"));
 const AutorizarMidiaAdicional = lazy(() => import("./features/geral/midia-adicional/AutorizarMidiaAdicional"));
 const MinhasSolicitacoes = lazy(() => import("./features/geral/midia-adicional/MinhasSolicitacoes"));
 const Perfil = lazy(() => import("./features/geral/conta/Perfil"));
@@ -84,7 +84,8 @@ function App() {
             <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
             <Route path="/pedidos-demanda" element={<ProtectedRoute><PedidosDemanda /></ProtectedRoute>} />
             <Route path="/notificacoes" element={<ProtectedRoute><Notificacoes /></ProtectedRoute>} />
-            <Route path="/artes-prontas" element={<ProtectedRoute><ArtesProntas /></ProtectedRoute>} />
+            {/* Artes Prontas foi descontinuada — tudo agora em Pure Design. */}
+            <Route path="/artes-prontas" element={<Navigate to="/pure-design" replace />} />
             <Route path="/materiais-implantacao" element={<ProtectedRoute><MateriaisImplantacao /></ProtectedRoute>} />
             <Route path="/parcerias" element={<ProtectedRoute><Parcerias /></ProtectedRoute>} />
             <Route path="/tutorial-marketing" element={<ProtectedRoute><TutorialMarketing /></ProtectedRoute>} />
@@ -92,6 +93,7 @@ function App() {
             <Route path="/midia-adicional/unidades" element={<ProtectedRoute><MidiaAdicionalUnidades /></ProtectedRoute>} />
             <Route path="/minha-area/minhas-solicitacoes" element={<ProtectedRoute><MinhasSolicitacoes /></ProtectedRoute>} />
             <Route path="/manual-sistema" element={<ProtectedRoute><ManualSistema /></ProtectedRoute>} />
+            <Route path="/tutoriais" element={<ProtectedRoute><Tutoriais /></ProtectedRoute>} />
             <Route path="/pure-design" element={<ProtectedRoute><PureDesign /></ProtectedRoute>} />
             <Route path="/pure-design/:id" element={<ProtectedRoute><PureDesignEditor /></ProtectedRoute>} />
             <Route path="/agente-design" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
