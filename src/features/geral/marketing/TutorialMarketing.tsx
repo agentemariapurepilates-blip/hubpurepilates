@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,7 @@ import {
   ExternalLink,
   FileText,
   Sparkles,
+  Megaphone,
 } from 'lucide-react';
 
 type Chapter = {
@@ -34,9 +36,10 @@ const CHAPTERS: Chapter[] = [
   { id: 'midia', num: '02', title: 'Contribuição de Mídia', desc: 'Distribuição do investimento em tráfego pago', icon: Target },
   { id: 'aportes', num: '03', title: 'Aportes Adicionais', desc: 'Investimento adicional do franqueado', icon: TrendingUp },
   { id: 'report', num: '04', title: 'Report & Resultados', desc: 'Transparência e acompanhamento de campanhas', icon: BarChart3 },
-  { id: 'social', num: '05', title: 'Redes Sociais Locais', desc: 'Diretrizes para perfis das unidades', icon: Share2 },
-  { id: 'influencers', num: '06', title: 'Influenciadores', desc: 'Manual de parceria, fluxo e formulário', icon: Users },
-  { id: 'gmb', num: '07', title: 'Google Meu Negócio', desc: 'Presença digital local como construção contínua', icon: MapPin },
+  { id: 'criativos', num: '05', title: 'Criativos das Campanhas de Aporte', desc: 'Anúncios e materiais usados na mídia apartada', icon: Megaphone },
+  { id: 'social', num: '06', title: 'Redes Sociais Locais', desc: 'Diretrizes para perfis das unidades', icon: Share2 },
+  { id: 'influencers', num: '07', title: 'Influenciadores', desc: 'Manual de parceria, fluxo e formulário', icon: Users },
+  { id: 'gmb', num: '08', title: 'Google Meu Negócio', desc: 'Presença digital local como construção contínua', icon: MapPin },
 ];
 
 const scrollTo = (id: string) => {
@@ -66,6 +69,35 @@ const SectionTitle = ({ children, accent }: { children: React.ReactNode; accent?
     {accent && <span className="text-pure-red"> {accent}</span>}
   </h2>
 );
+
+// Iframe que cresce até a altura real do conteúdo — sem rolagem própria,
+// pra ele viver dentro da rolagem única da página (mesma origem, então dá pra medir).
+const AutoHeightIframe = ({ src, title }: { src: string; title: string }) => {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [height, setHeight] = useState(600);
+
+  const handleLoad = () => {
+    const iframe = iframeRef.current;
+    const win = iframe?.contentWindow;
+    const doc = iframe?.contentDocument;
+    if (!win || !doc) return;
+    const fullHeight = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+    setHeight(fullHeight);
+    // O guia revela seções ao rolar; sem rolagem própria no iframe, força tudo visível de uma vez.
+    win.dispatchEvent(new Event('beforeprint'));
+  };
+
+  return (
+    <iframe
+      ref={iframeRef}
+      src={src}
+      title={title}
+      onLoad={handleLoad}
+      className="w-full block"
+      style={{ height, border: 0 }}
+    />
+  );
+};
 
 const TutorialMarketing = () => {
   return (
@@ -100,7 +132,7 @@ const TutorialMarketing = () => {
                   Uso <span className="text-pure-red ml-1.5">Interno</span>
                 </Badge>
                 <Badge variant="outline" className="border-pure-red/30 text-xs font-semibold tracking-widest uppercase px-3 py-1.5">
-                  <span className="text-pure-red mr-1.5">7</span> Capítulos
+                  <span className="text-pure-red mr-1.5">8</span> Capítulos
                 </Badge>
               </div>
             </div>
@@ -396,9 +428,51 @@ const TutorialMarketing = () => {
             </div>
           </section>
 
-          {/* 05 SOCIAL */}
+          {/* 05 CRIATIVOS */}
           <section>
             <ChapterHeader chapter={CHAPTERS[4]} />
+            <SectionTitle accent="das campanhas de aporte">Os criativos</SectionTitle>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl mb-8">
+              Veja abaixo os anúncios reais usados nas campanhas de mídia apartada — o mesmo material
+              que aparece para os futuros alunos dentro do raio de cobertura de cada unidade, com o
+              nome dela na faixa do anúncio.
+            </p>
+            <Card className="bg-pure-black text-white border-l-4 border-l-pure-red rounded-md mb-6">
+              <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <span className="block text-[10px] font-bold tracking-[0.35em] uppercase text-pure-red mb-1.5">
+                    Guia visual · Campanha apartada
+                  </span>
+                  <div className="text-base font-bold uppercase tracking-tight">
+                    O que o seu aporte faz
+                  </div>
+                  <div className="text-xs font-light text-white/50 mt-1">
+                    Anúncios, mapa de cobertura e caminho completo até a aula marcada
+                  </div>
+                </div>
+                <Button
+                  asChild
+                  className="bg-pure-red hover:bg-pure-red-light text-white text-xs font-bold tracking-[0.25em] uppercase px-6"
+                >
+                  <a href="/campanha-apartada.html" target="_blank" rel="noopener noreferrer">
+                    <Megaphone className="h-4 w-4 mr-2" />
+                    Abrir em tela cheia
+                    <ExternalLink className="h-3 w-3 ml-2" />
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+            <div className="rounded-xl overflow-hidden border border-border bg-background">
+              <AutoHeightIframe
+                src="/campanha-apartada.html"
+                title="Campanha apartada — o que o seu aporte faz"
+              />
+            </div>
+          </section>
+
+          {/* 06 SOCIAL */}
+          <section>
+            <ChapterHeader chapter={CHAPTERS[5]} />
             <SectionTitle accent="extensão da marca">Perfis locais:</SectionTitle>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl mb-8">
               A gestão das redes sociais locais é responsabilidade do franqueado, que deve atuar como
@@ -468,9 +542,9 @@ const TutorialMarketing = () => {
             </div>
           </section>
 
-          {/* 06 INFLUENCERS */}
+          {/* 07 INFLUENCERS */}
           <section>
-            <ChapterHeader chapter={CHAPTERS[5]} />
+            <ChapterHeader chapter={CHAPTERS[6]} />
             <SectionTitle accent="aprovação obrigatória">Parcerias com</SectionTitle>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl mb-8">
               Os influenciadores são a extensão da marca, levando a experiência Pure Pilates a mais
@@ -787,9 +861,9 @@ const TutorialMarketing = () => {
             </Card>
           </section>
 
-          {/* 07 GMB */}
+          {/* 08 GMB */}
           <section>
-            <ChapterHeader chapter={CHAPTERS[6]} />
+            <ChapterHeader chapter={CHAPTERS[7]} />
             <SectionTitle accent="construção">
               Presença local
               <br />é uma
@@ -889,8 +963,9 @@ const TutorialMarketing = () => {
                 { n: '02', title: 'Verba de Mídia', body: 'Tráfego pago: foco aula experimental (prioridade), campanhas promocionais e institucional/Google.' },
                 { n: '03', title: 'Aporte Adicional', body: 'R$1.500, R$2.000 ou R$2.500/mês por 3 meses. Para novas unidades, captação de instrutores ou unidades críticas.' },
                 { n: '04', title: 'Report', body: 'Gerido por cluster — sem report individual no padrão. Com aporte, o franqueado recebe report do veículo digital.' },
-                { n: '05', title: 'Social Local', body: 'Suporte ao conteúdo da matriz é obrigatório. Produção própria permitida, desde que siga os padrões da marca.' },
-                { n: '06', title: 'Influencers', body: 'Formulário obrigatório — aprovação em 7 dias úteis. Pacote: 10 aulas/45 dias. Permutas conduzidas pelo franqueado.' },
+                { n: '05', title: 'Criativos de Aporte', body: 'Anúncios reais das campanhas apartadas — foto, faixa com o nome da unidade e caminho até a aula marcada.' },
+                { n: '06', title: 'Social Local', body: 'Suporte ao conteúdo da matriz é obrigatório. Produção própria permitida, desde que siga os padrões da marca.' },
+                { n: '07', title: 'Influencers', body: 'Formulário obrigatório — aprovação em 7 dias úteis. Pacote: 10 aulas/45 dias. Permutas conduzidas pelo franqueado.' },
               ].map((c) => (
                 <Card
                   key={c.n}
@@ -910,7 +985,7 @@ const TutorialMarketing = () => {
               <Card className="md:col-span-2 lg:col-span-3 bg-pure-black text-white border-pure-black hover:bg-pure-black/90 transition-all">
                 <CardContent className="p-6">
                   <span className="block text-[10px] font-bold tracking-[0.3em] text-pure-red mb-3">
-                    07
+                    08
                   </span>
                   <h4 className="text-sm font-bold uppercase tracking-tight text-white mb-2">
                     Google Meu Negócio
