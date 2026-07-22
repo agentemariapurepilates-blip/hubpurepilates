@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -100,6 +100,15 @@ const AutoHeightIframe = ({ src, title }: { src: string; title: string }) => {
 };
 
 const TutorialMarketing = () => {
+  // Rola até o capítulo do #hash quando a página abre direto num link âncora
+  // (a rota é lazy-loaded, então o elemento só existe depois do primeiro render).
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (!hash) return;
+    const t = setTimeout(() => scrollTo(hash), 150);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <MainLayout>
       <div className="-m-4 sm:-m-6 lg:-m-8">

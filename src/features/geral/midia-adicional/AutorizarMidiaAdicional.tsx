@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Megaphone, ArrowLeft, AlertTriangle, Check, Info } from 'lucide-react';
+import { Megaphone, ArrowLeft, AlertTriangle, Check, Info, Image, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -169,6 +169,36 @@ const SolicitarMidiaAdicional = () => {
             experimental para sua unidade.
           </p>
         </div>
+
+        <Card className="mb-6 overflow-hidden border-primary/30 bg-primary/5">
+          <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-primary/10 p-2.5 shrink-0">
+                <Image className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Antes de preencher, veja os criativos usados nas campanhas
+                </p>
+                <p className="text-sm text-muted-foreground mt-0.5 max-w-xl">
+                  Anúncios reais, mapa de cobertura e o caminho até a aula marcada — no capítulo
+                  "Criativos das Campanhas de Aporte" do Tutorial do Marketing.
+                </p>
+              </div>
+            </div>
+            <Button asChild size="lg" className="w-full sm:w-auto shrink-0">
+              <a
+                href="/tutorial-marketing#criativos"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image className="h-4 w-4 mr-2" />
+                Ver os criativos
+                <ExternalLink className="h-3.5 w-3.5 ml-2" />
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
 
         <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
