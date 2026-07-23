@@ -10,6 +10,7 @@ import AvisoCard from '@/components/avisos/AvisoCard';
 import CreateAvisoDialog from '@/components/avisos/CreateAvisoDialog';
 import EditAvisoDialog from '@/components/avisos/EditAvisoDialog';
 import AvisoDetailsDialog from '@/components/avisos/AvisoDetailsDialog';
+import NovidadesPureSystemCard from '@/components/avisos/NovidadesPureSystemCard';
 
 export interface Aviso {
   id: string;
@@ -135,6 +136,12 @@ const Avisos = () => {
 
   const canCreate = isColaborador || isAdmin;
 
+  // Card em destaque (client-side, não vem do banco). Some quando a busca não bate com ele.
+  const featuredHaystack =
+    'novidades do pure system updates puresystem reunião apresentação 23 de julho slides rede 2026';
+  const showFeatured =
+    searchTerm.trim() === '' || featuredHaystack.includes(searchTerm.trim().toLowerCase());
+
   return (
     <MainLayout>
       <div className="max-w-3xl mx-auto px-2 sm:px-4">
@@ -169,6 +176,13 @@ const Avisos = () => {
             />
           </div>
         </div>
+
+        {/* Apresentação em destaque */}
+        {showFeatured && (
+          <div className="mb-4">
+            <NovidadesPureSystemCard />
+          </div>
+        )}
 
         {/* Content */}
         {loading ? (

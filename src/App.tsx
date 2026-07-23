@@ -13,6 +13,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 const Index = lazy(() => import("./features/geral/home/Index"));
 const NovidadesDoMes = lazy(() => import("./features/geral/timeline/NovidadesDoMes"));
 const Avisos = lazy(() => import("./features/geral/avisos/Avisos"));
+const NovidadesPreview = lazy(() => import("./features/geral/avisos/NovidadesPreview"));
 const TutorialMarketing = lazy(() => import("./features/geral/marketing/TutorialMarketing"));
 const CalendarioMarketing = lazy(() => import("./features/geral/marketing/CalendarioMarketing"));
 const MidiasSociais = lazy(() => import("./features/geral/marketing/MidiasSociais"));
@@ -126,6 +127,10 @@ function App() {
             <Route path="/auth/callback/tiktok" element={<AuthCallbackTikTok />} />
             {/* Landing pública do estudo "Quanto vale um domingo?" (linkada de um aviso) */}
             <Route path="/teste-quanto-vale-domingo" element={<QuantoValeDomingo />} />
+            {/* Preview SÓ EM DEV, sem login — sai do build de produção automaticamente. */}
+            {import.meta.env.DEV && (
+              <Route path="/preview/novidades" element={<NovidadesPreview />} />
+            )}
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
