@@ -421,7 +421,278 @@ const pureStoreFields: TemplateField[] = [
   { id: 'chave1', label: 'Chave PIX', placeholder: '{{chave1}}', defaultValue: '', maxLength: 60 },
 ];
 
+// ─── Série "Enxoval de Inauguração" (feed 1080×1440) ─────────────────────────
+// Fundos limpos exportados do Canva (fotos/fitas/títulos fixos + logo); os
+// campos editáveis (pills, caixa de data, etc.) são desenhados em HTML por cima.
+
+// Arte 1 — "Vem aí uma nova Pure Pilates": pill do nome da unidade, caixa de
+// data (dia|mês|ano) e pill da cidade/bairro, no miolo vazio do fundo.
+const inauguracaoVemAiHTML = (bgUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inauguração — Vem aí uma nova Pure Pilates</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1440px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+
+  <!--fld:nomeUnidade--><div style="position:absolute; left:220px; top:498px; width:640px; height:80px; box-sizing:border-box; border:2px solid #C12030; border-radius:999px; background:rgba(255,255,255,0.45); display:flex; align-items:center; justify-content:center; text-align:center; padding:0 26px;">
+    <span style="font-size:29px; font-weight:700; letter-spacing:1.5px; color:#231F20; text-transform:uppercase; line-height:1.1;">{{nomeUnidade}}</span>
+  </div><!--/fld:nomeUnidade-->
+
+  <div style="position:absolute; left:220px; top:606px; width:640px; height:98px; box-sizing:border-box; background:#C12030; border-radius:14px; display:flex; align-items:center;">
+    <div style="flex:1; text-align:center; color:#ffffff; font-size:46px; font-weight:800; letter-spacing:1px;">{{dia}}</div>
+    <div style="width:2px; height:54px; background:rgba(255,255,255,0.65);"></div>
+    <div style="flex:1; text-align:center; color:#ffffff; font-size:46px; font-weight:800; letter-spacing:1px;">{{mes}}</div>
+    <div style="width:2px; height:54px; background:rgba(255,255,255,0.65);"></div>
+    <div style="flex:1; text-align:center; color:#ffffff; font-size:46px; font-weight:800; letter-spacing:1px;">{{ano}}</div>
+  </div>
+
+  <!--fld:cidade--><div style="position:absolute; left:220px; top:732px; width:640px; height:80px; box-sizing:border-box; border:2px solid #C12030; border-radius:999px; display:flex; align-items:center; justify-content:center; text-align:center; padding:0 26px;">
+    <span style="font-size:29px; font-weight:700; letter-spacing:1.5px; color:#231F20; text-transform:uppercase; line-height:1.1;">{{cidade}}</span>
+  </div><!--/fld:cidade-->
+
+</div>
+</body>
+</html>`;
+
+const inauguracaoVemAiFields: TemplateField[] = [
+  { id: 'nomeUnidade', label: 'Nome da unidade', placeholder: '{{nomeUnidade}}', defaultValue: 'NOME DA UNIDADE', maxLength: 34 },
+  { id: 'dia', label: 'Dia', placeholder: '{{dia}}', defaultValue: '10', maxLength: 2 },
+  { id: 'mes', label: 'Mês', placeholder: '{{mes}}', defaultValue: '08', maxLength: 2 },
+  { id: 'ano', label: 'Ano', placeholder: '{{ano}}', defaultValue: '2026', maxLength: 4 },
+  { id: 'cidade', label: 'Cidade ou bairro', placeholder: '{{cidade}}', defaultValue: 'CIDADE OU BAIRRO', maxLength: 34 },
+];
+
+// 1x1 transparente: default do campo de foto. Enquanto vazio, mostra a "moldura"
+// (paisagem) que já vem no fundo; ao subir a foto do estúdio, ela cobre o topo.
+const TRANSPARENT_PX =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+// Arte 2 — "A melhor hora do seu dia está chegando em": foto do estúdio editável
+// na moldura do topo + bairro, pill do nome, caixa de endereço/referência e data.
+const inauguracaoMelhorHoraHTML = (bgUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inauguração — A melhor hora está chegando</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1440px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+
+  <!-- Foto do estúdio (moldura do topo). Vazio = mostra a paisagem do fundo. -->
+  <img src="{{foto}}" style="position:absolute; left:0; top:0; width:1080px; height:515px; object-fit:cover; display:block;" onerror="this.style.display='none'"/>
+
+  <!--fld:bairro--><div style="position:absolute; left:70px; right:70px; top:702px; text-align:center; font-size:36px; font-weight:700; color:#6d6d6d; text-transform:uppercase; letter-spacing:1px; line-height:1.1;">{{bairro}}</div><!--/fld:bairro-->
+
+  <!--fld:nomeUnidade--><div style="position:absolute; left:220px; top:772px; width:640px; height:80px; box-sizing:border-box; border:2px solid #C12030; border-radius:999px; background:rgba(255,255,255,0.45); display:flex; align-items:center; justify-content:center; text-align:center; padding:0 26px;">
+    <span style="font-size:29px; font-weight:700; letter-spacing:1.5px; color:#231F20; text-transform:uppercase; line-height:1.1;">{{nomeUnidade}}</span>
+  </div><!--/fld:nomeUnidade-->
+
+  <!--fld:endereco--><div style="position:absolute; left:150px; top:890px; width:780px; height:132px; box-sizing:border-box; background:#C12030; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 34px; color:#ffffff;">
+    <div style="font-size:28px; font-weight:700; line-height:1.25;">{{endereco}}</div>
+    <div style="font-size:24px; font-weight:400; line-height:1.25; margin-top:5px;">{{referencia}}</div>
+  </div><!--/fld:endereco-->
+
+  <div style="position:absolute; left:320px; top:1058px; width:440px; height:82px; box-sizing:border-box; border:2px solid #C12030; border-radius:999px; display:flex; align-items:center;">
+    <div style="flex:1; text-align:center; color:#C12030; font-size:38px; font-weight:800;">{{dia}}</div>
+    <div style="width:2px; height:44px; background:#C12030;"></div>
+    <div style="flex:1; text-align:center; color:#C12030; font-size:38px; font-weight:800;">{{mes}}</div>
+    <div style="width:2px; height:44px; background:#C12030;"></div>
+    <div style="flex:1; text-align:center; color:#C12030; font-size:38px; font-weight:800;">{{ano}}</div>
+  </div>
+
+</div>
+</body>
+</html>`;
+
+const inauguracaoMelhorHoraFields: TemplateField[] = [
+  { id: 'foto', label: 'Foto do estúdio', placeholder: '{{foto}}', defaultValue: TRANSPARENT_PX, inputType: 'image' },
+  { id: 'bairro', label: 'Nome do bairro', placeholder: '{{bairro}}', defaultValue: 'NOME DO BAIRRO', maxLength: 30 },
+  { id: 'nomeUnidade', label: 'Nome da unidade', placeholder: '{{nomeUnidade}}', defaultValue: 'NOME DA UNIDADE', maxLength: 34 },
+  { id: 'endereco', label: 'Endereço completo', placeholder: '{{endereco}}', defaultValue: 'Rua Alegre, 123 — Cidade Brasileira', maxLength: 60 },
+  { id: 'referencia', label: 'Ponto de referência', placeholder: '{{referencia}}', defaultValue: 'Próximo ao mercado central', maxLength: 60 },
+  { id: 'dia', label: 'Dia', placeholder: '{{dia}}', defaultValue: '10', maxLength: 2 },
+  { id: 'mes', label: 'Mês', placeholder: '{{mes}}', defaultValue: '08', maxLength: 2 },
+  { id: 'ano', label: 'Ano', placeholder: '{{ano}}', defaultValue: '2026', maxLength: 4 },
+];
+
+// Arte 3 — "Nossa inauguração já tem data" (bilhete no fundo vermelho): bloco de
+// data (dia da semana | dia | hora, com mês embaixo) + unidade, endereço e telefone.
+const NOTE_RED = '#a72537';
+const NOTE_DARK = '#231f20';
+const inauguracaoJaTemDataHTML = (bgUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inauguração — Já tem data</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1440px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif; color:${NOTE_RED};">
+
+  <!-- Tudo num container inclinado no mesmo ângulo do bilhete (~-3.5°) -->
+  <div style="position:absolute; left:210px; width:660px; top:660px; transform:rotate(-3.5deg); transform-origin:center;">
+
+    <!-- Bloco de data (cores/pesos exatos do Canva) -->
+    <div style="display:flex; align-items:center; justify-content:center; gap:24px;">
+      <div style="font-size:35px; font-weight:400; letter-spacing:0.5px; text-transform:uppercase; color:${NOTE_DARK};">{{diaSemana}}</div>
+      <div style="width:2px; height:96px; background:${NOTE_RED};"></div>
+      <div style="text-align:center; line-height:1;">
+        <div style="font-size:22px; font-weight:400; letter-spacing:2px; text-transform:uppercase; color:${NOTE_RED};">no dia</div>
+        <div style="font-size:80px; font-weight:700; margin:2px 0; color:${NOTE_RED};">{{dia}}</div>
+        <div style="font-size:22px; font-weight:400; letter-spacing:2px; text-transform:uppercase; color:${NOTE_RED};">{{mes}}</div>
+      </div>
+      <div style="width:2px; height:96px; background:${NOTE_RED};"></div>
+      <div style="font-size:35px; font-weight:400; letter-spacing:0.5px; text-transform:uppercase; color:${NOTE_DARK};">{{hora}}</div>
+    </div>
+
+    <!-- Unidade + endereço + telefone -->
+    <div style="margin-top:118px; text-align:center;">
+      <div style="font-size:34px; font-weight:700; font-style:italic; color:${NOTE_RED}; margin-bottom:26px;">{{nomeUnidade}}</div>
+      <div style="display:flex; align-items:center; justify-content:center; gap:9px; font-size:27px; font-weight:400; font-style:italic; color:${NOTE_DARK};">
+        <svg width="19" height="25" viewBox="0 0 24 24" fill="${NOTE_RED}" style="flex-shrink:0;"><path d="M12 2C7.6 2 4 5.6 4 10c0 5.4 7 11.5 7.3 11.8.4.3.9.3 1.3 0C13 21.5 20 15.4 20 10c0-4.4-3.6-8-8-8zm0 11a3 3 0 110-6 3 3 0 010 6z"/></svg>
+        <span>{{endereco}}</span>
+      </div>
+      <div style="font-size:27px; font-weight:400; font-style:italic; color:${NOTE_DARK}; margin-top:12px;">{{telefone}}</div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>`;
+
+const inauguracaoJaTemDataFields: TemplateField[] = [
+  { id: 'diaSemana', label: 'Dia da semana', placeholder: '{{diaSemana}}', defaultValue: 'Sábado', maxLength: 13 },
+  { id: 'dia', label: 'Dia', placeholder: '{{dia}}', defaultValue: '12', maxLength: 2 },
+  { id: 'hora', label: 'Horário', placeholder: '{{hora}}', defaultValue: '14 horas', maxLength: 14 },
+  { id: 'mes', label: 'Mês', placeholder: '{{mes}}', defaultValue: 'Setembro', maxLength: 12 },
+  { id: 'nomeUnidade', label: 'Nome da unidade', placeholder: '{{nomeUnidade}}', defaultValue: 'Nome da unidade', maxLength: 34 },
+  { id: 'endereco', label: 'Endereço', placeholder: '{{endereco}}', defaultValue: 'Rua Alegre, 123 - Cidade Brasileira', maxLength: 48 },
+  { id: 'telefone', label: 'Telefone', placeholder: '{{telefone}}', defaultValue: '11 9999-9999', maxLength: 20 },
+];
+
+// Arte 5 — "Sua primeira aula na nova Pure Pilates começa aqui" (foto no reformer):
+// 3 pills vermelhos sólidos (unidade, telefone, endereço) abaixo do "Agende".
+const inauguracaoPrimeiraAulaHTML = (bgUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inauguração — Sua primeira aula</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1440px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+
+  <!--fld:nomeUnidade--><div style="position:absolute; left:275px; top:852px; width:530px; height:80px; box-sizing:border-box; background:${NOTE_RED}; border-radius:999px; display:flex; align-items:center; justify-content:center; text-align:center; padding:0 26px;"><span style="font-size:31px; font-weight:400; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap;">{{nomeUnidade}}</span></div><!--/fld:nomeUnidade-->
+
+  <!--fld:telefone--><div style="position:absolute; left:275px; top:946px; width:530px; height:80px; box-sizing:border-box; background:${NOTE_RED}; border-radius:999px; display:flex; align-items:center; justify-content:center; text-align:center; padding:0 26px;"><span style="font-size:31px; font-weight:400; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap;">{{telefone}}</span></div><!--/fld:telefone-->
+
+  <!--fld:endereco--><div style="position:absolute; left:275px; top:1040px; width:530px; height:80px; box-sizing:border-box; background:${NOTE_RED}; border-radius:999px; display:flex; align-items:center; justify-content:center; text-align:center; padding:0 26px;"><span style="font-size:31px; font-weight:400; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap;">{{endereco}}</span></div><!--/fld:endereco-->
+
+</div>
+</body>
+</html>`;
+
+const inauguracaoPrimeiraAulaFields: TemplateField[] = [
+  { id: 'nomeUnidade', label: 'Nome da unidade', placeholder: '{{nomeUnidade}}', defaultValue: 'Nome da unidade', maxLength: 30 },
+  { id: 'telefone', label: 'Telefone', placeholder: '{{telefone}}', defaultValue: '11 9999-9999', maxLength: 22 },
+  { id: 'endereco', label: 'Endereço', placeholder: '{{endereco}}', defaultValue: 'Endereço', maxLength: 34 },
+];
+
+// Arte 6 — "Inauguramos" (fundo vermelho, fita/tesoura): frase com nome da
+// unidade em negrito, endereço (2 linhas) e telefone num pill branco vazado.
+const inauguracaoInauguramosHTML = (bgUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inauguração — Inauguramos</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1440px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif; color:#ffffff; text-align:center;">
+
+  <!-- Frase de boas-vindas -->
+  <div style="position:absolute; left:150px; width:780px; top:520px; font-size:37px; font-weight:400; line-height:1.4;">A Pure Pilates <span style="font-weight:700;">{{nomeUnidade}}</span> já está pronta para receber você.</div>
+
+  <!-- Endereço (2 linhas) -->
+  <div style="position:absolute; left:150px; width:780px; top:742px; font-size:30px; font-weight:400; line-height:1.4;">{{endereco}}<br>{{cidade}}</div>
+
+  <!-- Telefone (pill branco vazado) -->
+  <div style="position:absolute; left:360px; width:360px; top:858px; height:76px; box-sizing:border-box; border:2px solid #ffffff; border-radius:999px; display:flex; align-items:center; justify-content:center;">
+    <span style="font-size:30px; font-weight:600;">{{telefone}}</span>
+  </div>
+
+</div>
+</body>
+</html>`;
+
+const inauguracaoInauguramosFields: TemplateField[] = [
+  { id: 'nomeUnidade', label: 'Nome da unidade', placeholder: '{{nomeUnidade}}', defaultValue: 'nome da unidade', maxLength: 30 },
+  { id: 'endereco', label: 'Endereço', placeholder: '{{endereco}}', defaultValue: 'Rua Alegre, 123', maxLength: 40 },
+  { id: 'cidade', label: 'Cidade', placeholder: '{{cidade}}', defaultValue: 'Cidade Brasileira', maxLength: 40 },
+  { id: 'telefone', label: 'Telefone', placeholder: '{{telefone}}', defaultValue: '11 9999-9999', maxLength: 20 },
+];
+
 export const pureDesignTemplates: PureDesignTemplate[] = [
+  {
+    id: 'inauguracao-vem-ai',
+    name: 'Inauguração — Vem aí uma nova',
+    category: 'Inauguração',
+    thumbnail: '/images/pure-design/inauguracao-vem-ai.png',
+    width: 1080,
+    height: 1440,
+    html: inauguracaoVemAiHTML('/images/pure-design/inauguracao-vem-ai.png'),
+    fields: inauguracaoVemAiFields,
+  },
+  {
+    id: 'inauguracao-melhor-hora',
+    name: 'Inauguração — A melhor hora está chegando',
+    category: 'Inauguração',
+    thumbnail: '/images/pure-design/inauguracao-melhor-hora.png',
+    width: 1080,
+    height: 1440,
+    html: inauguracaoMelhorHoraHTML('/images/pure-design/inauguracao-melhor-hora.png'),
+    fields: inauguracaoMelhorHoraFields,
+  },
+  {
+    id: 'inauguracao-ja-tem-data',
+    name: 'Inauguração — Já tem data',
+    category: 'Inauguração',
+    thumbnail: '/images/pure-design/inauguracao-ja-tem-data.png',
+    width: 1080,
+    height: 1440,
+    html: inauguracaoJaTemDataHTML('/images/pure-design/inauguracao-ja-tem-data.png'),
+    fields: inauguracaoJaTemDataFields,
+  },
+  {
+    id: 'inauguracao-primeira-aula',
+    name: 'Inauguração — Sua primeira aula',
+    category: 'Inauguração',
+    thumbnail: '/images/pure-design/inauguracao-primeira-aula.png',
+    width: 1080,
+    height: 1440,
+    html: inauguracaoPrimeiraAulaHTML('/images/pure-design/inauguracao-primeira-aula.png'),
+    fields: inauguracaoPrimeiraAulaFields,
+  },
+  {
+    id: 'inauguracao-inauguramos',
+    name: 'Inauguração — Inauguramos',
+    category: 'Inauguração',
+    thumbnail: '/images/pure-design/inauguracao-inauguramos.png',
+    width: 1080,
+    height: 1440,
+    html: inauguracaoInauguramosHTML('/images/pure-design/inauguracao-inauguramos.png'),
+    fields: inauguracaoInauguramosFields,
+  },
   {
     id: 'pure-store-tabela-precos',
     name: 'Pure Store — Tabela de Preços',
