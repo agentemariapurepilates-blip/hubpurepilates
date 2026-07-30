@@ -34,6 +34,21 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
+    /* Tokens semânticos de status, portados do purepilatesrelatorios.
+       As telas de Dashboard codificam por cor a variação em relação à meta:
+       acima da meta = success, abaixo = destructive, neutro = warning.
+       Sem estes tokens "acima da meta" e "neutro" ficavam idênticos. */
+    --success: 144 69% 39%;
+    --success-foreground: 0 0% 100%;
+
+    /* O laranja da marca tem contraste baixo como texto sobre fundo claro;
+       este valor é a versão aprofundada usada na origem para uso semântico. */
+    --warning: 38 74% 43%;
+    --warning-foreground: 0 0% 100%;
+
+    --info: 181 53% 40%;
+    --info-foreground: 0 0% 100%;
+
     --border: 0 0% 90%;
     --input: 0 0% 90%;
     --ring: 350 72% 45%;
@@ -101,6 +116,18 @@
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
+
+    /* Variantes escuras dos tokens de status (mesma origem).
+       O --warning-foreground escuro usa o cinza do tema escuro do Hub,
+       porque o laranja claro do modo escuro pede texto escuro por cima. */
+    --success: 144 55% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 75% 55%;
+    --warning-foreground: 0 0% 10%;
+
+    --info: 181 45% 48%;
+    --info-foreground: 0 0% 100%;
 
     --border: 0 0% 20%;
     --input: 0 0% 20%;
