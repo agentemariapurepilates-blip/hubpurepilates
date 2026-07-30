@@ -46,6 +46,7 @@ const AgenteMonitoramentoMetricas = lazy(() => import("./features/colaborador/mo
 const SaudeDeMarca = lazy(() => import("./features/colaborador/monitoramento/SaudeDeMarca"));
 const PureMonitor = lazy(() => import("./features/colaborador/monitoramento/PureMonitor"));
 const GerarCertificados = lazy(() => import("./features/colaborador/academy/GerarCertificados"));
+const GerarContratos = lazy(() => import("./features/colaborador/academy/GerarContratos"));
 
 // Admin (só admin)
 const AdminUsuarios = lazy(() => import("./features/admin/usuarios/AdminUsuarios"));
@@ -102,6 +103,7 @@ function App() {
             <Route path="/agente-design/avatares" element={<ProtectedRoute><AgenteDesign /></ProtectedRoute>} />
             <Route path="/agente-design/criacao-layout" element={<ProtectedRoute><CriacaoLayout /></ProtectedRoute>} />
             <Route path="/academy/gerar-certificados" element={<ProtectedRoute requireColaborador><GerarCertificados /></ProtectedRoute>} />
+            <Route path="/academy/gerar-contratos" element={<ProtectedRoute requireColaborador><GerarContratos /></ProtectedRoute>} />
             <Route path="/colaborador/midias-sociais/:brand" element={<ProtectedRoute requireColaborador><ColabMidiasSociais /></ProtectedRoute>} />
             {/* Backward compat — redireciona pra nova URL */}
             <Route path="/agente-design/criacao-fotos" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />

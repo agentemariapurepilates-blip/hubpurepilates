@@ -38,6 +38,7 @@ import {
   Radar,
   GraduationCap,
   PlayCircle,
+  FileSignature,
 } from 'lucide-react';
 
 const SectionHeader = ({
@@ -184,6 +185,7 @@ const Sidebar = () => {
   // Sub-grupo Academy (dentro de Colaboradores)
   const academyNavigation = [
     { name: 'Gerar certificados', href: '/academy/gerar-certificados', icon: GraduationCap, disabled: false },
+    { name: 'Automação de contratos', href: '/academy/gerar-contratos', icon: FileSignature, disabled: false },
   ];
 
   // Sub-grupo Mídias Sociais (calendários por marca, dentro de Colaboradores)
