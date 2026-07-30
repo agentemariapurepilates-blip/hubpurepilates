@@ -39,6 +39,10 @@ import {
   GraduationCap,
   PlayCircle,
   FileSignature,
+  LayoutDashboard,
+  Trophy,
+  Calendar,
+  LineChart,
 } from 'lucide-react';
 
 const SectionHeader = ({
@@ -76,7 +80,7 @@ import { useHasUnitAccess } from '@/features/colaborador/dashboard/hooks/useHasU
 
 // Accordion: apenas uma seção aberta por vez. Abrir uma fecha a anterior.
 // Persistido em sessionStorage — sobrevive à navegação e ao reload; reseta ao fechar a aba.
-type SectionKey = 'geral' | 'colaboradores' | 'agentes' | 'minha-area' | 'admin';
+type SectionKey = 'geral' | 'colaboradores' | 'agentes' | 'minha-area' | 'admin' | 'dashboard';
 
 export const MobileMenuButton = ({ mobileOpen, setMobileOpen }: { mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) => (
   <Button
@@ -102,9 +106,12 @@ const TUTORIAIS_PATHS = [
   '/manual-sistema',
 ];
 
-const sectionFromPath = (path: string): SectionKey | null => {
+export const sectionFromPath = (path: string): SectionKey | null => {
   if (AGENTES_DE_IA_ROUTE_PREFIXES.some((p) => path.startsWith(p))) return 'agentes';
   if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais'].some((p) => path.startsWith(p))) return 'colaboradores';
+  // Antes de '/minha-area': o Hub tem /minha-area/dashboard (Mídia Adicional),
+  // que NÃO pertence a esta seção. Por isso o teste é '/dashboard/' com barra.
+  if (path.startsWith('/dashboard/')) return 'dashboard';
   if (path.startsWith('/minha-area')) return 'minha-area';
   if (path.startsWith('/admin')) return 'admin';
   return null;
@@ -219,6 +226,15 @@ const Sidebar = () => {
       ? [{ name: 'Mídia adicional', href: '/minha-area/midia-adicional', icon: Megaphone, disabled: false }]
       : []),
     { name: 'Minhas solicitações', href: '/minha-area/minhas-solicitacoes', icon: Inbox, disabled: false },
+  ];
+
+  // Painel de Indicadores — banco Supabase separado, leitura anônima.
+  // Rótulos e ícones espelham o menu do projeto de origem.
+  const dashboardNavigation = [
+    { name: 'Visão Geral', href: '/dashboard/visao-geral', icon: LayoutDashboard },
+    { name: 'Top 10 Unidades', href: '/dashboard/top-10-unidades', icon: Trophy },
+    { name: 'Visão Diária', href: '/dashboard/visao-diaria', icon: Calendar },
+    { name: 'Cronologia', href: '/dashboard/cronologia', icon: LineChart },
   ];
 
   // Admin section
@@ -524,6 +540,39 @@ const Sidebar = () => {
             </div>
           </CollapsibleContent>
         </Collapsible>
+
+        {/* Dashboard — Painel de Indicadores */}
+        {(isColaborador || isAdmin) && (
+          <Collapsible open={openSection === 'dashboard'} onOpenChange={(o) => setOpenSection(o ? 'dashboard' : null)}>
+            <CollapsibleTrigger asChild>
+              <button type="button" className="w-full">
+                <SectionHeader icon={BarChart3} label="Dashboard" open={openSection === 'dashboard'} onMouseDown={(e) => e.preventDefault()} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+              <div className="space-y-0.5 pb-1">
+                {dashboardNavigation.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                      )
+                    }
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </NavLink>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         {/* Admin Section */}
         {isAdmin && (
