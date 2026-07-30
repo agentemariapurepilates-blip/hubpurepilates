@@ -1,7 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabaseIndicadores } from '@/integrations/supabase/indicadores';
 import { RawConsolidatedDaily } from '../types';
-import { toast } from 'sonner';
 
 export function useRawData(unitId: number | null, month: string | null) {
   return useQuery({
@@ -76,32 +75,6 @@ export function useTableColumns() {
       }
       
       return [];
-    },
-  });
-}
-
-export function useImportCSV() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ rows }: { rows: Record<string, string>[] }) => {
-      const { data, error } = await supabaseIndicadores.functions.invoke('import-csv', {
-        body: { rows }
-      });
-
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error || 'Import failed');
-
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['indicadores_raw-data'] });
-      queryClient.invalidateQueries({ queryKey: ['indicadores_latest-data'] });
-      queryClient.invalidateQueries({ queryKey: ['indicadores_table-columns'] });
-      toast.success(data.message || 'Dados importados com sucesso!');
-    },
-    onError: (error: any) => {
-      toast.error('Erro na importação: ' + error.message);
     },
   });
 }

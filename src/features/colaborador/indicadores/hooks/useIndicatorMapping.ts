@@ -1,7 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabaseIndicadores } from '@/integrations/supabase/indicadores';
 import { IndicatorMapping } from '../types';
-import { toast } from 'sonner';
 
 export function useIndicatorMappings() {
   return useQuery({
@@ -83,77 +82,6 @@ export function useHighlightIndicators() {
 
       if (error) throw error;
       return data as IndicatorMapping[];
-    },
-  });
-}
-
-export function useUpdateIndicatorMapping() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (mapping: Partial<IndicatorMapping> & { id: number }) => {
-      const { data, error } = await supabaseIndicadores
-        .from('indicator_mapping')
-        .update(mapping)
-        .eq('id', mapping.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['indicadores_indicator-mappings'] });
-      toast.success('Mapeamento atualizado!');
-    },
-    onError: (error) => {
-      toast.error('Erro ao atualizar: ' + error.message);
-    },
-  });
-}
-
-export function useCreateIndicatorMapping() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (mapping: Omit<IndicatorMapping, 'id' | 'created_at'>) => {
-      const { data, error } = await supabaseIndicadores
-        .from('indicator_mapping')
-        .insert(mapping)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['indicadores_indicator-mappings'] });
-      toast.success('Mapeamento criado!');
-    },
-    onError: (error) => {
-      toast.error('Erro ao criar: ' + error.message);
-    },
-  });
-}
-
-export function useDeleteIndicatorMapping() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (id: number) => {
-      const { error } = await supabaseIndicadores
-        .from('indicator_mapping')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['indicadores_indicator-mappings'] });
-      toast.success('Mapeamento removido!');
-    },
-    onError: (error) => {
-      toast.error('Erro ao remover: ' + error.message);
     },
   });
 }
