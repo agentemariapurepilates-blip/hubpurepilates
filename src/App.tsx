@@ -39,6 +39,12 @@ const PedidosDemanda = lazy(() => import("./features/colaborador/demandas/Pedido
 const MidiaAdicionalUnidades = lazy(() => import("./features/colaborador/unidades/MidiaAdicionalUnidades"));
 const ColabMidiasSociais = lazy(() => import("./features/colaborador/marketing/ColabMidiasSociais"));
 const DashboardMidiaAdicional = lazy(() => import("./features/colaborador/dashboard/DashboardMidiaAdicional"));
+
+// Painel de Indicadores (banco Supabase separado — ver integrations/supabase/indicadores.ts)
+const IndicadoresVisaoGeral = lazy(() => import("./features/colaborador/indicadores/VisaoGeral"));
+const IndicadoresTop10Unidades = lazy(() => import("./features/colaborador/indicadores/Top10Unidades"));
+const IndicadoresVisaoDiaria = lazy(() => import("./features/colaborador/indicadores/VisaoDiaria"));
+const IndicadoresCronologia = lazy(() => import("./features/colaborador/indicadores/Cronologia"));
 const AgenteDesign = lazy(() => import("./features/colaborador/agentes/agente-design/AgenteDesign"));
 const GerarFoto = lazy(() => import("./features/colaborador/agentes/agente-design/GerarFoto"));
 const CriacaoLayout = lazy(() => import("./features/colaborador/agentes/agente-design/CriacaoLayout"));
@@ -109,6 +115,10 @@ function App() {
             <Route path="/agente-design/criacao-fotos" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />
             <Route path="/minha-area/dashboard" element={<ProtectedRoute><DashboardMidiaAdicional /></ProtectedRoute>} />
+            <Route path="/dashboard/visao-geral" element={<ProtectedRoute requireColaborador><IndicadoresVisaoGeral /></ProtectedRoute>} />
+            <Route path="/dashboard/top-10-unidades" element={<ProtectedRoute requireColaborador><IndicadoresTop10Unidades /></ProtectedRoute>} />
+            <Route path="/dashboard/visao-diaria" element={<ProtectedRoute requireColaborador><IndicadoresVisaoDiaria /></ProtectedRoute>} />
+            <Route path="/dashboard/cronologia" element={<ProtectedRoute requireColaborador><IndicadoresCronologia /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional" element={<ProtectedRoute requireAdmin><MidiaAdicional /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional/sync-logs" element={<ProtectedRoute requireAdmin><MidiaAdicionalSyncLogs /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional/:slug" element={<ProtectedRoute requireAdmin><MidiaAdicionalUnidade /></ProtectedRoute>} />
