@@ -20,7 +20,7 @@ const anonKey = import.meta.env.VITE_INDICADORES_SUPABASE_ANON_KEY;
 if (!url || !anonKey) {
   throw new Error(
     'VITE_INDICADORES_SUPABASE_URL e VITE_INDICADORES_SUPABASE_ANON_KEY precisam estar no .env.local. ' +
-      'Sem elas as telas de Dashboard não carregam.',
+      'Sem elas as telas de Dashboard não carregam. Use o .env.local.example como modelo.',
   );
 }
 

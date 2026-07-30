@@ -3,10 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Páginas lazy-loaded — cada uma vira um chunk separado, baixado só ao visitar
 // Geral (todo mundo vê)
@@ -115,10 +116,16 @@ function App() {
             <Route path="/agente-design/criacao-fotos" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />
             <Route path="/minha-area/dashboard" element={<ProtectedRoute><DashboardMidiaAdicional /></ProtectedRoute>} />
-            <Route path="/dashboard/visao-geral" element={<ProtectedRoute requireColaborador><IndicadoresVisaoGeral /></ProtectedRoute>} />
-            <Route path="/dashboard/top-10-unidades" element={<ProtectedRoute requireColaborador><IndicadoresTop10Unidades /></ProtectedRoute>} />
-            <Route path="/dashboard/visao-diaria" element={<ProtectedRoute requireColaborador><IndicadoresVisaoDiaria /></ProtectedRoute>} />
-            <Route path="/dashboard/cronologia" element={<ProtectedRoute requireColaborador><IndicadoresCronologia /></ProtectedRoute>} />
+            {/* As telas de Dashboard dependem de um segundo banco Supabase, configurado
+                por variáveis do .env.local. Sem elas o módulo lança na avaliação, e como
+                as rotas são lazy() isso viraria tela branca no Hub inteiro. O boundary
+                segura qualquer erro de render dessas 4 telas e mostra a mensagem. */}
+            <Route element={<ErrorBoundary area="Dashboard"><Outlet /></ErrorBoundary>}>
+              <Route path="/dashboard/visao-geral" element={<ProtectedRoute requireColaborador><IndicadoresVisaoGeral /></ProtectedRoute>} />
+              <Route path="/dashboard/top-10-unidades" element={<ProtectedRoute requireColaborador><IndicadoresTop10Unidades /></ProtectedRoute>} />
+              <Route path="/dashboard/visao-diaria" element={<ProtectedRoute requireColaborador><IndicadoresVisaoDiaria /></ProtectedRoute>} />
+              <Route path="/dashboard/cronologia" element={<ProtectedRoute requireColaborador><IndicadoresCronologia /></ProtectedRoute>} />
+            </Route>
             <Route path="/minha-area/midia-adicional" element={<ProtectedRoute requireAdmin><MidiaAdicional /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional/sync-logs" element={<ProtectedRoute requireAdmin><MidiaAdicionalSyncLogs /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional/:slug" element={<ProtectedRoute requireAdmin><MidiaAdicionalUnidade /></ProtectedRoute>} />

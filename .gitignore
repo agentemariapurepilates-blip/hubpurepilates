@@ -3,6 +3,8 @@
 .env.*
 .env.local
 .env.production
+# Modelo versionado (só placeholders) para quem clona o repo do zero
+!.env.local.example
 
 
 # Logs
