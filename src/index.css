@@ -151,6 +151,21 @@
     transform: translateY(-2px);
   }
 
+  /* Cartão dos painéis de indicadores (seção Dashboard).
+     Portado do projeto purepilatesrelatorios, onde era
+     `bg-card rounded-xl p-5 border border-border shadow-sm hover:shadow-md
+     transition-all duration-300`. Aqui as sombras vêm dos tokens do Hub
+     (--shadow-sm/--shadow-md), que têm os mesmos valores das sombras
+     equivalentes do Tailwind — a aparência da origem fica preservada. */
+  .metric-card {
+    @apply bg-card rounded-xl p-5 border border-border transition-all duration-300;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .metric-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+
   .sector-tag {
     @apply inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide;
   }
