@@ -7,6 +7,7 @@ describe('sectionFromPath', () => {
     expect(sectionFromPath('/dashboard/top-10-unidades')).toBe('dashboard');
     expect(sectionFromPath('/dashboard/visao-diaria')).toBe('dashboard');
     expect(sectionFromPath('/dashboard/cronologia')).toBe('dashboard');
+    expect(sectionFromPath('/dashboard/administracao')).toBe('dashboard');
   });
 
   it('mantém /minha-area/dashboard em Minha Área — não confunde com a seção nova', () => {
