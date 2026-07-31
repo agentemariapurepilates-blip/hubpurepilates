@@ -45,8 +45,10 @@ export function IntegrationStatusTab() {
   const { data: logs, isLoading: logsLoading, error: erro } = useIntegrationLogs(EXECUCOES_NO_HISTORICO);
   const [docsOpen, setDocsOpen] = useState(false);
 
-  // Só derivam depois que a lista chega: enquanto carrega, os cartões mostram
-  // "-" em vez de zeros que parecem dado de verdade.
+  // Só derivam depois que a lista chega. Enquanto carrega, "Último Import" e
+  // "Taxa de Sucesso" mostram "-" em vez de zeros que passariam por dado real.
+  // Os outros dois cartões ainda mostram "Sem dados" e "Nenhuma" durante o
+  // carregamento — é como a origem se comporta, e foi portado assim.
   const latestSync = useMemo(() => (logs ? ultimaSincronizacaoBemSucedida(logs) : undefined), [logs]);
   const stats = useMemo(() => (logs ? estatisticasDeIntegracao(logs) : undefined), [logs]);
 
@@ -104,7 +106,12 @@ export function IntegrationStatusTab() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Última Sincronização</CardDescription>
+            {/* O escopo vai no rótulo: a busca acontece só dentro das
+                execuções carregadas, então "Nenhuma" quer dizer "nenhuma
+                destas", não "nenhuma jamais". */}
+            <CardDescription>
+              Última Sincronização (nas {EXECUCOES_NO_HISTORICO} últimas)
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="font-semibold text-sm">

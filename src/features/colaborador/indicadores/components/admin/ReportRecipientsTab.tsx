@@ -20,6 +20,11 @@ import { AvisoDaFonte } from './AvisoDaFonte';
 //
 // O QUE FICOU: o horário e a ativação do envio, a lista completa de
 // destinatários com o estado de cada um, e os estados de carregando e vazio.
+//
+// UM ESTADO QUE A ORIGEM NÃO CHEGAVA A TER: lá o `.single()` estourava quando
+// report_settings estava vazia. Aqui a linha ausente é leitura normal, então a
+// aba mostra o padrão do sistema — mas marcado como padrão, nunca disfarçado
+// de configuração salva.
 
 /** Horário do envio no formato HH:MM, com os padrões da origem quando falta a linha. */
 function horarioDeEnvio(hora: number | undefined, minuto: number | undefined): string {
@@ -49,6 +54,12 @@ export function ReportRecipientsTab() {
     );
   }
 
+  // A tabela report_settings pode vir vazia. Nesse caso os valores mostrados
+  // não são a configuração salva — são o padrão embutido no código. Numa aba
+  // cujo trabalho é dizer como o envio está configurado, apresentar um sem
+  // marcar seria a pior falha possível: a pessoa lê "08:00" e vai embora
+  // achando que existe um horário salvo.
+  const semConfiguracaoSalva = !settings;
   const envioAtivado = settings?.enabled ?? true;
 
   return (
@@ -62,13 +73,16 @@ export function ReportRecipientsTab() {
           </CardTitle>
           <CardDescription>Horário e ativação do envio automático diário</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Envio automático:</span>
               <Badge variant={envioAtivado ? 'default' : 'secondary'}>
                 {envioAtivado ? 'Ativado' : 'Desativado'}
               </Badge>
+              {semConfiguracaoSalva && (
+                <span className="text-xs text-muted-foreground">(padrão)</span>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -77,8 +91,18 @@ export function ReportRecipientsTab() {
                 {horarioDeEnvio(settings?.send_hour, settings?.send_minute)}
               </span>
               <span className="text-sm text-muted-foreground">(Brasília)</span>
+              {semConfiguracaoSalva && (
+                <span className="text-xs text-muted-foreground">(padrão)</span>
+              )}
             </div>
           </div>
+
+          {semConfiguracaoSalva && (
+            <p className="text-xs text-muted-foreground">
+              Nenhuma configuração salva no banco — os valores acima são o padrão do sistema, não
+              o que está gravado.
+            </p>
+          )}
         </CardContent>
       </Card>
 

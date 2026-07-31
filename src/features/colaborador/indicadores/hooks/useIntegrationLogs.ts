@@ -38,10 +38,29 @@ export function useIntegrationLogs(limit: number = 20) {
 // abaixo deles.
 
 /**
+ * Instante da conclusão, em milissegundos, para poder ordenar.
+ *
+ * Comparar `completed_at` como texto pareceria funcionar e não funciona: o
+ * mesmo instante pode chegar como `...12:00:00Z` ou como `...14:00:00+02:00`,
+ * e aí a ordem alfabética não tem relação nenhuma com a ordem no tempo.
+ *
+ * Sem data (ou com data ilegível) vai para o fim da fila, nunca para o topo:
+ * uma execução que não registrou quando terminou não pode ser apresentada
+ * como a mais recente. O valor é finito de propósito — com `-Infinity`, duas
+ * linhas sem data fariam o comparador devolver `NaN`.
+ */
+function instanteDeConclusao(log: IntegrationLog): number {
+  if (!log.completed_at) return Number.MIN_SAFE_INTEGER;
+  const instante = new Date(log.completed_at).getTime();
+  return Number.isNaN(instante) ? Number.MIN_SAFE_INTEGER : instante;
+}
+
+/**
  * Última execução bem-sucedida.
  * Diferença conhecida em relação à origem: procura só entre as execuções
  * carregadas. Se nenhuma das últimas `limit` deu certo, o cartão mostra
- * "Nenhuma" mesmo que exista um sucesso mais antigo no banco.
+ * "Nenhuma" mesmo que exista um sucesso mais antigo no banco. Por isso o
+ * rótulo do cartão diz o escopo — ver IntegrationStatusTab.
  */
 export function ultimaSincronizacaoBemSucedida(
   logs: IntegrationLog[] | undefined,
@@ -51,8 +70,9 @@ export function ultimaSincronizacaoBemSucedida(
   if (!sucessos.length) return null;
 
   // A origem ordenava por completed_at; a lista chega ordenada por started_at.
-  // Reordena para que o cartão mostre mesmo a conclusão mais recente.
-  return [...sucessos].sort((a, b) => (b.completed_at ?? '').localeCompare(a.completed_at ?? ''))[0];
+  // Reordena para que o cartão mostre mesmo a conclusão mais recente — as duas
+  // ordens divergem sempre que uma execução demora mais que a seguinte.
+  return [...sucessos].sort((a, b) => instanteDeConclusao(b) - instanteDeConclusao(a))[0];
 }
 
 export interface EstatisticasDeIntegracao {
