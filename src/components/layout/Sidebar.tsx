@@ -43,6 +43,7 @@ import {
   Trophy,
   Calendar,
   LineChart,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 const SectionHeader = ({
@@ -235,6 +236,7 @@ const Sidebar = () => {
     { name: 'Top 10 Unidades', href: '/dashboard/top-10-unidades', icon: Trophy },
     { name: 'Visão Diária', href: '/dashboard/visao-diaria', icon: Calendar },
     { name: 'Cronologia', href: '/dashboard/cronologia', icon: LineChart },
+    { name: 'Administração', href: '/dashboard/administracao', icon: SlidersHorizontal },
   ];
 
   // Admin section
