@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 
 // A área de Dashboard é SOMENTE CONSULTA por decisão de produto: ela lê um
 // banco Supabase de produção compartilhado com o painel do Cloudflare, e uma
@@ -23,6 +23,11 @@ const CHAMADA_RPC = /\.rpc\s*\(\s*([^,)]*)/g;
 // Só aceitamos um literal de string simples: 'nome', "nome" ou `nome`.
 const NOME_LITERAL = /^(['"`])([A-Za-z0-9_]+)\1$/;
 
+// Quem importa o cliente do banco de indicadores. Pega import estático,
+// `import()` dinâmico e `require()`, tanto no alias `@/...` quanto relativo.
+// Menção em comentário (sem aspas) não conta.
+const IMPORTA_CLIENTE = /(?:from|import|require)\s*\(?\s*['"][^'"]*integrations\/supabase\/indicadores['"]/;
+
 const MOTIVO_RPC =
   'RPC não permitida na área de Dashboard. Uma função Postgres pode ser SECURITY DEFINER e ' +
   'escrever no banco de produção ignorando a segurança de linha, então só passam nomes que ' +
@@ -30,6 +35,12 @@ const MOTIVO_RPC =
   'que a função só lê e acrescentar o nome em RPCS_DE_LEITURA_PERMITIDAS, neste arquivo. ' +
   'Se a chamada aparecer com nome dinâmico (variável, template com interpolação), ela falha ' +
   'de propósito — o nome precisa ser legível aqui para poder ser conferido.';
+
+const MOTIVO_IMPORT =
+  'O cliente supabaseIndicadores só pode ser usado dentro de ' +
+  `${RAIZ}/. Ele aponta para um banco de produção compartilhado com o painel do Cloudflare, e ` +
+  'a garantia de somente-consulta é sustentada pela varredura de escrita que roda apenas nessa ' +
+  'pasta. Um import de fora escapa da varredura e fura a garantia sem ninguém perceber.';
 
 function arquivosDe(dir: string): string[] {
   return readdirSync(dir).flatMap((nome) => {
@@ -74,5 +85,18 @@ describe('área de Dashboard é somente consulta', () => {
     }
 
     expect(infratores, MOTIVO_RPC).toEqual([]);
+  });
+
+  it('o cliente do banco de indicadores só é importado de dentro da feature', () => {
+    // O próprio módulo que DEFINE o cliente é a exceção óbvia.
+    const definicao = join('src', 'integrations', 'supabase', 'indicadores.ts');
+    const dentroDaFeature = join(RAIZ) + sep;
+
+    const infratores = arquivosDe('src')
+      .filter((arquivo) => arquivo !== definicao)
+      .filter((arquivo) => !arquivo.startsWith(dentroDaFeature))
+      .filter((arquivo) => IMPORTA_CLIENTE.test(readFileSync(arquivo, 'utf8')));
+
+    expect(infratores, MOTIVO_IMPORT).toEqual([]);
   });
 });
