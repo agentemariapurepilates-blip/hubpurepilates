@@ -120,7 +120,7 @@ function App() {
             {/* As telas de Dashboard dependem de um segundo banco Supabase, configurado
                 por variáveis do .env.local. Sem elas o módulo lança na avaliação, e como
                 as rotas são lazy() isso viraria tela branca no Hub inteiro. O boundary
-                segura qualquer erro de render dessas 4 telas e mostra a mensagem. */}
+                segura qualquer erro de render das telas abaixo e mostra a mensagem. */}
             <Route element={<ErrorBoundary area="Dashboard"><Outlet /></ErrorBoundary>}>
               <Route path="/dashboard/visao-geral" element={<ProtectedRoute requireColaborador><IndicadoresVisaoGeral /></ProtectedRoute>} />
               <Route path="/dashboard/top-10-unidades" element={<ProtectedRoute requireColaborador><IndicadoresTop10Unidades /></ProtectedRoute>} />
