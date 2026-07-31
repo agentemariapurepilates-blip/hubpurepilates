@@ -7,11 +7,16 @@ import { CalculatedMetricsTab } from './components/admin/CalculatedMetricsTab';
 import { IndicatorOrderTab } from './components/admin/IndicatorOrderTab';
 import { GlobalGoalsTab } from './components/admin/GlobalGoalsTab';
 import { UnidadesTab } from './components/admin/UnidadesTab';
+import { AbaExterna } from './components/admin/AbaExterna';
 
 // Tela de administração do Painel de Indicadores, em modo somente consulta.
-// Reúne as 7 abas que mostram a configuração hoje mantida no painel publicado
+// Reúne as abas que mostram a configuração hoje mantida no painel publicado
 // em pure-pilates-insights.pages.dev. Nenhuma aba grava no banco — ver a
 // trava de sem-escrita.test.ts na raiz da feature.
+//
+// As duas últimas abas (Relatório e Integração) não trazem tabela: os dados
+// delas exigem sessão de administrador do projeto de indicadores, que o Hub
+// não tem. Ver AbaExterna.tsx.
 
 export default function Administracao() {
   return (
@@ -33,7 +38,7 @@ export default function Administracao() {
         </div>
 
         <Tabs defaultValue="analise">
-          {/* Em telas estreitas as 7 abas rolam horizontalmente em vez de
+          {/* Em telas estreitas as abas rolam horizontalmente em vez de
               quebrar linha ou estourar a largura da página. */}
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="analise">Análise</TabsTrigger>
@@ -43,6 +48,8 @@ export default function Administracao() {
             <TabsTrigger value="ordenacao">Ordenação</TabsTrigger>
             <TabsTrigger value="metas">Metas</TabsTrigger>
             <TabsTrigger value="unidades">Unidades</TabsTrigger>
+            <TabsTrigger value="relatorio">Relatório</TabsTrigger>
+            <TabsTrigger value="integracao">Integração</TabsTrigger>
           </TabsList>
 
           <TabsContent value="analise">
@@ -65,6 +72,20 @@ export default function Administracao() {
           </TabsContent>
           <TabsContent value="unidades">
             <UnidadesTab />
+          </TabsContent>
+          <TabsContent value="relatorio">
+            <AbaExterna
+              titulo="Destinatários do relatório"
+              conteudo="Quem recebe o relatório diário por e-mail e como o envio está configurado."
+              abaNoPainel="Relatório"
+            />
+          </TabsContent>
+          <TabsContent value="integracao">
+            <AbaExterna
+              titulo="Status da integração"
+              conteudo="Histórico das sincronizações de dados e o resultado de cada execução."
+              abaNoPainel="Integração"
+            />
           </TabsContent>
         </Tabs>
       </div>
