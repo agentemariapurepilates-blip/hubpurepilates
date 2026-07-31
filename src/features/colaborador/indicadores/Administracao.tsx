@@ -7,16 +7,18 @@ import { CalculatedMetricsTab } from './components/admin/CalculatedMetricsTab';
 import { IndicatorOrderTab } from './components/admin/IndicatorOrderTab';
 import { GlobalGoalsTab } from './components/admin/GlobalGoalsTab';
 import { UnidadesTab } from './components/admin/UnidadesTab';
-import { AbaExterna } from './components/admin/AbaExterna';
+import { ReportRecipientsTab } from './components/admin/ReportRecipientsTab';
+import { IntegrationStatusTab } from './components/admin/IntegrationStatusTab';
 
 // Tela de administração do Painel de Indicadores, em modo somente consulta.
 // Reúne as abas que mostram a configuração hoje mantida no painel publicado
 // em pure-pilates-insights.pages.dev. Nenhuma aba grava no banco — ver a
 // trava de sem-escrita.test.ts na raiz da feature.
 //
-// As duas últimas abas (Relatório e Integração) não trazem tabela: os dados
-// delas exigem sessão de administrador do projeto de indicadores, que o Hub
-// não tem. Ver AbaExterna.tsx.
+// As duas últimas abas (Relatório e Integração) leem tabelas protegidas do
+// projeto de indicadores, que só abrem com a chave de serviço. Elas não usam o
+// cliente supabase do navegador: buscam pelo proxy do servidor de
+// desenvolvimento, onde a chave fica. Ver lib/indicadoresProxy.ts.
 
 export default function Administracao() {
   return (
@@ -74,18 +76,10 @@ export default function Administracao() {
             <UnidadesTab />
           </TabsContent>
           <TabsContent value="relatorio">
-            <AbaExterna
-              titulo="Destinatários do relatório"
-              conteudo="Quem recebe o relatório diário por e-mail e como o envio está configurado."
-              abaNoPainel="Relatório"
-            />
+            <ReportRecipientsTab />
           </TabsContent>
           <TabsContent value="integracao">
-            <AbaExterna
-              titulo="Status da integração"
-              conteudo="Histórico das sincronizações de dados e o resultado de cada execução."
-              abaNoPainel="Integração"
-            />
+            <IntegrationStatusTab />
           </TabsContent>
         </Tabs>
       </div>
