@@ -1,0 +1,151 @@
+{
+  "name": "Aviso de inauguracao (marketing)",
+  "active": false,
+  "nodes": [
+    {
+      "id": "8f2b1c40-5a1e-4a1d-9c31-0b6a1e9d0001",
+      "name": "Todo dia as 03:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-560, 0],
+      "notes": "Roda todo dia as 03:00 no fuso America/Sao_Paulo. O fuso NAO vem da instancia: esta declarado em settings.timezone deste workflow, que o Schedule Trigger prioriza sobre GENERIC_TIMEZONE. Rodando as 3h da manha, um deslocamento de fuso mudaria o dia consultado e o aviso sairia um dia cedo ou um dia tarde.",
+      "notesInFlow": true,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 3,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "8f2b1c40-5a1e-4a1d-9c31-0b6a1e9d0002",
+      "name": "Buscar inauguracoes de hoje",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-340, 0],
+      "notes": "Le a tabela inauguracao_requests via PostgREST com a chave de servico (passa por cima da RLS, e o que permite ver as solicitacoes de todos os colaboradores). A data de hoje vem de $now.setZone('America/Sao_Paulo'), NAO do fuso da instancia. Se nenhuma unidade inaugura hoje, a resposta e uma lista vazia, nenhum item sai deste no e o workflow termina sem enviar nada -- isso nao e erro.",
+      "notesInFlow": true,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/inauguracao_requests?select=*&data_inauguracao=eq.{{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}&email_enviado_em=is.null",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8f2b1c40-5a1e-4a1d-9c31-0b6a1e9d0003",
+      "name": "Enviar e-mail ao marketing",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [-120, 0],
+      "notes": "Um e-mail por unidade que inaugura hoje. PREENCHER: o remetente (fromEmail), a lista do marketing (toEmail, separada por virgula) e a credencial SMTP -- nada disso vem preenchido de proposito, para nao ir endereco chutado para producao. Este no roda ANTES da marcacao no banco; ver a nota do proximo no.",
+      "notesInFlow": true,
+      "parameters": {
+        "fromEmail": "PREENCHER-remetente@purepilates.com.br",
+        "toEmail": "PREENCHER-marketing@purepilates.com.br",
+        "subject": "=Inauguração hoje — {{ $json.nome_unidade }}",
+        "emailFormat": "html",
+        "html": "=<p>Uma unidade inaugura <strong>hoje</strong>. Estes sao os dados que o colaborador preencheu no Hub:</p>\n<table cellpadding=\"6\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:14px\">\n  <tr><td><strong>Unidade</strong></td><td>{{ $json.nome_unidade }}</td></tr>\n  <tr><td><strong>ID da unidade</strong></td><td>{{ $json.unidade_id }}</td></tr>\n  <tr><td><strong>Endereço</strong></td><td>{{ $json.endereco }}</td></tr>\n  <tr><td><strong>Data da inauguração</strong></td><td>{{ DateTime.fromFormat($json.data_inauguracao, 'yyyy-MM-dd').setLocale('pt-BR').toFormat(\"dd 'de' LLLL 'de' yyyy\") }}</td></tr>\n  <tr><td><strong>Solicitante</strong></td><td>{{ $json.solicitante_nome }} &lt;{{ $json.solicitante_email }}&gt;</td></tr>\n</table>\n<p style=\"color:#666666;font-size:12px;font-family:Arial,Helvetica,sans-serif\">Enviado automaticamente pelo Hub Pure Pilates, pelo workflow \"Aviso de inauguracao (marketing)\" do n8n. Duvidas sobre os dados: fale com o solicitante acima.</p>",
+        "options": {}
+      }
+    },
+    {
+      "id": "8f2b1c40-5a1e-4a1d-9c31-0b6a1e9d0004",
+      "name": "Marcar aviso como enviado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [100, 0],
+      "notes": "Grava email_enviado_em na linha, para o aviso nao sair de novo. Vem DEPOIS do envio de proposito: se a marcacao falhar, o marketing pode receber repetido -- incomodo. Se a ordem fosse inversa e o e-mail falhasse, a linha ficaria marcada e o aviso nunca sairia -- silencioso e pior. NAO inverta. O id vem de $('Buscar inauguracoes de hoje').item porque a saida do no de e-mail e a resposta do SMTP, nao a linha do banco.",
+      "notesInFlow": true,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/inauguracao_requests?id=eq.{{ $('Buscar inauguracoes de hoje').item.json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"email_enviado_em\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Todo dia as 03:00": {
+      "main": [
+        [
+          {
+            "node": "Buscar inauguracoes de hoje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar inauguracoes de hoje": {
+      "main": [
+        [
+          {
+            "node": "Enviar e-mail ao marketing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar e-mail ao marketing": {
+      "main": [
+        [
+          {
+            "node": "Marcar aviso como enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "pinData": {},
+  "tags": []
+}
