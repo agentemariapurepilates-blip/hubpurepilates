@@ -335,8 +335,38 @@ gaste tempo investigando os que estão marcados como confirmados.
 | Fuso declarado no workflow, não no nó | `settings.timezone` | **Confirmado no código-fonte** — o `ScheduleTrigger` chama `this.getTimezone()`, que lê `workflow.settings.timezone`; o nó **não tem** campo de fuso próprio | Confira em *Workflow settings → Timezone*. Ver o alerta sobre copiar-e-colar no passo 2 da importação |
 | Um e-mail por unidade | O HTTP Request v4 divide o array JSON da resposta em vários itens | **Confirmado no código-fonte** — `if (Array.isArray(response)) { response.forEach(...) }`, com `pairedItem` por elemento | Nada a fazer. **Não** insira um nó Split Out: ele é desnecessário e no cenário abaixo até atrapalha |
 | `$('Buscar inauguracoes de hoje').item.json.id` no nó 5 | Referência ao item pareado do nó 2 | **Confirmado no código-fonte** — o `emailSend` empurra `pairedItem: { item: itemIndex }`, então o vínculo segue item a item mesmo com várias unidades no mesmo dia; e se o pareamento quebrasse, o n8n lança erro explícito em vez de marcar a linha errada em silêncio | Nada a fazer. Foi feito assim porque a saída do nó de e-mail é a resposta do SMTP (`messageId`, `accepted`...), **não** a linha do banco — `$json.id` ali daria `undefined` |
-| `filter` `typeVersion` e o formato das condições | `2.2`, condições v2 com `operator: string/exists` e `typeValidation: "loose"` | **Não verificado** — é o único nó cujo formato não foi conferido no fonte. O `2.2` e a estrutura `conditions.options.version = 2` acompanham o nó `if` dos exemplos oficiais | Se o Filter abrir com a condição em branco, reconfigure pela interface: **campo** `{{ $json.messageId }}`, **operação** *String → exists*. O importante é a **semântica** (passar só o que tem `messageId`), não a versão. Alternativa sem nó nenhum, se preferir: apague o Filter, ligue o e-mail direto na marcação e troque a URL do nó 5 por `?id=eq.{{ $json.messageId ? $('Buscar inauguracoes de hoje').item.json.id : '00000000-0000-0000-0000-000000000000' }}` — protege igual, mas a trava fica escondida numa expressão |
+| `filter` `typeVersion` e o formato das condições | `2.2`, condições v2 com `operator: string/exists`, `singleValue: true` e `typeValidation: "loose"` | **Confirmado no código-fonte** — o nó registra as versões `{1, 2, 2.1, 2.2, 2.3}`, e o operador bate com a definição canônica `'string:exists': { type: 'string', operation: 'exists', singleValue: true }` (`FilterConditions/constants.ts`). O `singleValue: true` é necessário, não enfeite: é ele que faz o `filter-parameter.ts` pular a validação do `rightValue` vazio. E `={{ $json.messageId }}` é expressão única cobrindo a string inteira, então o n8n devolve o **valor cru** (`undefined` numa linha do banco), não a string `''` — se virasse `''`, o `exists` daria **true** e o guard deixaria passar tudo | Nada a fazer. **Não** troque pela alternativa do ternário na URL (descrita abaixo) sem necessidade: ela devolve a trava para dentro de uma expressão |
 | Data por extenso em pt-BR | `DateTime.fromFormat(...).setLocale('pt-BR')` (Luxon) | Não verificado — depende do ICU do Node da instância | Se o mês vier em inglês, troque por `{{ $json.data_inauguracao.split('-').reverse().join('/') }}` para `dd/mm/aaaa` |
+
+### A única ressalva de portabilidade: o Filter exige n8n ≥ 1.59.0
+
+O nó `So o que virou e-mail de verdade` usa `typeVersion 2.2`, que **existe a
+partir do n8n 1.59.0**. Numa instância mais antiga o nó importa como **versão
+desconhecida** — ele aparece no canvas quebrado/não reconhecido, não com a
+condição em branco. É o único ponto do workflow com piso de versão.
+
+**O fallback é seguro:** baixe o `typeVersion` do Filter para `2` ou `2.1` (no
+JSON, ou removendo e recriando o nó pela interface). **Isso não muda nada neste
+guard.** A condição usada é `exists` sobre um valor ausente, e o `filter-parameter`
+devolve o veredito para `null`/`undefined` **antes** de qualquer código sensível
+a versão — o `version` das condições só afeta comparação de *boolean* e *number*,
+que este filtro não usa.
+
+Pelo mesmo motivo, `typeValidation: "loose"` é inócuo aqui: o curto-circuito do
+valor ausente acontece antes da checagem de tipo, com `strict` ou `loose`. Está
+posto por coerência, não por necessidade.
+
+**Alternativa, se por algum motivo o Filter não servir na sua instância:** apague
+o nó, ligue o e-mail direto na marcação e troque a URL do nó 5 por
+
+```
+?id=eq.{{ $json.messageId ? $('Buscar inauguracoes de hoje').item.json.id : '00000000-0000-0000-0000-000000000000' }}
+```
+
+O PATCH não casa nenhuma linha quando o e-mail não saiu, então protege igual.
+**Só use se precisar** — a trava fica escondida numa expressão, dentro do próprio
+nó que ela protege, que é justamente onde alguém vai "limpar" um ternário que não
+parece ter a ver com marcar uma linha.
 
 ### O único cenário que ainda exige ajuste: a resposta interpretada como texto
 
