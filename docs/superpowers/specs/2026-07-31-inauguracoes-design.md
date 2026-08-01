@@ -116,7 +116,21 @@ CREATE POLICY "Exclui ate 48h antes; admin sempre"
   );
 ```
 
-**Nota sobre a policy de UPDATE:** ela não tem `WITH CHECK`, então um colaborador dentro do prazo poderia, em tese, adiar a data e reabrir o prazo. Isso é aceitável — adiar a inauguração é uma alteração legítima, e o objetivo da regra é impedir mudança em cima da hora, não impedir remarcação feita com antecedência.
+**Nota sobre a policy de UPDATE — corrigida após revisão.** A versão anterior deste spec afirmava que, sem `WITH CHECK`, a policy validaria apenas a linha antiga. Isso descreve mal o Postgres: **quando nenhum `WITH CHECK` é definido para UPDATE, a expressão do `USING` é reusada como `WITH CHECK`**. Deixar implícito teria dois efeitos:
+
+- **Bom, e não previsto:** impede `UPDATE ... SET user_id = <outro>`, ou seja, transferir a solicitação para outra pessoa.
+- **Ruim:** impediria o colaborador, mesmo dentro do prazo, de **antecipar** a data para dentro da janela de 48h — o banco recusaria enquanto a tela mostra o botão de editar.
+
+**Decisão: antecipar é permitido.** Uma inauguração antecipada é justamente a informação que o marketing precisa receber depressa; bloquear obrigaria a pessoa a procurar o marketing, que é o que esta tela existe para eliminar. Quem está dentro do prazo no momento da edição pode editar, inclusive a data.
+
+Por isso o `WITH CHECK` é **explícito**, exigindo só a propriedade — o que preserva o fechamento do buraco de transferência:
+
+```sql
+  WITH CHECK (
+    public.has_role(auth.uid(), 'admin')
+    OR user_id = auth.uid()
+  )
+```
 
 ## 5. Frontend
 

@@ -55,6 +55,20 @@ CREATE POLICY "Colaborador cria em seu nome"
   );
 
 -- A regra das 48h vive aqui.
+--
+-- WITH CHECK explicito de proposito: sem ele, o Postgres reusaria a expressao
+-- do USING tambem para validar a linha NOVA, o que bloquearia o colaborador de
+-- ANTECIPAR a data de inauguracao para dentro da janela das 48h (o UPDATE
+-- falharia mesmo tendo comecado dentro do prazo). Antecipar deve ser permitido
+-- -- e justamente a informacao que o marketing precisa saber rapido, e essa
+-- tela existe para eliminar a necessidade de procurar o marketing por
+-- conversa. Quem estava no prazo no momento da edicao tem o direito de mudar
+-- a data, inclusive para uma data mais proxima.
+--
+-- O WITH CHECK abaixo exige so a propriedade da linha (nao o prazo), o que
+-- preserva a outra funcao que o USING/CHECK implicito cumpriria: impedir
+-- `UPDATE ... SET user_id = <outro>` para transferir a linha para outra
+-- pessoa.
 CREATE POLICY "Edita ate 48h antes; admin sempre"
   ON public.inauguracao_requests FOR UPDATE
   USING (
@@ -63,6 +77,10 @@ CREATE POLICY "Edita ate 48h antes; admin sempre"
       user_id = auth.uid()
       AND now() < (data_inauguracao::timestamp AT TIME ZONE 'America/Sao_Paulo') - interval '48 hours'
     )
+  )
+  WITH CHECK (
+    public.has_role(auth.uid(), 'admin')
+    OR user_id = auth.uid()
   );
 
 CREATE POLICY "Exclui ate 48h antes; admin sempre"
@@ -74,3 +92,10 @@ CREATE POLICY "Exclui ate 48h antes; admin sempre"
       AND now() < (data_inauguracao::timestamp AT TIME ZONE 'America/Sao_Paulo') - interval '48 hours'
     )
   );
+
+COMMENT ON TABLE public.inauguracao_requests IS
+  'Solicitacoes feitas pelo colaborador com os dados de uma unidade que vai inaugurar, para o marketing montar a campanha.';
+COMMENT ON COLUMN public.inauguracao_requests.data_inauguracao IS
+  'Data (sem hora) da inauguracao. A inauguracao comeca as 00:00 em Sao Paulo; o prazo de alteracao do colaborador fecha 48h antes disso (ver as policies de UPDATE/DELETE).';
+COMMENT ON COLUMN public.inauguracao_requests.unidade_id IS
+  'ID da unidade em texto livre -- nao ha vinculo com a tabela dpp_units nem com o cadastro de unidades.';

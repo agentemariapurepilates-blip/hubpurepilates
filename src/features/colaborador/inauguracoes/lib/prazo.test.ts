@@ -38,11 +38,14 @@ describe('podeAlterar', () => {
     expect(podeAlterar(INAUGURACAO, new Date('2026-09-01T12:00:00Z'))).toBe(false);
   });
 
-  it('não depende do fuso da máquina — a âncora é a data, não o relógio local', () => {
-    // Se o cálculo usasse `new Date('2026-08-20')` sem fuso explícito, ou
-    // getFullYear()/getMonth() locais, este resultado mudaria conforme a
-    // máquina. Ancorar em -03:00 mantém o mesmo instante em qualquer lugar.
+  it('não depende do fuso da máquina — a âncora é -03:00, não o relógio local', () => {
+    // Este arquivo roda com TZ=UTC (fixado em vitest.config.ts), um fuso
+    // DIFERENTE de America/Sao_Paulo de propósito. Se o cálculo usasse
+    // `new Date(ano, mes - 1, dia)` ou getFullYear()/getMonth() locais em vez
+    // de ancorar explicitamente em `-03:00`, o resultado sairia 3h adiantado
+    // (00:00Z em vez de 03:00Z) e esta asserção falharia — é essa diferença
+    // que prova que a âncora é a data, não o relógio da máquina que roda o
+    // teste.
     expect(prazoDeAlteracao('2026-01-15').toISOString()).toBe('2026-01-13T03:00:00.000Z');
-    expect(prazoDeAlteracao('2026-07-15').toISOString()).toBe('2026-07-13T03:00:00.000Z');
   });
 });
