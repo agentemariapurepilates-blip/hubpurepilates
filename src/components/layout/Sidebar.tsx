@@ -44,6 +44,7 @@ import {
   Calendar,
   LineChart,
   SlidersHorizontal,
+  PartyPopper,
 } from 'lucide-react';
 
 const SectionHeader = ({
@@ -109,7 +110,7 @@ const TUTORIAIS_PATHS = [
 
 export const sectionFromPath = (path: string): SectionKey | null => {
   if (AGENTES_DE_IA_ROUTE_PREFIXES.some((p) => path.startsWith(p))) return 'agentes';
-  if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais'].some((p) => path.startsWith(p))) return 'colaboradores';
+  if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais', '/inauguracoes'].some((p) => path.startsWith(p))) return 'colaboradores';
   // Antes de '/minha-area': o Hub tem /minha-area/dashboard (Mídia Adicional),
   // que NÃO pertence a esta seção. Por isso o teste é '/dashboard/' com barra.
   if (path.startsWith('/dashboard/')) return 'dashboard';
@@ -188,6 +189,7 @@ const Sidebar = () => {
     { name: 'Feed da Sede', href: '/feed', icon: Newspaper },
     { name: 'Solicitação de demandas', href: '/pedidos-demanda', icon: ClipboardList },
     { name: 'Visão Geral das Unidades', href: '/midia-adicional/unidades', icon: Building2 },
+    { name: 'Inaugurações', href: '/inauguracoes', icon: PartyPopper },
   ];
 
   // Sub-grupo Academy (dentro de Colaboradores)

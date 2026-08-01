@@ -40,6 +40,7 @@ const PedidosDemanda = lazy(() => import("./features/colaborador/demandas/Pedido
 const MidiaAdicionalUnidades = lazy(() => import("./features/colaborador/unidades/MidiaAdicionalUnidades"));
 const ColabMidiasSociais = lazy(() => import("./features/colaborador/marketing/ColabMidiasSociais"));
 const DashboardMidiaAdicional = lazy(() => import("./features/colaborador/dashboard/DashboardMidiaAdicional"));
+const Inauguracoes = lazy(() => import("./features/colaborador/inauguracoes/Inauguracoes"));
 
 // Painel de Indicadores (banco Supabase separado — ver integrations/supabase/indicadores.ts)
 const IndicadoresVisaoGeral = lazy(() => import("./features/colaborador/indicadores/VisaoGeral"));
@@ -113,6 +114,7 @@ function App() {
             <Route path="/academy/gerar-certificados" element={<ProtectedRoute requireColaborador><GerarCertificados /></ProtectedRoute>} />
             <Route path="/academy/gerar-contratos" element={<ProtectedRoute requireColaborador><GerarContratos /></ProtectedRoute>} />
             <Route path="/colaborador/midias-sociais/:brand" element={<ProtectedRoute requireColaborador><ColabMidiasSociais /></ProtectedRoute>} />
+            <Route path="/inauguracoes" element={<ProtectedRoute requireColaborador><Inauguracoes /></ProtectedRoute>} />
             {/* Backward compat — redireciona pra nova URL */}
             <Route path="/agente-design/criacao-fotos" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><AdminUsuarios /></ProtectedRoute>} />

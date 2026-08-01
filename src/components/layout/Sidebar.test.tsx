@@ -20,4 +20,8 @@ describe('sectionFromPath', () => {
     expect(sectionFromPath('/admin/usuarios')).toBe('admin');
     expect(sectionFromPath('/avisos')).toBe(null);
   });
+
+  it('abre a seção Colaboradores na tela de Inaugurações', () => {
+    expect(sectionFromPath('/inauguracoes')).toBe('colaboradores');
+  });
 });
