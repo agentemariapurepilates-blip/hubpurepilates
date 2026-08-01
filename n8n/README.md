@@ -14,14 +14,15 @@ foram avisadas, e manda **um e-mail por unidade** ao pessoal do marketing com os
 dados que o colaborador preencheu no Hub. Depois de enviar, marca a linha para o
 aviso não sair repetido.
 
-### Os quatro nós
+### Os cinco nós
 
 | # | Nó | O que faz |
 |---|---|---|
 | 1 | `Todo dia as 03:00` (Schedule Trigger) | Dispara diariamente às 03:00 em `America/Sao_Paulo` |
 | 2 | `Buscar inauguracoes de hoje` (HTTP Request, GET) | Lê `inauguracao_requests` no Supabase via PostgREST |
 | 3 | `Enviar e-mail ao marketing` (Send Email) | Um e-mail por linha retornada |
-| 4 | `Marcar aviso como enviado` (HTTP Request, PATCH) | Grava `email_enviado_em` na linha |
+| 4 | `So o que virou e-mail de verdade` (Filter) | Deixa passar só o que o SMTP aceitou — ver "O nó 4 é uma trava, não enfeite" |
+| 5 | `Marcar aviso como enviado` (HTTP Request, PATCH) | Grava `email_enviado_em` na linha |
 
 ---
 
@@ -164,7 +165,7 @@ Se você mexer no workflow, **não troque nenhum dos dois por um valor implícit
 
 ## A ordem dos nós: e-mail ANTES da marcação
 
-O nó 4 (marcar como enviado) vem **depois** do nó 3 (enviar e-mail). Isso é
+O nó 5 (marcar como enviado) vem **depois** do nó 3 (enviar e-mail). Isso é
 deliberado, não descuido:
 
 - **Como está:** se a marcação falhar, o e-mail já saiu e o marketing pode
@@ -174,7 +175,38 @@ deliberado, não descuido:
   sabendo.
 
 Entre falhar barulhento e falhar em silêncio, o desenho escolheu barulhento.
-**Não inverta os nós 3 e 4.**
+**Não inverta os nós 3 e 5.**
+
+---
+
+## O nó 4 é uma trava, não enfeite
+
+O nó **`So o que virou e-mail de verdade`** (um **Filter**) fica entre o envio e
+a marcação e deixa passar só os itens que têm `messageId` — ou seja, o que o
+servidor SMTP de fato aceitou. Ele parece redundante e **não é**. Se alguém
+apagar esse nó "para simplificar", volta o pior defeito possível deste workflow.
+
+**O que ele impede.** O nó de e-mail tem duas maneiras diferentes de falhar:
+
+| Tipo de falha | Exemplo | O que o n8n faz |
+|---|---|---|
+| **Por item** | O SMTP recusa o endereço de uma unidade | O item que falhou sai pela **saída de erro** (desconectada). As outras seguem. Tudo certo. |
+| **De nível de nó** | **Credencial SMTP não selecionada, apagada ou renomeada** | O nó estoura **antes** do laço por item, e o motor repassa os **itens de entrada** — as linhas do banco, com `id` e `pairedItem` intactos — pela **saída principal**. A saída de erro nem chega a ser usada. |
+
+É a segunda linha que faz o estrago: sem o filtro, as linhas do banco chegariam
+ao nó de marcação, que gravaria `email_enviado_em` em **todas as unidades do
+dia** sem **nenhum** e-mail ter saído. Ninguém recebe, ninguém fica sabendo, e no
+dia seguinte a consulta não devolve mais nada porque está tudo marcado. É
+exatamente o silêncio que a ordem dos nós existe para evitar.
+
+A credencial ausente é o gatilho mais provável justamente porque o arquivo vem
+**sem** credencial preenchida — e a validação prévia do n8n não checa credencial
+antes de rodar. O filtro funciona porque as linhas do banco não têm `messageId`;
+a resposta do nodemailer tem.
+
+> Se quiser apertar mais, dá para exigir também que `accepted` não esteja vazio
+> (SMTP que aceita a mensagem mas rejeita todos os destinatários). Uma condição
+> só já cobre o caso que importa.
 
 ---
 
@@ -211,6 +243,32 @@ Entre falhar barulhento e falhar em silêncio, o desenho escolheu barulhento.
 não executam e o workflow termina em sucesso. Isso é o comportamento correto,
 não um erro.
 
+### Confira estes quatro pontos na primeira execução manual
+
+1. **Chegou um e-mail por unidade**, não um só com tudo dentro. Se vier um só,
+   veja "O único cenário que ainda exige ajuste" mais abaixo.
+2. **A data saiu por extenso em português** ("15 de setembro de 2026"). Se o mês
+   veio em inglês, veja a tabela de formato mais abaixo.
+3. **A linha ficou marcada:** rode o `select` do passo 2 de novo — a unidade
+   avisada não deve mais aparecer.
+4. **O teste da credencial ausente** — é o que valida a trava do nó 4, e vale a
+   pena fazer **uma vez**, porque é o modo de falha que causaria o pior estrago
+   em silêncio:
+
+   1. Limpe a marcação da linha de teste (SQL do passo 3 acima).
+   2. No nó `Enviar e-mail ao marketing`, **remova a credencial SMTP**
+      (ou renomeie a credencial, que dá no mesmo).
+   3. **Execute o workflow.** Ele vai falhar no nó de e-mail — é o esperado.
+   4. Rode o `select` do passo 2 e confirme que a linha de teste **continua
+      aparecendo**, ou seja, `email_enviado_em` continua `NULL`.
+
+   Se a linha aparecer marcada mesmo sem e-mail nenhum ter saído, **a trava do
+   nó 4 não está funcionando** — pare, não ative o workflow, e confira se o nó
+   `So o que virou e-mail de verdade` está presente e conectado entre o envio e
+   a marcação.
+
+   5. Recoloque a credencial e limpe a marcação antes de seguir.
+
 ---
 
 ## Limitações conhecidas
@@ -229,14 +287,26 @@ Estão no spec (§8) e são conscientes, não bugs a corrigir:
 - **Duas unidades no mesmo dia** geram dois e-mails, um por unidade. É o
   pedido, não um defeito.
 - **Se o envio de uma unidade falhar, só ela fica para trás.** O nó de e-mail
-  está com *Retry On Fail* (3 tentativas, 5s entre elas) e *On Error →
-  Continue (using error output)*. Numa falha de SMTP com três unidades no dia,
-  as outras duas seguem normalmente para a marcação; a que falhou sai pela
-  saída de erro, que está **desconectada de propósito** — a linha fica sem
-  `email_enviado_em` e volta a ser candidata no próximo ciclo. Como a consulta
-  é sempre "hoje", esse próximo ciclo na prática só existe se você reexecutar o
-  workflow manualmente **no mesmo dia**; passou da meia-noite, o aviso daquela
-  unidade não sai mais (é a limitação "sem recuperação" acima).
+  está com *On Error → Continue (using error output)*. Numa falha de SMTP com
+  três unidades no dia, as outras duas seguem normalmente para a marcação; a que
+  falhou sai pela saída de erro, que está **desconectada de propósito** — a
+  linha fica sem `email_enviado_em` e volta a ser candidata no próximo ciclo.
+  Como a consulta é sempre "hoje", esse próximo ciclo na prática só existe se
+  você reexecutar o workflow manualmente **no mesmo dia**; passou da meia-noite,
+  o aviso daquela unidade não sai mais (é a limitação "sem recuperação" acima).
+- **O *Retry On Fail* cobre menos do que o nome sugere — e na primeira unidade
+  pode duplicar.** O nó está com 3 tentativas e 5s de intervalo, e isso ajuda no
+  caso transitório mais comum (SMTP fora do ar por alguns segundos). Mas o
+  retry é do **nó inteiro**, não do item, e o n8n só decide reexecutar olhando o
+  **primeiro item** da saída principal. Na prática:
+  - falha na **1ª** unidade → o nó reexecuta **inteiro**, e as unidades que já
+    tinham dado certo **recebem o e-mail de novo** (até 3 cópias);
+  - falha na 2ª ou na 3ª, com a 1ª tendo dado certo → **nenhum retry acontece**;
+    a que falhou simplesmente sai pela saída de erro.
+
+  Não é motivo para tirar o retry — sem ele, o caso transitório também não é
+  coberto. É motivo para **não confiar nele como rede de segurança**: com mais
+  de uma unidade no mesmo dia, o comportamento depende de qual delas falhou.
 - **Reexecutar manualmente depois de uma falha parcial não reenvia para quem já
   recebeu.** Quem recebeu já está marcado, e a consulta filtra
   `email_enviado_em=is.null`. O único caso em que ainda dá para receber
@@ -251,7 +321,7 @@ Estão no spec (§8) e são conscientes, não bugs a corrigir:
 Este JSON foi escrito **sem acesso a uma instância do n8n**, então nunca foi
 importado de verdade. O que dá para garantir por verificação local: é JSON
 válido, tem `name`/`nodes`/`connections`, cada nó tem `type`/`typeVersion`/
-`position`/`parameters`, e as conexões ligam os quatro nós na ordem certa.
+`position`/`parameters`, e as conexões ligam os cinco nós na ordem certa.
 
 Os pontos que ficaram em dúvida na primeira escrita **foram conferidos depois no
 código-fonte do n8n** e se resolveram todos a favor do arquivo como está — não
@@ -264,7 +334,8 @@ gaste tempo investigando os que estão marcados como confirmados.
 | `emailSend` `typeVersion` | `2.1` | **Confirmado no código-fonte do n8n** — o nó declara o array de versões `[2, 2.1]` | Nada a fazer |
 | Fuso declarado no workflow, não no nó | `settings.timezone` | **Confirmado no código-fonte** — o `ScheduleTrigger` chama `this.getTimezone()`, que lê `workflow.settings.timezone`; o nó **não tem** campo de fuso próprio | Confira em *Workflow settings → Timezone*. Ver o alerta sobre copiar-e-colar no passo 2 da importação |
 | Um e-mail por unidade | O HTTP Request v4 divide o array JSON da resposta em vários itens | **Confirmado no código-fonte** — `if (Array.isArray(response)) { response.forEach(...) }`, com `pairedItem` por elemento | Nada a fazer. **Não** insira um nó Split Out: ele é desnecessário e no cenário abaixo até atrapalha |
-| `$('Buscar inauguracoes de hoje').item.json.id` no nó 4 | Referência ao item pareado do nó 2 | **Confirmado no código-fonte** — o `emailSend` empurra `pairedItem: { item: itemIndex }`, então o vínculo segue item a item mesmo com várias unidades no mesmo dia; e se o pareamento quebrasse, o n8n lança erro explícito em vez de marcar a linha errada em silêncio | Nada a fazer. Foi feito assim porque a saída do nó de e-mail é a resposta do SMTP (`messageId`, `accepted`...), **não** a linha do banco — `$json.id` ali daria `undefined` |
+| `$('Buscar inauguracoes de hoje').item.json.id` no nó 5 | Referência ao item pareado do nó 2 | **Confirmado no código-fonte** — o `emailSend` empurra `pairedItem: { item: itemIndex }`, então o vínculo segue item a item mesmo com várias unidades no mesmo dia; e se o pareamento quebrasse, o n8n lança erro explícito em vez de marcar a linha errada em silêncio | Nada a fazer. Foi feito assim porque a saída do nó de e-mail é a resposta do SMTP (`messageId`, `accepted`...), **não** a linha do banco — `$json.id` ali daria `undefined` |
+| `filter` `typeVersion` e o formato das condições | `2.2`, condições v2 com `operator: string/exists` e `typeValidation: "loose"` | **Não verificado** — é o único nó cujo formato não foi conferido no fonte. O `2.2` e a estrutura `conditions.options.version = 2` acompanham o nó `if` dos exemplos oficiais | Se o Filter abrir com a condição em branco, reconfigure pela interface: **campo** `{{ $json.messageId }}`, **operação** *String → exists*. O importante é a **semântica** (passar só o que tem `messageId`), não a versão. Alternativa sem nó nenhum, se preferir: apague o Filter, ligue o e-mail direto na marcação e troque a URL do nó 5 por `?id=eq.{{ $json.messageId ? $('Buscar inauguracoes de hoje').item.json.id : '00000000-0000-0000-0000-000000000000' }}` — protege igual, mas a trava fica escondida numa expressão |
 | Data por extenso em pt-BR | `DateTime.fromFormat(...).setLocale('pt-BR')` (Luxon) | Não verificado — depende do ICU do Node da instância | Se o mês vier em inglês, troque por `{{ $json.data_inauguracao.split('-').reverse().join('/') }}` para `dd/mm/aaaa` |
 
 ### O único cenário que ainda exige ajuste: a resposta interpretada como texto

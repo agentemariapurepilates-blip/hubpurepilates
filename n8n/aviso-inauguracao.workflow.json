@@ -76,12 +76,46 @@
       }
     },
     {
+      "id": "8f2b1c40-5a1e-4a1d-9c31-0b6a1e9d0005",
+      "name": "So o que virou e-mail de verdade",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [100, 0],
+      "notes": "NAO REMOVA ESTE NO. Ele nao e redundante, mesmo parecendo. Deixa passar so os itens que trazem messageId -- ou seja, o que o SMTP realmente aceitou. Existe por causa de uma falha de NIVEL DE NO (nao por item): se o no de e-mail estourar antes do laco -- o caso mais provavel e credencial SMTP nao selecionada, apagada ou renomeada, porque getCredentials() roda antes do laco e a validacao previa do n8n nao checa credencial --, o motor repassa os ITENS DE ENTRADA (as linhas do banco, com id e pairedItem intactos) pela saida PRINCIPAL, e a saida de erro nem chega a ser usada. Sem este filtro, o no seguinte marcaria TODAS as linhas do dia como avisadas sem nenhum e-mail ter saido: silencio total, que e exatamente o que a ordem dos nos existe para evitar. As linhas do banco nao tem messageId; a resposta do nodemailer tem. Para apertar mais, da para exigir tambem que accepted nao esteja vazio.",
+      "notesInFlow": true,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b1d9a7e2-3c44-4f18-9a70-2d5c8e1f0011",
+              "leftValue": "={{ $json.messageId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
       "id": "8f2b1c40-5a1e-4a1d-9c31-0b6a1e9d0004",
       "name": "Marcar aviso como enviado",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [100, 0],
-      "notes": "Grava email_enviado_em na linha, para o aviso nao sair de novo. Vem DEPOIS do envio de proposito: se a marcacao falhar, o marketing pode receber repetido -- incomodo. Se a ordem fosse inversa e o e-mail falhasse, a linha ficaria marcada e o aviso nunca sairia -- silencioso e pior. NAO inverta. O id vem de $('Buscar inauguracoes de hoje').item porque a saida do no de e-mail e a resposta do SMTP, nao a linha do banco.",
+      "position": [320, 0],
+      "notes": "Grava email_enviado_em na linha, para o aviso nao sair de novo. Vem DEPOIS do envio de proposito: se a marcacao falhar, o marketing pode receber repetido -- incomodo. Se a ordem fosse inversa e o e-mail falhasse, a linha ficaria marcada e o aviso nunca sairia -- silencioso e pior. NAO inverta. O id vem de $('Buscar inauguracoes de hoje').item porque a saida do no de e-mail e a resposta do SMTP, nao a linha do banco; o pairedItem sobrevive ao filtro anterior, entao cada item ainda resolve a sua propria linha.",
       "notesInFlow": true,
       "parameters": {
         "method": "PATCH",
@@ -138,12 +172,23 @@
       "main": [
         [
           {
-            "node": "Marcar aviso como enviado",
+            "node": "So o que virou e-mail de verdade",
             "type": "main",
             "index": 0
           }
         ],
         []
+      ]
+    },
+    "So o que virou e-mail de verdade": {
+      "main": [
+        [
+          {
+            "node": "Marcar aviso como enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
