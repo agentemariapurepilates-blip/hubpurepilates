@@ -60,8 +60,12 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [-120, 0],
-      "notes": "Um e-mail por unidade que inaugura hoje. PREENCHER: o remetente (fromEmail), a lista do marketing (toEmail, separada por virgula) e a credencial SMTP -- nada disso vem preenchido de proposito, para nao ir endereco chutado para producao. Este no roda ANTES da marcacao no banco; ver a nota do proximo no.",
+      "notes": "Um e-mail por unidade que inaugura hoje. PREENCHER: o remetente (fromEmail), a lista do marketing (toEmail, separada por virgula) e a credencial SMTP -- nada disso vem preenchido de proposito, para nao ir endereco chutado para producao. Este no roda ANTES da marcacao no banco; ver a nota do proximo no. onError=continueErrorOutput isola a falha POR ITEM: se o SMTP falhar na 2a de 3 unidades, as outras duas seguem para a marcacao normalmente, e so a que falhou sai pela saida de erro (desconectada de proposito) -- fica sem marcacao e volta no proximo ciclo. NAO troque por continueRegularOutput: ali o item que falhou seguiria para o no 4 e a linha seria marcada como avisada sem o e-mail ter saido.",
       "notesInFlow": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput",
       "parameters": {
         "fromEmail": "PREENCHER-remetente@purepilates.com.br",
         "toEmail": "PREENCHER-marketing@purepilates.com.br",
@@ -138,7 +142,8 @@
             "type": "main",
             "index": 0
           }
-        ]
+        ],
+        []
       ]
     }
   },

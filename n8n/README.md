@@ -47,8 +47,17 @@ supabase/migrations/20260801100000_inauguracao_email_enviado.sql
 2. No n8n (<https://backend.purepilates.com.br>), no canto superior direito:
    **Workflows → Add workflow** (ou os três pontinhos `...` de um workflow novo)
    **→ Import from File...** e selecione o JSON.
-   - Alternativa: abra o arquivo num editor, copie tudo, crie um workflow em
-     branco e cole (`Ctrl+V`) direto no canvas.
+   - Alternativa (**copiar e colar**): abra o arquivo num editor, copie tudo,
+     crie um workflow em branco e cole (`Ctrl+V`) direto no canvas.
+
+     > ⚠️ **Colar traz só os nós e as conexões — o `settings.timezone` do
+     > arquivo é descartado.** O workflow fica com o fuso da instância, que num
+     > n8n self-hosted é `America/New_York` por padrão: o gatilho das 3h
+     > dispararia às 5h de São Paulo e a data consultada seria a de Nova York.
+     > Ou seja, o e-mail sai no dia errado — e nada avisa que isso aconteceu.
+     > Se você colar em vez de importar, **abra `Workflow settings → Timezone`
+     > e ponha `America/Sao_Paulo` na mão**, antes de qualquer outra coisa.
+     > Prefira **Import from File**, que preserva o `settings`.
 3. Confira em **Workflow settings (`...` → Settings) → Timezone** que está
    `America/Sao_Paulo`. O arquivo já traz isso, mas vale conferir depois de
    importar — ver a seção "O fuso" abaixo, porque é o detalhe que mais dói se
@@ -219,27 +228,62 @@ Estão no spec (§8) e são conscientes, não bugs a corrigir:
   instância. É a contrapartida consciente de não construir uma tela para isso.
 - **Duas unidades no mesmo dia** geram dois e-mails, um por unidade. É o
   pedido, não um defeito.
+- **Se o envio de uma unidade falhar, só ela fica para trás.** O nó de e-mail
+  está com *Retry On Fail* (3 tentativas, 5s entre elas) e *On Error →
+  Continue (using error output)*. Numa falha de SMTP com três unidades no dia,
+  as outras duas seguem normalmente para a marcação; a que falhou sai pela
+  saída de erro, que está **desconectada de propósito** — a linha fica sem
+  `email_enviado_em` e volta a ser candidata no próximo ciclo. Como a consulta
+  é sempre "hoje", esse próximo ciclo na prática só existe se você reexecutar o
+  workflow manualmente **no mesmo dia**; passou da meia-noite, o aviso daquela
+  unidade não sai mais (é a limitação "sem recuperação" acima).
+- **Reexecutar manualmente depois de uma falha parcial não reenvia para quem já
+  recebeu.** Quem recebeu já está marcado, e a consulta filtra
+  `email_enviado_em=is.null`. O único caso em que ainda dá para receber
+  repetido é o e-mail sair e o PATCH da própria linha falhar — bem mais raro, e
+  é o incômodo que o desenho aceita de propósito para nunca ficar em silêncio
+  (ver "A ordem dos nós").
 
 ---
 
-## Incertezas de formato — onde olhar se a importação reclamar
+## Formato do workflow — o que está confirmado e onde olhar se algo reclamar
 
-Este JSON foi escrito **sem acesso a uma instância do n8n**, então não foi
-importado de verdade nenhuma vez. O que dá para garantir: é JSON válido, tem
-`name`/`nodes`/`connections`, cada nó tem `type`/`typeVersion`/`position`/
-`parameters`, e as conexões ligam os quatro nós na ordem certa. O resto depende
-da versão do n8n de vocês. Se algo der errado na importação ou na primeira
-execução, comece por aqui:
+Este JSON foi escrito **sem acesso a uma instância do n8n**, então nunca foi
+importado de verdade. O que dá para garantir por verificação local: é JSON
+válido, tem `name`/`nodes`/`connections`, cada nó tem `type`/`typeVersion`/
+`position`/`parameters`, e as conexões ligam os quatro nós na ordem certa.
 
-| Ponto | O que foi usado | Confiança | Se der problema |
+Os pontos que ficaram em dúvida na primeira escrita **foram conferidos depois no
+código-fonte do n8n** e se resolveram todos a favor do arquivo como está — não
+gaste tempo investigando os que estão marcados como confirmados.
+
+| Ponto | O que foi usado | Situação | Se der problema |
 |---|---|---|---|
-| `scheduleTrigger` `typeVersion` | `1.2` | Alta — é o que a documentação oficial do n8n usa nos exemplos de workflow | Se a instância for antiga, baixe para `1.1`; os parâmetros `rule.interval` são os mesmos |
-| `httpRequest` `typeVersion` | `4.2` | Alta — versão atual, usada nos exemplos oficiais | Numa instância antiga, `4.1` aceita os mesmos parâmetros |
-| `emailSend` `typeVersion` | `2.1` | **Média** — não achei um exemplo oficial em JSON confirmando `2.1`; a v2 é a que tem `emailFormat`/`html` e credencial SMTP | Se o nó abrir estranho, tente `2` ou `2.1` e reconfigure os campos pela interface — os valores estão todos na tabela de "destinatários" acima |
-| Fuso declarado no workflow, não no nó | `settings.timezone` | Alta — a documentação diz que o Schedule Trigger **prioriza o fuso do workflow** sobre o da instância | O Schedule Trigger não tem campo de fuso próprio; é em *Workflow settings → Timezone* que se confere |
-| Um e-mail por unidade | O nó de HTTP Request divide um array JSON de resposta em vários itens automaticamente | **Média** | Se chegar **um** e-mail com a lista toda em vez de um por unidade, insira um nó **Split Out** (campo: `data`) entre os nós 2 e 3 |
-| `$('Buscar inauguracoes de hoje').item.json.id` no nó 4 | Referência ao item pareado do nó 2 | Alta | Foi feito assim porque a saída do nó de e-mail é a resposta do SMTP (`messageId`, `accepted`...), **não** a linha do banco — `$json.id` ali daria `undefined` e o PATCH atualizaria a linha errada ou nenhuma |
-| Data por extenso em pt-BR | `DateTime.fromFormat(...).setLocale('pt-BR')` (Luxon) | Média-alta | Se o mês vier em inglês, o Node da instância está sem ICU completo; troque por `{{ $json.data_inauguracao.split('-').reverse().join('/') }}` para `dd/mm/aaaa` |
+| `scheduleTrigger` `typeVersion` | `1.2` | **Confirmado** — é o que a documentação oficial usa nos exemplos de workflow | Se a instância for muito antiga, baixe para `1.1`; os parâmetros `rule.interval` são os mesmos |
+| `httpRequest` `typeVersion` | `4.2` | **Confirmado** — versão atual, usada nos exemplos oficiais | Numa instância antiga, `4.1` aceita os mesmos parâmetros |
+| `emailSend` `typeVersion` | `2.1` | **Confirmado no código-fonte do n8n** — o nó declara o array de versões `[2, 2.1]` | Nada a fazer |
+| Fuso declarado no workflow, não no nó | `settings.timezone` | **Confirmado no código-fonte** — o `ScheduleTrigger` chama `this.getTimezone()`, que lê `workflow.settings.timezone`; o nó **não tem** campo de fuso próprio | Confira em *Workflow settings → Timezone*. Ver o alerta sobre copiar-e-colar no passo 2 da importação |
+| Um e-mail por unidade | O HTTP Request v4 divide o array JSON da resposta em vários itens | **Confirmado no código-fonte** — `if (Array.isArray(response)) { response.forEach(...) }`, com `pairedItem` por elemento | Nada a fazer. **Não** insira um nó Split Out: ele é desnecessário e no cenário abaixo até atrapalha |
+| `$('Buscar inauguracoes de hoje').item.json.id` no nó 4 | Referência ao item pareado do nó 2 | **Confirmado no código-fonte** — o `emailSend` empurra `pairedItem: { item: itemIndex }`, então o vínculo segue item a item mesmo com várias unidades no mesmo dia; e se o pareamento quebrasse, o n8n lança erro explícito em vez de marcar a linha errada em silêncio | Nada a fazer. Foi feito assim porque a saída do nó de e-mail é a resposta do SMTP (`messageId`, `accepted`...), **não** a linha do banco — `$json.id` ali daria `undefined` |
+| Data por extenso em pt-BR | `DateTime.fromFormat(...).setLocale('pt-BR')` (Luxon) | Não verificado — depende do ICU do Node da instância | Se o mês vier em inglês, troque por `{{ $json.data_inauguracao.split('-').reverse().join('/') }}` para `dd/mm/aaaa` |
+
+### O único cenário que ainda exige ajuste: a resposta interpretada como texto
+
+O nó 2 está com o **autodetect** de formato de resposta do HTTP Request. Se, por
+algum motivo, o PostgREST responder com um `Content-Type` que o n8n não
+reconheça como JSON, ele cai no caminho de **texto** e embrulha tudo num único
+item no formato `{ "data": "<a resposta inteira como string>" }`.
+
+O sintoma é chegar **um** e-mail só, com os campos vazios ou com `undefined`, em
+vez de um por unidade.
+
+**A correção não é um Split Out.** Nesse cenário `data` é uma *string*, não um
+array — um Split Out em `data` falha. O ajuste é forçar o formato no nó 2:
+
+> Abra o nó **`Buscar inauguracoes de hoje`** → **Options** → **Add Option** →
+> **Response** → **Response Format** → **JSON**.
+
+No JSON isso corresponde a `nodes[1].parameters.options.response.response.responseFormat = "json"`.
 
 ---
 

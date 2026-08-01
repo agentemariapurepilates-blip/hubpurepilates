@@ -16,6 +16,14 @@
 -- A RLS nao muda. O workflow usa a chave de servico do Supabase, que passa por
 -- cima da RLS, entao nenhuma policy nova e necessaria -- e a coluna nova fica
 -- visivel exatamente para quem ja via a linha.
+--
+-- EFEITO COLATERAL ESPERADO no `updated_at`: a marcacao do workflow e um UPDATE
+-- comum, entao dispara o trigger `update_inauguracao_requests_updated_at` e a
+-- linha ganha `updated_at` novo as 03:00 do dia da inauguracao, sem ninguem ter
+-- editado nada. Hoje isso e inocuo -- nenhuma tela ordena ou filtra por
+-- `updated_at`, e a regra das 48h olha `data_inauguracao`, nao `updated_at`.
+-- Fica registrado para quem um dia for usar `updated_at` como "ultima edicao
+-- humana" nao se assustar: nesta tabela ele nao e so isso.
 
 ALTER TABLE public.inauguracao_requests
   ADD COLUMN IF NOT EXISTS email_enviado_em timestamptz;
