@@ -269,8 +269,13 @@ function EditarInauguracaoDialog({
  * useExcluirInauguracao): esta tela só explica a regra antes de o usuário
  * tentar, e deixa o erro do hook aparecer se banco e interface discordarem
  * (ex.: relógio do navegador adiantado).
+ *
+ * `aoIrParaNova` é opcional — quando informado (ver Inauguracoes.tsx), o
+ * estado vazio ganha um atalho para a aba "Nova solicitação"; sem ele, o
+ * componente continua utilizável sozinho (ex.: um teste que só monta a
+ * lista) e mostra só o texto.
  */
-export function ListaInauguracoes() {
+export function ListaInauguracoes({ aoIrParaNova }: { aoIrParaNova?: () => void }) {
   const { isAdmin } = useAuth();
   const { data: inauguracoes, isLoading, isError, error } = useInauguracoes();
   const excluirInauguracao = useExcluirInauguracao();
@@ -303,7 +308,16 @@ export function ListaInauguracoes() {
   const lista = inauguracoes ?? [];
 
   if (lista.length === 0) {
-    return <p className="text-sm text-muted-foreground">Nenhuma solicitação ainda.</p>;
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">Nenhuma solicitação ainda.</p>
+        {aoIrParaNova && (
+          <Button variant="outline" size="sm" onClick={aoIrParaNova}>
+            Nova solicitação
+          </Button>
+        )}
+      </div>
+    );
   }
 
   return (

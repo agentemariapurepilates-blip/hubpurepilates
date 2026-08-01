@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { format, addDays, subDays } from 'date-fns';
 import { ListaInauguracoes } from './ListaInauguracoes';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,8 +48,8 @@ function item(data_inauguracao: string): InauguracaoRequest {
   };
 }
 
-function mutacaoStub() {
-  return { mutate: vi.fn(), isPending: false } as unknown as ReturnType<typeof useEditarInauguracao>;
+function mutacaoStub<T>() {
+  return { mutate: vi.fn(), isPending: false } as unknown as T;
 }
 
 function preparar(options: { isAdmin: boolean; lista: InauguracaoRequest[] }) {
@@ -59,8 +60,8 @@ function preparar(options: { isAdmin: boolean; lista: InauguracaoRequest[] }) {
     isError: false,
     error: null,
   } as unknown as ReturnType<typeof useInauguracoes>);
-  vi.mocked(useEditarInauguracao).mockReturnValue(mutacaoStub());
-  vi.mocked(useExcluirInauguracao).mockReturnValue(mutacaoStub());
+  vi.mocked(useEditarInauguracao).mockReturnValue(mutacaoStub<ReturnType<typeof useEditarInauguracao>>());
+  vi.mocked(useExcluirInauguracao).mockReturnValue(mutacaoStub<ReturnType<typeof useExcluirInauguracao>>());
 }
 
 beforeEach(() => {
@@ -96,5 +97,26 @@ describe('ListaInauguracoes — regra das 48h', () => {
     expect(screen.getByRole('button', { name: /Editar/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Excluir/ })).toBeInTheDocument();
     expect(screen.queryByText(CONTATO_MARKETING)).not.toBeInTheDocument();
+  });
+});
+
+describe('ListaInauguracoes — estado vazio', () => {
+  it('sem aoIrParaNova, mostra só o texto (o componente continua utilizável sozinho)', () => {
+    preparar({ isAdmin: false, lista: [] });
+    render(<ListaInauguracoes />);
+
+    expect(screen.getByText('Nenhuma solicitação ainda.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Nova solicitação/ })).not.toBeInTheDocument();
+  });
+
+  it('com aoIrParaNova, mostra o atalho e chama o callback ao clicar', async () => {
+    preparar({ isAdmin: false, lista: [] });
+    const aoIrParaNova = vi.fn();
+    render(<ListaInauguracoes aoIrParaNova={aoIrParaNova} />);
+
+    const botao = screen.getByRole('button', { name: /Nova solicitação/ });
+    await userEvent.click(botao);
+
+    expect(aoIrParaNova).toHaveBeenCalledOnce();
   });
 });

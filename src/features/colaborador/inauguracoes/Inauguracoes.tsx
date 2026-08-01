@@ -41,7 +41,7 @@ const Inauguracoes = () => {
           </TabsContent>
 
           <TabsContent value="solicitacoes">
-            <ListaInauguracoes />
+            <ListaInauguracoes aoIrParaNova={() => setAba('nova')} />
           </TabsContent>
         </Tabs>
       </div>
