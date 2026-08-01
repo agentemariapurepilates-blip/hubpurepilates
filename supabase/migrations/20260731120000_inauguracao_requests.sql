@@ -43,7 +43,7 @@ CREATE POLICY "Ve as proprias, admin ve todas"
   ON public.inauguracao_requests FOR SELECT
   USING (
     user_id = auth.uid()
-    OR public.has_role(auth.uid(), 'admin')
+    OR public.has_role(auth.uid(), 'admin'::app_role)
   );
 
 -- So colaborador (ou admin) cria, e sempre em seu proprio nome.
@@ -51,7 +51,7 @@ CREATE POLICY "Colaborador cria em seu nome"
   ON public.inauguracao_requests FOR INSERT
   WITH CHECK (
     user_id = auth.uid()
-    AND (public.is_colaborador(auth.uid()) OR public.has_role(auth.uid(), 'admin'))
+    AND (public.is_colaborador(auth.uid()) OR public.has_role(auth.uid(), 'admin'::app_role))
   );
 
 -- A regra das 48h vive aqui.
@@ -72,21 +72,21 @@ CREATE POLICY "Colaborador cria em seu nome"
 CREATE POLICY "Edita ate 48h antes; admin sempre"
   ON public.inauguracao_requests FOR UPDATE
   USING (
-    public.has_role(auth.uid(), 'admin')
+    public.has_role(auth.uid(), 'admin'::app_role)
     OR (
       user_id = auth.uid()
       AND now() < (data_inauguracao::timestamp AT TIME ZONE 'America/Sao_Paulo') - interval '48 hours'
     )
   )
   WITH CHECK (
-    public.has_role(auth.uid(), 'admin')
+    public.has_role(auth.uid(), 'admin'::app_role)
     OR user_id = auth.uid()
   );
 
 CREATE POLICY "Exclui ate 48h antes; admin sempre"
   ON public.inauguracao_requests FOR DELETE
   USING (
-    public.has_role(auth.uid(), 'admin')
+    public.has_role(auth.uid(), 'admin'::app_role)
     OR (
       user_id = auth.uid()
       AND now() < (data_inauguracao::timestamp AT TIME ZONE 'America/Sao_Paulo') - interval '48 hours'
