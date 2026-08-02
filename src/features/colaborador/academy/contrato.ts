@@ -41,7 +41,7 @@ export interface ContratoRow {
   // 2. Serviço contratado
   conteudo: string;
   descricaoConteudo: string;
-  // 3. Períodos (condicionais)
+  // 3. Períodos (condicionais) — só no contrato de Gravação
   periodos: Periodo[];
   // 4. Remuneração
   valor: string;
@@ -49,6 +49,14 @@ export interface ContratoRow {
   formaPagamento: string;
   // 5. Assinatura
   dataAssinatura: string;
+  // 6. Anexo do evento — só no contrato Wellhub (eventos externos)
+  local: string;
+  dataEvento: string;
+  horario: string;
+  atividade: string;
+  prazoPagamento: string;
+  pix: string;
+  email: string;
 }
 
 // Aliases de cabeçalho (normalizados) → campo. Aceita algumas variações comuns.
@@ -84,14 +92,28 @@ const HEADER_TO_FIELD: Record<string, keyof ContratoRow> = {
   'FORMA DE PAGAMENTO': 'formaPagamento',
   'DATA ASSINATURA': 'dataAssinatura',
   'DATA DA ASSINATURA': 'dataAssinatura',
+  // Wellhub — anexo do evento
+  LOCAL: 'local',
+  'LOCAL DO EVENTO': 'local',
+  'DATA EVENTO': 'dataEvento',
+  'DATA DO EVENTO': 'dataEvento',
+  HORARIO: 'horario',
+  'HORARIO DO EVENTO': 'horario',
+  ATIVIDADE: 'atividade',
+  'PRAZO PAGAMENTO': 'prazoPagamento',
+  'PRAZO DE PAGAMENTO': 'prazoPagamento',
+  PIX: 'pix',
+  'CHAVE PIX': 'pix',
+  EMAIL: 'email',
+  'E-MAIL': 'email',
 };
 
 // Campos de data (recebem tratamento tipado do SheetJS + normalização dd/mm/aaaa).
-const DATE_FIELDS = new Set<keyof ContratoRow>(['dataPagamento', 'dataAssinatura']);
+const DATE_FIELDS = new Set<keyof ContratoRow>(['dataPagamento', 'dataAssinatura', 'dataEvento']);
 
 const REQUIRED_BY_TIPO: Record<ContratoTipo, string[]> = {
   gravacao: ['NOME COMPLETO', 'CPF', 'CONTEUDO', 'VALOR', 'DATA ASSINATURA'],
-  wellhub: ['NOME COMPLETO', 'CPF'], // ajustado quando o modelo Wellhub chegar
+  wellhub: ['NOME COMPLETO', 'CPF', 'LOCAL', 'DATA EVENTO', 'VALOR', 'DATA ASSINATURA'],
 };
 
 // Cabeçalhos da planilha-modelo, por tipo (ordem de coluna).
@@ -104,10 +126,15 @@ const TEMPLATE_HEADERS: Record<ContratoTipo, string[]> = {
     'PERIODOS',
     'VALOR', 'DATA PAGAMENTO', 'FORMA PAGAMENTO', 'DATA ASSINATURA',
   ],
-  wellhub: ['NOME COMPLETO', 'CPF'], // ajustado quando o modelo Wellhub chegar
+  wellhub: [
+    'NOME COMPLETO', 'NACIONALIDADE', 'ESTADO CIVIL', 'PROFISSAO', 'RG', 'ORGAO EMISSOR RG',
+    'CPF', 'ENDERECO COMPLETO', 'CEP', 'CIDADE', 'UF',
+    'LOCAL', 'DATA EVENTO', 'HORARIO', 'ATIVIDADE',
+    'VALOR', 'PRAZO PAGAMENTO', 'PIX', 'EMAIL', 'DATA ASSINATURA',
+  ],
 };
 
-// Linha de exemplo na planilha-modelo (deixa claro o formato dos períodos).
+// Linha de exemplo na planilha-modelo (deixa claro o formato dos campos).
 const EXEMPLO: Partial<Record<ContratoTipo, string[]>> = {
   gravacao: [
     'EXEMPLO — apague esta linha', 'Brasileiro(a)', 'Solteiro(a)', 'Fisioterapeuta',
@@ -115,6 +142,13 @@ const EXEMPLO: Partial<Record<ContratoTipo, string[]>> = {
     '04055-010', 'São Paulo', 'SP', 'Gravação de Campanha', 'Gravação de campanha, reels e teasers',
     '09/07/2026, 09:00, 13:00, A\n09/07/2026, 14:00, 18:00, A\n10/07/2026, 09:00, 13:00, F',
     '600,00', '08/07/2026', 'PIX', '06/07/2026',
+  ],
+  wellhub: [
+    'EXEMPLO — apague esta linha', 'Brasileira', 'Casada', 'Fisioterapeuta',
+    '30.301.301-1', 'SSP/SP', '322.819.088-95', 'Rua Fruta do Paraíso, 230, Vila Jacuí',
+    '08050-050', 'São Paulo', 'SP',
+    'VR SP – Av. dos Bandeirantes, 460 - Brooklin', '30/04/2026', '9 às 11hs', 'Aula/ação de Pilates corporativo',
+    '170,00', 'Até 08/05/2026', '11 94116 1650', 'laranjeira.paula@hotmail.com', '30/04/2026',
   ],
 };
 
@@ -137,6 +171,7 @@ function emptyRow(): ContratoRow {
     nome: '', nacionalidade: '', estadoCivil: '', profissao: '', rg: '', orgaoEmissor: '',
     cpf: '', endereco: '', cep: '', cidade: '', uf: '', conteudo: '', descricaoConteudo: '',
     periodos: [], valor: '', dataPagamento: '', formaPagamento: '', dataAssinatura: '',
+    local: '', dataEvento: '', horario: '', atividade: '', prazoPagamento: '', pix: '', email: '',
   };
 }
 
@@ -227,8 +262,7 @@ const PURE_VERMELHO = 'FFC12030';
 // (2) dropdown "suave" no CONTEUDO (sugere as opções mas permite digitar outro).
 async function estilizarEValidar(
   xlsxBytes: Uint8Array,
-  conteudoCol: string,
-  opcoes: string[],
+  dropdown: { col: string; opcoes: string[] } | null,
 ): Promise<Uint8Array> {
   const zip = await JSZip.loadAsync(xlsxBytes);
 
@@ -263,14 +297,16 @@ async function estilizarEValidar(
         return `<row r="1"${attrs} ht="28" customHeight="1">${styled}</row>`;
       });
     }
-    const lista = opcoes.join(',');
-    const dv =
-      `<dataValidations count="1">` +
-      `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="0" sqref="${conteudoCol}2:${conteudoCol}1000">` +
-      `<formula1>"${lista}"</formula1></dataValidation></dataValidations>`;
-    // dataValidations vem antes de pageMargins/hyperlinks/etc. (ordem do schema).
-    const anchor = ['<pageMargins', '<pageSetup', '<headerFooter', '<drawing', '</worksheet>'].find((t) => sheet.includes(t))!;
-    sheet = sheet.replace(anchor, dv + anchor);
+    if (dropdown) {
+      const lista = dropdown.opcoes.join(',');
+      const dv =
+        `<dataValidations count="1">` +
+        `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="0" sqref="${dropdown.col}2:${dropdown.col}1000">` +
+        `<formula1>"${lista}"</formula1></dataValidation></dataValidations>`;
+      // dataValidations vem antes de pageMargins/hyperlinks/etc. (ordem do schema).
+      const anchor = ['<pageMargins', '<pageSetup', '<headerFooter', '<drawing', '</worksheet>'].find((t) => sheet.includes(t))!;
+      sheet = sheet.replace(anchor, dv + anchor);
+    }
     zip.file('xl/worksheets/sheet1.xml', sheet);
   }
 
@@ -282,17 +318,19 @@ export async function gerarPlanilhaModeloBytes(tipo: ContratoTipo): Promise<Uint
   const headers = TEMPLATE_HEADERS[tipo];
   const exemplo = EXEMPLO[tipo];
   const ws = XLSX.utils.aoa_to_sheet(exemplo ? [headers, exemplo] : [headers]);
-  // Larguras amigáveis (PERIODOS bem largo, já que aceita várias linhas).
-  ws['!cols'] = headers.map((h) =>
-    h === 'PERIODOS' ? { wch: 42 } : h === 'ENDERECO COMPLETO' || h === 'DESCRICAO CONTEUDO' ? { wch: 30 } : { wch: 16 },
-  );
+  // Larguras amigáveis (colunas de texto longo mais largas).
+  const largas = new Set(['PERIODOS', 'ENDERECO COMPLETO', 'DESCRICAO CONTEUDO', 'LOCAL', 'ATIVIDADE', 'EMAIL']);
+  ws['!cols'] = headers.map((h) => (h === 'PERIODOS' ? { wch: 42 } : largas.has(h) ? { wch: 30 } : { wch: 16 }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Contratos');
   const bytes = new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer);
 
+  // Dropdown "suave" só onde existe a coluna CONTEUDO (contrato de Gravação).
   const conteudoIdx = headers.indexOf('CONTEUDO');
-  const conteudoCol = conteudoIdx >= 0 ? XLSX.utils.encode_col(conteudoIdx) : 'A';
-  return estilizarEValidar(bytes, conteudoCol, CONTEUDO_OPCOES);
+  const dropdown = conteudoIdx >= 0
+    ? { col: XLSX.utils.encode_col(conteudoIdx), opcoes: CONTEUDO_OPCOES }
+    : null;
+  return estilizarEValidar(bytes, dropdown);
 }
 
 // Gera e baixa a planilha-modelo pro tipo escolhido.

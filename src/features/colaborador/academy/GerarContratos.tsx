@@ -13,7 +13,7 @@ import {
   type ContratoTipo,
   type ContratoRow,
 } from './contrato';
-import { buildContratoGravacaoDoc, docToPdfBlob } from './contratoPdf';
+import { buildContratoGravacaoDoc, buildContratoWellhubDoc, docToPdfBlob } from './contratoPdf';
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -28,13 +28,12 @@ function downloadBlob(blob: Blob, filename: string) {
 
 const TIPOS: { id: ContratoTipo; nome: string; disponivel: boolean }[] = [
   { id: 'gravacao', nome: 'Gravação de Conteúdo', disponivel: true },
-  { id: 'wellhub', nome: 'Prestação de Serviços — Wellhub', disponivel: false },
+  { id: 'wellhub', nome: 'Eventos Externos (Wellhub)', disponivel: true },
 ];
 
 // Monta o doc PDF (jsPDF) do contrato conforme o tipo.
 function buildDoc(tipo: ContratoTipo, row: ContratoRow) {
-  if (tipo === 'gravacao') return buildContratoGravacaoDoc(row);
-  throw new Error('Modelo Wellhub ainda não disponível.');
+  return tipo === 'wellhub' ? buildContratoWellhubDoc(row) : buildContratoGravacaoDoc(row);
 }
 
 const GerarContratos = () => {

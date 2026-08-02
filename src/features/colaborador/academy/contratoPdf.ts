@@ -72,8 +72,20 @@ function paraLabel(
   doc.setFont(FONT, 'normal');
   const spaceW = doc.getTextWidth(' ');
 
-  // Quebra o texto: 1ª linha começa depois do rótulo (+espaço); demais, largura cheia.
   const gap = spaceW * 2; // gap posicional entre rótulo e valor (fragmentos separados grudam com 1 espaço)
+
+  // Rótulo muito longo (ex.: nome grande) → fica na própria linha e o valor vem
+  // abaixo, em largura cheia — evita o valor colar/estourar a margem.
+  if (width - labelW - gap < 140) {
+    if (cur.y > pageBottom(doc)) { doc.addPage(); cur.y = MARGIN + size; }
+    doc.setFont(FONT, 'bold');
+    doc.text(label, left, cur.y);
+    cur.y += lineH;
+    para(doc, cur, text, { size, gapAfter: opts.gapAfter });
+    return;
+  }
+
+  // Quebra o texto: 1ª linha começa depois do rótulo (+espaço); demais, largura cheia.
   const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let line = '';
@@ -200,7 +212,108 @@ export function buildContratoGravacaoDoc(row: ContratoRow): jsPDF {
   assinatura(doc, cur, 'PURE PILATES ACADEMY SERVIÇOS LTDA', 'CAROLINE LO DUCA SERRONI');
   assinatura(doc, cur, 'CONTRATADO', row.nome);
   assinatura(doc, cur, 'Testemunha 1', 'Nome: Caroline Vila Real Monsanto   RG: 32.423.177-5   CPF: 360.505.698-94');
-  assinatura(doc, cur, 'Testemunha 2', 'Nome: Maria Luiza Joaquim   RG: 12.259.995-0   CPF: 012.365.668-XX');
+  assinatura(doc, cur, 'Testemunha 2', 'Nome: Maria Luiza Joaquim   RG: 12.259.995-0   CPF: 012.365.668-07');
+
+  return doc;
+}
+
+// Alíneas "a) ... b) ..." — itens indentados sem marcador.
+function alineas(doc: jsPDF, cur: Cursor, lista: string[]): void {
+  for (const it of lista) para(doc, cur, it, { indent: 14, gapAfter: 2 });
+}
+
+/** Contrato Wellhub (Eventos Externos) — jsPDF — para uma linha da planilha. */
+export function buildContratoWellhubDoc(row: ContratoRow): jsPDF {
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const cur: Cursor = { y: MARGIN };
+
+  titulo(doc, cur, ['CONTRATO DE PRESTAÇÃO DE SERVIÇOS PROFISSIONAIS', 'PARA EVENTOS EXTERNOS – ÁREA DE PILATES']);
+
+  paraLabel(doc, cur, 'CONTRATANTE:', 'ASSOCIAÇÃO DE REDE DE FRANQUIAS PURE PILATE, inscrita no CNPJ/ME sob nº 48.078.942/0001-19, com sede na Rua Herval, nº 816 e 824, Bairro Belenzinho, São Paulo/SP, CEP 03092-000.');
+  paraLabel(doc, cur, `CONTRATADO: ${row.nome},`, `${row.nacionalidade}, ${row.estadoCivil}, ${row.profissao}, portador do RG sob nº ${row.rg}${row.orgaoEmissor ? ` ${row.orgaoEmissor}` : ''}, inscrito no CPF sob nº ${row.cpf}, residente ${row.endereco}, ${row.cidade} – ${row.uf} e CEP ${row.cep}.`);
+  para(doc, cur, 'As partes acima identificadas têm entre si justo e contratado o presente instrumento, que se regerá pelas cláusulas abaixo:');
+
+  clausula(doc, cur, 'CLÁUSULA 1 – DO OBJETO');
+  para(doc, cur, '1.1. O presente contrato tem por objeto a prestação de serviços profissionais pelo(a) CONTRATADO(a) em ações, eventos externos, aulas demonstrativas, ativações e/ou atividades corporativas na área de Pilates e/ou atividades correlatas, organizadas ou intermediadas pela CONTRATANTE.');
+  para(doc, cur, '1.2. Os serviços poderão incluir, mas não se limitam a:');
+  itens(doc, cur, ['Condução de aulas ou práticas de Pilates;', 'Orientação corporal e postural;', 'Atendimento em eventos corporativos;', 'Participação em ações promocionais e institucionais.']);
+  para(doc, cur, '1.3. As condições específicas de cada evento constarão em ANEXO, parte integrante deste contrato.');
+
+  clausula(doc, cur, 'CLÁUSULA 2 – DA NATUREZA DA RELAÇÃO');
+  para(doc, cur, '2.1. O presente contrato possui natureza estritamente civil e autônoma, não configurando vínculo empregatício entre as partes.');
+  para(doc, cur, '2.2. O(a) CONTRATADO(a) exercerá suas atividades com autonomia técnica, sem subordinação jurídica, assumindo integral responsabilidade por sua atuação profissional.');
+  para(doc, cur, '2.3. O(a) CONTRATADO(a) declara possuir habilitação profissional válida, bem como estar regularmente inscrito no respectivo conselho de classe, quando aplicável.');
+
+  clausula(doc, cur, 'CLÁUSULA 3 – DAS OBRIGAÇÕES DO CONTRATADO');
+  para(doc, cur, '3.1. São obrigações do(a) CONTRATADO(a):');
+  alineas(doc, cur, [
+    'a) Executar os serviços com zelo, ética e observância às normas técnicas da profissão;',
+    'b) Comparecer ao local do evento com antecedência mínima acordada;',
+    'c) Utilizar vestimenta adequada e conduta profissional compatível com o ambiente;',
+    'd) Responsabilizar-se pela correta execução das atividades propostas;',
+    'e) Zelar pela integridade física dos participantes durante as atividades;',
+    'f) Não realizar procedimentos que extrapolem sua habilitação profissional;',
+  ]);
+  para(doc, cur, '3.2. O(a) CONTRATADO(a) declara ciência de que atua por sua conta e risco técnico, sendo responsável por eventuais danos decorrentes de imperícia, imprudência ou negligência.');
+
+  clausula(doc, cur, 'CLÁUSULA 4 – DAS OBRIGAÇÕES DA CONTRATANTE');
+  para(doc, cur, '4.1. São obrigações da CONTRATANTE:');
+  alineas(doc, cur, [
+    'a) Informar previamente as condições do evento (local, público, horário);',
+    'b) Realizar o pagamento conforme estipulado em anexo;',
+    'c) Intermediar a relação com o cliente contratante do evento;',
+    'd) Fornecer, quando aplicável, estrutura básica para execução da atividade;',
+  ]);
+
+  clausula(doc, cur, 'CLÁUSULA 5 – DA REMUNERAÇÃO');
+  para(doc, cur, '5.1. Pelos serviços prestados, o(a) CONTRATADO(a) receberá o valor descrito no ANEXO deste contrato.');
+  para(doc, cur, '5.2. O pagamento será realizado na forma e prazo acordados, mediante fornecimento dos dados bancários pelo(a) CONTRATADO(a).');
+  para(doc, cur, '5.3. Não haverá pagamento de qualquer verba adicional, tais como:');
+  itens(doc, cur, ['horas extras;', 'encargos trabalhistas;', 'benefícios de natureza empregatícia.']);
+
+  clausula(doc, cur, 'CLÁUSULA 6 – DA RESPONSABILIDADE CIVIL E PROFISSIONAL');
+  para(doc, cur, '6.1. O(a) CONTRATADO(a) é integralmente responsável por sua atuação profissional, devendo observar as normas legais e éticas da sua categoria.');
+  para(doc, cur, '6.2. A CONTRATANTE não se responsabiliza por:');
+  itens(doc, cur, ['acidentes decorrentes da execução técnica do serviço;', 'danos causados a terceiros pelo CONTRATADO;', 'eventuais intercorrências clínicas durante as atividades.']);
+  para(doc, cur, '6.3. Recomenda-se que o(a) CONTRATADO(a) possua seguro de responsabilidade civil profissional, sendo este de sua exclusiva responsabilidade.');
+
+  clausula(doc, cur, 'CLÁUSULA 7 – DO USO DE IMAGEM');
+  para(doc, cur, '7.1. O(a) CONTRATADO(a) autoriza o uso de sua imagem, nome e voz para fins institucionais e promocionais da CONTRATANTE, sem ônus adicional, salvo disposição em contrário no ANEXO.');
+
+  clausula(doc, cur, 'CLÁUSULA 8 – DO PRAZO E RESCISÃO');
+  para(doc, cur, '8.1. Este contrato é válido por prazo indeterminado, vinculando-se às execuções previstas em cada ANEXO.');
+  para(doc, cur, '8.2. O descumprimento de qualquer cláusula poderá ensejar rescisão imediata, sem prejuízo de perdas e danos.');
+  para(doc, cur, '8.3. Em caso de ausência injustificada no evento, poderá ser aplicada multa equivalente ao valor do serviço contratado.');
+
+  clausula(doc, cur, 'CLÁUSULA 9 – DA CONFIDENCIALIDADE E LGPD');
+  para(doc, cur, '9.1. O(a) CONTRATADO(a) compromete-se a manter sigilo sobre quaisquer informações obtidas durante a prestação dos serviços.');
+  para(doc, cur, '9.2. As partes comprometem-se a cumprir a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).');
+
+  clausula(doc, cur, 'CLÁUSULA 10 – DA INEXISTÊNCIA DE VÍNCULO TRABALHISTA');
+  para(doc, cur, '10.1. Fica expressamente pactuado que este contrato não gera vínculo empregatício, nos termos da legislação vigente.');
+  para(doc, cur, '10.2. O(a) CONTRATADO(a) é responsável por seus encargos fiscais, previdenciários e trabalhistas.');
+  para(doc, cur, '10.3. Caso haja qualquer questionamento judicial, o(a) CONTRATADO(a) se compromete a isentar a CONTRATANTE de qualquer responsabilidade, inclusive com reembolso de custos.');
+
+  clausula(doc, cur, 'CLÁUSULA 11 – DO FORO');
+  para(doc, cur, 'Fica eleito o foro da Comarca de São Paulo/SP para dirimir quaisquer controvérsias.');
+  para(doc, cur, 'E, por estarem de acordo, as partes assinam o presente instrumento.');
+
+  clausula(doc, cur, 'ANEXO – CONDIÇÕES DO EVENTO');
+  paraLabel(doc, cur, 'Local:', row.local || '—');
+  paraLabel(doc, cur, 'Data:', row.dataEvento || '—');
+  paraLabel(doc, cur, 'Horário:', row.horario || '—');
+  paraLabel(doc, cur, 'Atividade:', row.atividade || '—');
+  paraLabel(doc, cur, 'Valor:', `R$ ${row.valor}`);
+  paraLabel(doc, cur, 'Pagamento:', row.prazoPagamento || '—');
+  para(doc, cur, 'Dados para pagamento:', { bold: true, gapAfter: 2 });
+  paraLabel(doc, cur, 'PIX:', row.pix || '—');
+  paraLabel(doc, cur, 'Email:', row.email || '—');
+
+  para(doc, cur, `São Paulo, ${dataExtenso(row.dataAssinatura)}.`, { gapAfter: 6 });
+  assinatura(doc, cur, 'CONTRATANTE: ASSOCIAÇÃO DE REDE DE FRANQUIAS PURE PILATE', 'CNPJ: 48.078.942/0001-19');
+  assinatura(doc, cur, 'CONTRATADA', `${row.nome}   CPF: ${row.cpf}`);
+  assinatura(doc, cur, 'Testemunha 1', 'Nome: Caroline Vila Real Monsanto   RG: 32.423.177-5   CPF: 360.505.698-94');
+  assinatura(doc, cur, 'Testemunha 2', 'Nome: Maria Luiza Joaquim   RG: 12.259.995-0   CPF: 012.365.668-07');
 
   return doc;
 }
