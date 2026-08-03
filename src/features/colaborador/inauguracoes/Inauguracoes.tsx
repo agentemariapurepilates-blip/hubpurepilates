@@ -4,8 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { NovaInauguracaoForm } from './components/NovaInauguracaoForm';
 import { ListaInauguracoes } from './components/ListaInauguracoes';
+import { DestinatariosTab } from './components/DestinatariosTab';
 
-type Aba = 'nova' | 'solicitacoes';
+type Aba = 'nova' | 'solicitacoes' | 'destinatarios';
 
 /**
  * Tela de Inaugurações: reúne o formulário de nova solicitação e a lista das
@@ -29,11 +30,16 @@ const Inauguracoes = () => {
         </div>
 
         <Tabs value={aba} onValueChange={(v) => setAba(v as Aba)}>
-          <TabsList className="grid w-full grid-cols-2">
+          {/* A aba "Destinatários" só existe no grid (e no DOM) para admin —
+              colaborador não deve nem ver que ela existe, não só ter o
+              conteúdo bloqueado. Por isso o grid-cols muda junto: 3 colunas
+              só quando a aba extra está presente. */}
+          <TabsList className={isAdmin ? 'grid w-full grid-cols-3' : 'grid w-full grid-cols-2'}>
             <TabsTrigger value="nova">Nova solicitação</TabsTrigger>
             <TabsTrigger value="solicitacoes">
               {isAdmin ? 'Todas as solicitações' : 'Minhas solicitações'}
             </TabsTrigger>
+            {isAdmin && <TabsTrigger value="destinatarios">Destinatários</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="nova">
@@ -43,6 +49,12 @@ const Inauguracoes = () => {
           <TabsContent value="solicitacoes">
             <ListaInauguracoes aoIrParaNova={() => setAba('nova')} />
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="destinatarios">
+              <DestinatariosTab />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </MainLayout>

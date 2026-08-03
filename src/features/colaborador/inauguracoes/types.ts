@@ -19,3 +19,16 @@ export type NovaInauguracao = Omit<
   InauguracaoRequest,
   'id' | 'user_id' | 'created_at' | 'updated_at'
 >;
+
+// Espelha `inauguracao_email_recipients` (ver
+// supabase/migrations/20260801140000_inauguracao_email_recipients.sql). Lista
+// de quem recebe o aviso de inauguração por e-mail, gerenciada só por admin.
+export interface DestinatarioAviso {
+  id: string;
+  email: string;
+  nome: string | null;
+  ativo: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
