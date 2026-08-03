@@ -178,11 +178,13 @@ responder o e-mail para falar com quem cadastrou.
 as linhas nesse caso seria a pior falha possível desta automação: o aviso se
 perderia em silêncio e ninguém descobriria.
 
-A garantia é **estrutural, não uma condição escrita em algum lugar**: por isso o
-nó 2 (destinatários) vem **antes** do nó 3 (inaugurações). Sem destinatário
-ativo, o PostgREST devolve `[]`, o nó 2 **não emite nenhum item**, e o motor do
-n8n não executa nada depois dele — nem a consulta das inaugurações, nem o envio,
-nem, principalmente, a marcação. O nó 6 fica **inalcançável**.
+A garantia é **estrutural, não uma condição escrita em algum lugar**: sem
+destinatário ativo o PostgREST devolve `[]`, o nó `Buscar destinatarios ativos`
+**não emite nenhum item**, e o motor do n8n não executa nada depois dele — nem a
+consulta das inaugurações, nem o envio, nem, principalmente, a marcação. Como o
+nó 6 está a jusante do nó de destinatários, ele fica **inalcançável**. Não há
+condição a manter, nem expressão a não apagar: o caminho até a marcação
+simplesmente não existe quando a lista está vazia.
 
 Consequência prática: as inaugurações do dia continuam com `email_enviado_em`
 `NULL` e seguem candidatas. Nada é perdido — o aviso simplesmente não sai
@@ -195,9 +197,42 @@ preferiu a garantia estrutural — a mais forte disponível — a um alerta a ma
 **Quem cuida da lista precisa saber disto:** desativar o último destinatário
 desliga o aviso, sem erro nenhum aparecendo.
 
-> **Não reordene os nós 2 e 3.** Com as inaugurações primeiro, o nó de e-mail
-> seria alcançado com o campo **Para** vazio, e o risco de marcar linha sem
-> aviso ter saído voltaria.
+> **A ordem dos nós 2 e 3 não é o que protege a lista vazia** — e vale dizer,
+> porque é a conclusão errada mais fácil de tirar daqui. Com as inaugurações
+> primeiro, o nó de destinatários também sairia com 0 itens e o envio também não
+> seria alcançado; a proteção vale nos dois sentidos, porque o que importa é o
+> nó de destinatários estar **antes da marcação**, e ele está nas duas ordens.
+> A inversão existe por outro motivo, na nota abaixo — que é igualmente
+> obrigatório.
+
+## Por que os destinatários vêm ANTES das inaugurações
+
+O spec (§5) lista as inaugurações como passo 2 e os destinatários como passo 3.
+**O arquivo faz o contrário, e é obrigatório que faça** — não é preferência de
+layout.
+
+O motivo é o que alimenta o nó Gmail. **Ele precisa iterar as inaugurações**: é
+`$json.nome_unidade`, `$json.endereco`, `$json.data_inauguracao` que montam o
+corpo do e-mail, e um nó do n8n produz um item de saída por item de **entrada**.
+Como o HTTP Request sempre **substitui** a entrada pela resposta, quem estiver
+imediatamente antes do Gmail define o que ele itera:
+
+| Ordem | O que entra no Gmail | Resultado |
+|---|---|---|
+| Destinatários → Inaugurações → Gmail (**o arquivo**) | as linhas do banco | ✅ um e-mail por unidade, com os dados preenchidos, para a lista inteira |
+| Inaugurações → Destinatários → Gmail (a do spec) | os endereços | ❌ **um e-mail por destinatário**, cada um com os campos da unidade em branco (`undefined`), porque `$json` ali é `{ email: ... }` |
+
+> **Não reordene os nós 2 e 3.** O sintoma de ter reordenado é bem específico:
+> **e-mails demais** — um por pessoa da lista em vez de um por unidade — e todos
+> com Unidade, ID, Endereço, Data e Solicitante **vazios**.
+
+Não existe arranjo linear que respeite a ordem do spec e ainda assim faça o
+Gmail iterar inaugurações. As alternativas foram consideradas e descartadas: um
+**ramo paralelo** (destinatários e Gmail saindo os dois do nó de inaugurações)
+funciona, mas a ordem de execução de ramos no `executionOrder: v1` é resolvida
+pela posição dos nós no canvas — arrastar um nó mudaria o comportamento, e o
+Gmail passaria a ser alcançável com a lista vazia; e um **sétimo nó** só para
+reorganizar isso não se paga.
 
 O nó 3 está com **`Execute Once`** ligado justamente porque agora recebe N itens
 (os destinatários) na entrada. Sem isso, ele faria uma consulta por destinatário
@@ -317,8 +352,11 @@ não um erro.
 
 ### Confira estes seis pontos na primeira execução manual
 
-1. **Chegou um e-mail por unidade**, não um só com tudo dentro. Se vier um só,
-   veja "O único cenário que ainda exige ajuste" mais abaixo.
+1. **Chegou um e-mail por unidade**, não um só com tudo dentro nem um por pessoa
+   da lista. Se vier **um só**, veja "O único cenário que ainda exige ajuste"
+   mais abaixo. Se vier **um por destinatário, com os dados da unidade em
+   branco**, os nós 2 e 3 foram reordenados — ver "Por que os destinatários vêm
+   ANTES das inaugurações".
 2. **O campo Para trouxe TODOS os destinatários ativos**, não só um. Se vier só
    um endereço por e-mail, alguém trocou o `.all()` da expressão do `sendTo` por
    `.item` — ver "Os destinatários" acima.
@@ -355,8 +393,11 @@ não um erro.
    4. Rode o `select` do passo 2 e confirme que a linha de teste **continua
       aparecendo** com `email_enviado_em` `NULL`.
 
-   Se a linha aparecer marcada, ou se algum e-mail sair com o campo Para vazio,
-   **a ordem dos nós 2 e 3 foi invertida** — corrija antes de ativar.
+   Se a linha aparecer marcada, **a trava estrutural da lista vazia se perdeu** —
+   confira se o nó `Buscar destinatarios ativos` continua **a montante** do nó
+   `Marcar aviso como enviado`, e não em algum ramo paralelo a ele. (Um e-mail
+   com o campo Para vazio **não** é o sintoma esperado aqui: sem destinatário o
+   nó de envio nem chega a executar.)
 
    5. Reative os destinatários e limpe a marcação antes de seguir.
 
