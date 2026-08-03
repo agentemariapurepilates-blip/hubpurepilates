@@ -29,6 +29,19 @@ const N8N_WEBHOOK_URL = Deno.env.get('INAUGURACAO_WEBHOOK_URL')
 // ate o timeout da plataforma. Estourar aqui NAO marca nada -- ver o final.
 const WEBHOOK_TIMEOUT_MS = 60_000;
 
+// Token compartilhado com o Header Auth do no Webhook do n8n.
+//
+// POR QUE ISTO EXISTE: o no Gmail envia para a lista que vem NO CORPO do POST
+// (`body.destinatarios`). Com o webhook aberto, qualquer um que descobrisse a URL
+// faria a conta Gmail da Pure Pilates mandar e-mail para qualquer endereco, com
+// assunto e Reply-To escolhidos por ele -- phishing com a reputacao do dominio.
+// O Header Auth do n8n fecha isso, e este e o header que ele espera.
+//
+// O valor NAO tem default. Se o segredo nao estiver configurado, esta function
+// para antes de chamar o n8n em vez de mandar sem header: falhar barulhento e
+// melhor do que um 403 diario que ninguem le.
+const WEBHOOK_HEADER = 'x-inauguracao-token';
+
 interface InauguracaoRow {
   id: string;
   nome_unidade: string;
@@ -161,11 +174,33 @@ Deno.serve(async (req) => {
       })),
     };
 
+    // Conferido AQUI, e nao no inicio, pelo mesmo criterio do caso "sem
+    // destinatarios": so vira erro quando ha algo real para enviar. Checar no
+    // topo faria o cron logar erro todo dia em que ninguem inaugura nada, e
+    // barulho diario que nao significa nada e a forma mais rapida de ninguem
+    // mais ler os logs.
+    const webhookToken = Deno.env.get('INAUGURACAO_WEBHOOK_TOKEN') || '';
+    if (!webhookToken) {
+      console.error(
+        `[aviso-inauguracao] ${hoje}: INAUGURACAO_WEBHOOK_TOKEN nao configurado nos segredos das Edge Functions. ${inauguracoes.length} inauguracao(oes) NAO foram avisadas e NADA foi marcado. Cadastre o segredo com o mesmo valor da credencial Header Auth do webhook no n8n e reexecute AINDA HOJE.`,
+      );
+      return json({
+        error: 'webhook_token_ausente',
+        data: hoje,
+        inauguracoes: inauguracoes.length,
+        destinatarios: destinatarios.length,
+        marcadas: 0,
+      }, 500);
+    }
+
     let enviados: string[];
     try {
       const resp = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          [WEBHOOK_HEADER]: webhookToken,
+        },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
       });
