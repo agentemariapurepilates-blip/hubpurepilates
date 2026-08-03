@@ -18,3 +18,11 @@ verify_jwt = false
 # via pg_net, autentica-se com INSTAGRAM_CRON_SECRET (header x-cron-secret).
 [functions.instagram-feed-sync]
 verify_jwt = false
+
+# Aviso de inauguração ao marketing: chamado por pg_cron às 03:00 de São Paulo
+# (06:00 UTC) via pg_net. Autentica-se com o segredo lido do Vault, no header
+# Authorization: Bearer — que NÃO é um JWT, daí o verify_jwt = false. Sem esta
+# entrada a plataforma rejeitaria a chamada com 401 antes de chegar no código,
+# e o aviso falharia todo dia em silêncio.
+[functions.inauguracao-aviso-diario]
+verify_jwt = false
