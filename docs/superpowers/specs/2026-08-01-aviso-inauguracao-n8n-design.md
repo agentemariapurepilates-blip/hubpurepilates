@@ -29,11 +29,37 @@ Um workflow no N8N que, todo dia às 3h (horário de São Paulo):
 | Decisão | Escolha | Razão |
 |---|---|---|
 | Como o N8N obtém os dados | Lê o Supabase direto, com a chave de serviço | É como ele já toca este banco (grava `brand_health_reports`). Criar endpoint novo no Hub seria uma peça a mais para manter, sem ganho. |
-| Onde fica a lista de destinatários | **No próprio workflow do N8N** | São poucas pessoas, que mudam raramente, e o N8N tem interface de edição. Uma tabela + tela de administração para três e-mails é desproporcional. Mover para o Hub depois custa pouco. |
+| Onde fica a lista de destinatários | **Tabela no Hub, gerenciada por admins** — revisado, ver §3.1 | Pedido explícito do usuário. Quem cuida da lista não precisa de acesso ao N8N. |
+| Qual nó de e-mail | **Gmail** (`n8n-nodes-base.gmail` v2.1), credencial `Gmail account` (`GfnvRU8IivJHJehE`) — revisado, ver §3.2 | É o que a instância já usa em 5 workflows, incluindo o de Mídia Adicional. Um nó SMTP genérico exigiria credencial nova sem motivo. |
 | Evitar e-mail repetido | Coluna nova `email_enviado_em` | Notificação agendada sem marcador de envio é o caminho garantido para o marketing receber cinco e-mails iguais quando alguém reexecutar o workflow. |
 | Fuso do agendamento | `America/Sao_Paulo`, declarado no gatilho | O N8N usa o fuso da instância se nada for dito. Fuso implícito é onde o erro se esconde — mesma lição da regra das 48h. |
 | Um e-mail por unidade | Sim, o workflow itera as linhas | Foi o pedido: "para cada unidade que será inaugurada". |
-| Quem executa a entrega | **O usuário** | Ver §7. |
+| Quem executa a entrega | Claude faz o N8N; as migrations dependem de token | Ver §7. |
+
+### 3.1 Revisão: a lista de destinatários vem do Hub
+
+A versão anterior deste spec colocava a lista dentro do workflow, por YAGNI. **O usuário decidiu o contrário:** admins gerenciam pelo Hub. É a escolha melhor — quem cuida de quem recebe não precisa ter acesso ao N8N, e a lista fica auditável junto com o resto.
+
+Isso acrescenta ao escopo:
+
+- Tabela `inauguracao_email_recipients` (§4.2), gerenciada só por admin.
+- Uma aba **"Destinatários"** na tela `/inauguracoes`, visível **apenas para admin**, para adicionar, ativar/desativar e remover.
+- Um passo a mais no workflow: buscar a lista antes de enviar.
+
+A tela nasce vazia. Para referência, quem hoje recebe a notificação equivalente de Mídia Adicional (lida do workflow existente no N8N) são seis endereços — mas eles **não** são semeados no código: colocar e-mails de pessoas numa migration versionada é espalhar dado pessoal sem necessidade, e a lista certa para inaugurações pode não ser a mesma.
+
+### 3.2 Revisão: Gmail, e o que isso quebra na trava
+
+A instância do N8N usa o nó **Gmail** com OAuth2 (credencial `Gmail account`, id `GfnvRU8IivJHJehE`), em cinco workflows. Trocar `emailSend` por `gmail` tem uma consequência que passa despercebida:
+
+| | Resposta do nó | Tem `messageId`? | Tem `id`? |
+|---|---|---|---|
+| `emailSend` (SMTP) | `info` do nodemailer | **sim** | não |
+| `gmail` | resposta da API do Gmail | **não** | **sim** |
+
+A trava (§5) testa `messageId`. Com o nó Gmail ela **bloquearia tudo** — nenhum aviso seria marcado, e o marketing receberia repetido todo dia. E trocar ingenuamente para `id` seria pior: **as linhas do banco também têm `id`**, então a trava passaria tudo, que é exatamente a falha silenciosa que ela existe para impedir.
+
+**A trava passa a testar `threadId`** — presente na resposta do Gmail, ausente nas linhas do banco.
 
 ## 4. Mudança no banco
 
@@ -55,16 +81,52 @@ O índice é parcial de propósito: a consulta do workflow procura sempre por li
 
 **A RLS não muda.** O workflow usa a chave de serviço, que passa por cima da RLS. Nenhuma policy nova é necessária, e nenhum usuário do Hub ganha ou perde acesso — a coluna nova é visível a quem já via a linha.
 
+### 4.2 Tabela dos destinatários
+
+```sql
+CREATE TABLE public.inauguracao_email_recipients (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email      text NOT NULL,
+  nome       text,
+  ativo      boolean NOT NULL DEFAULT true,
+  created_by uuid REFERENCES auth.users(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT inauguracao_email_recipients_email_unico UNIQUE (email)
+);
+```
+
+`ativo` existe para desligar alguém sem perder o registro de que ele já esteve na lista — quem sai de férias ou muda de área volta com um clique, e o histórico não some.
+
+O `UNIQUE (email)` evita o erro mais provável de operação: duas pessoas cadastrando o mesmo endereço e o marketing recebendo dois e-mails idênticos.
+
+**RLS: só admin, em tudo.**
+
+```sql
+ALTER TABLE public.inauguracao_email_recipients ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Somente admin gerencia destinatarios"
+  ON public.inauguracao_email_recipients FOR ALL
+  USING (public.has_role(auth.uid(), 'admin'::app_role))
+  WITH CHECK (public.has_role(auth.uid(), 'admin'::app_role));
+```
+
+Uma policy `FOR ALL` cobre leitura e escrita, e é honesta quanto à intenção: esta tabela é assunto de administrador. Colaborador não precisa saber quem recebe, e o workflow lê com chave de serviço, que ignora RLS.
+
 ## 5. O workflow
 
-Quatro passos, entregues como arquivo JSON importável:
+Seis passos — **revisado** para ler os destinatários do Hub (§3.1) e usar Gmail (§3.2):
 
 | # | Nó | O que faz |
 |---|---|---|
 | 1 | **Schedule Trigger** | Todo dia às 03:00, fuso `America/Sao_Paulo` |
 | 2 | **HTTP Request** (GET) | `{SUPABASE_URL}/rest/v1/inauguracao_requests?select=*&data_inauguracao=eq.{hoje}&email_enviado_em=is.null` |
-| 3 | **Send Email** | Um por linha retornada |
-| 4 | **HTTP Request** (PATCH) | Grava `email_enviado_em` na linha |
+| 3 | **HTTP Request** (GET) | `.../inauguracao_email_recipients?select=email&ativo=is.true` — a lista, do Hub |
+| 4 | **Gmail** | Um e-mail por inauguração, para todos os destinatários ativos |
+| 5 | **Filter** | Deixa passar só o que virou e-mail de verdade (testa `threadId`, ver §3.2) |
+| 6 | **HTTP Request** (PATCH) | Grava `email_enviado_em` na linha |
+
+**Se a lista de destinatários estiver vazia**, não há para quem enviar. O workflow não deve marcar as linhas nesse caso — senão o aviso se perde em silêncio e ninguém descobre. Sem destinatário, ele falha barulhento, coerente com o resto do desenho.
 
 **A data de hoje** vem de `{{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}` — não do fuso da instância do N8N. Rodando às 3h, um deslocamento de fuso mudaria o dia consultado e o aviso sairia um dia cedo ou tarde.
 
