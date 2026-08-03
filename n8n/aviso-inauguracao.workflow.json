@@ -14,8 +14,15 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "aviso-inauguracao",
+        "authentication": "headerAuth",
         "responseMode": "responseNode",
         "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "6R2vnkHZ1UQ5Lmgq",
+          "name": "Aviso inauguracao - token do webhook"
+        }
       }
     },
     {
