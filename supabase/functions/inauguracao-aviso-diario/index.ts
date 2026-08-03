@@ -46,9 +46,31 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Segredo aceito no header Authorization.
+//
+// O ideal e INAUGURACAO_CRON_SECRET, dedicado a esta function. Enquanto ele nao
+// existir, caimos em INSTAGRAM_CRON_SECRET -- que e o UNICO segredo presente ao
+// mesmo tempo nas Edge Functions e no Vault do banco, e o pg_cron so consegue ler
+// do Vault. CRON_SECRET nao serve aqui: existe como segredo das functions, mas
+// nao esta no Vault, entao o agendamento nao teria como enviá-lo.
+//
+// Isso e um compromisso, nao um desenho: amarra este aviso a um segredo com nome
+// de outra funcionalidade, e uma rotacao daquele segredo quebra este cron em
+// silencio (401 diario, sem ninguem reclamar). Para desamarrar, basta criar o
+// segredo dedicado nos dois lugares -- a function passa a preferi-lo sozinha:
+//   1. Edge Functions: segredo INAUGURACAO_CRON_SECRET
+//   2. Banco: select vault.create_secret('<mesmo valor>', 'inauguracao_cron_secret')
+//   3. Migration do cron: trocar o nome lido do Vault
+function segredoEsperado(): string {
+  return Deno.env.get('INAUGURACAO_CRON_SECRET')
+    || Deno.env.get('INSTAGRAM_CRON_SECRET')
+    || '';
+}
+
 Deno.serve(async (req) => {
-  const expected = `Bearer ${Deno.env.get('CRON_SECRET') ?? ''}`;
-  if (req.headers.get('authorization') !== expected) {
+  const segredo = segredoEsperado();
+  // Sem segredo configurado, nada de "autenticar" com string vazia.
+  if (!segredo || req.headers.get('authorization') !== `Bearer ${segredo}`) {
     return json({ error: 'unauthorized' }, 401);
   }
 

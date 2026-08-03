@@ -9,14 +9,29 @@
 -- '0 3 * * *' faria o aviso sair a meia-noite de Sao Paulo, ou seja, no dia
 -- ERRADO para quem cadastrou a inauguracao perto da virada.
 --
--- O segredo vem do Vault, como no cron do feed do Instagram. O valor tem que ser
--- IDENTICO ao segredo `CRON_SECRET` das Edge Functions -- e ele que a function
--- compara no header Authorization. Cadastre uma vez, antes de rodar isto:
+-- SOBRE O SEGREDO -- ler antes de mexer.
 --
---   select vault.create_secret('<o mesmo valor de CRON_SECRET>', 'cron_secret');
+-- O pg_cron so consegue ler segredo do Vault. Hoje o Vault deste projeto tem UM
+-- unico segredo: `instagram_cron_secret`. O `CRON_SECRET` que as outras functions
+-- usam existe apenas como segredo das Edge Functions, NAO esta no Vault -- por
+-- isso os crons `dpp-cron-*` foram agendados a mao, com o valor escrito literal
+-- dentro do comando (veja `select command from cron.job`). Nao repetimos isso
+-- aqui: seria versionar um segredo neste arquivo.
 --
--- Sem esse segredo no Vault o header sai como `Bearer ` e a function responde 401
--- todo dia, em silencio (o pg_cron nao reclama de um 200/401 do lado de la).
+-- Entao reusamos `instagram_cron_secret`, que ja existe nos dois lados. A function
+-- aceita `INAUGURACAO_CRON_SECRET` com prioridade e cai em `INSTAGRAM_CRON_SECRET`
+-- como reserva, entao os dois convivem.
+--
+-- ISSO E UM COMPROMISSO, NAO UM DESENHO. Amarra este aviso a um segredo com nome
+-- de outra funcionalidade: se alguem rotacionar o do Instagram, este cron passa a
+-- responder 401 todo dia, em silencio -- o pg_cron nao reclama do que acontece do
+-- outro lado. Para desamarrar, tres passos:
+--
+--   1. Edge Functions: criar o segredo INAUGURACAO_CRON_SECRET
+--   2. Banco: select vault.create_secret('<mesmo valor>', 'inauguracao_cron_secret');
+--   3. Aqui: trocar o name lido abaixo para 'inauguracao_cron_secret'
+--
+-- A function ja prefere o dedicado, entao o passo 3 e o unico que exige atencao.
 
 -- Unschedule defensivo: deixa a migration re-executavel. Diferente de
 -- `select cron.unschedule('nome')`, esta forma nao estoura quando o job ainda nao
@@ -33,7 +48,7 @@ select cron.schedule(
     url := 'https://evprrtvbvjnjixogjsmn.supabase.co/functions/v1/inauguracao-aviso-diario',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'instagram_cron_secret')
     ),
     body := '{}'::jsonb
   );
