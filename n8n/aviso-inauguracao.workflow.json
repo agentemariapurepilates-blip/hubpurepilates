@@ -7,7 +7,7 @@
       "name": "Todo dia as 03:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [-560, 0],
+      "position": [-780, 0],
       "notes": "Roda todo dia as 03:00 no fuso America/Sao_Paulo. O fuso NAO vem da instancia: esta declarado em settings.timezone deste workflow, que o Schedule Trigger prioriza sobre GENERIC_TIMEZONE. Rodando as 3h da manha, um deslocamento de fuso mudaria o dia consultado e o aviso sairia um dia cedo ou um dia tarde.",
       "notesInFlow": true,
       "parameters": {
@@ -24,13 +24,45 @@
       }
     },
     {
+      "id": "8f2b1c40-5a1e-4a1d-9c31-0b6a1e9d0006",
+      "name": "Buscar destinatarios ativos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-560, 0],
+      "notes": "Le a lista de quem recebe o aviso na tabela inauguracao_email_recipients (Hub: Inauguracoes -> aba Destinatarios, so admin). Traz so ativo=is.true, ordenado por e-mail para o cabecalho Para: sair sempre igual. VEM ANTES DA BUSCA DAS INAUGURACOES DE PROPOSITO, e essa ordem e a trava da lista vazia: sem nenhum destinatario ativo o PostgREST devolve [], este no nao emite nenhum item, e o motor do n8n NAO EXECUTA nada depois dele -- nem o envio, nem, principalmente, a marcacao. As linhas do dia ficam com email_enviado_em NULL e continuam candidatas. Se a ordem fosse a inversa (inauguracoes primeiro), o e-mail sairia com o campo Para: vazio e o risco de marcar linha sem aviso voltaria. NAO reordene estes dois nos.",
+      "notesInFlow": true,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/inauguracao_email_recipients?select=email&ativo=is.true&order=email.asc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
       "id": "8f2b1c40-5a1e-4a1d-9c31-0b6a1e9d0002",
       "name": "Buscar inauguracoes de hoje",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [-340, 0],
-      "notes": "Le a tabela inauguracao_requests via PostgREST com a chave de servico (passa por cima da RLS, e o que permite ver as solicitacoes de todos os colaboradores). A data de hoje vem de $now.setZone('America/Sao_Paulo'), NAO do fuso da instancia. Se nenhuma unidade inaugura hoje, a resposta e uma lista vazia, nenhum item sai deste no e o workflow termina sem enviar nada -- isso nao e erro.",
+      "notes": "Le a tabela inauguracao_requests via PostgREST com a chave de servico (passa por cima da RLS, e o que permite ver as solicitacoes de todos os colaboradores). A data de hoje vem de $now.setZone('America/Sao_Paulo'), NAO do fuso da instancia. Se nenhuma unidade inaugura hoje, a resposta e uma lista vazia, nenhum item sai deste no e o workflow termina sem enviar nada -- isso nao e erro. executeOnce=true NAO E ENFEITE: a entrada deste no sao os N destinatarios do no anterior, e sem ele o n8n faria uma consulta por destinatario e devolveria cada inauguracao N vezes -- o marketing receberia o mesmo aviso N vezes. Com executeOnce, a consulta roda uma vez so e a saida e uma linha do banco por item, que e o que os nos seguintes esperam.",
       "notesInFlow": true,
+      "executeOnce": true,
       "parameters": {
         "method": "GET",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/inauguracao_requests?select=*&data_inauguracao=eq.{{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}&email_enviado_em=is.null",
@@ -57,22 +89,32 @@
     {
       "id": "8f2b1c40-5a1e-4a1d-9c31-0b6a1e9d0003",
       "name": "Enviar e-mail ao marketing",
-      "type": "n8n-nodes-base.emailSend",
+      "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [-120, 0],
-      "notes": "Um e-mail por unidade que inaugura hoje. PREENCHER: o remetente (fromEmail), a lista do marketing (toEmail, separada por virgula) e a credencial SMTP -- nada disso vem preenchido de proposito, para nao ir endereco chutado para producao. Este no roda ANTES da marcacao no banco; ver a nota do proximo no. onError=continueErrorOutput isola a falha POR ITEM: se o SMTP falhar na 2a de 3 unidades, as outras duas seguem para a marcacao normalmente, e so a que falhou sai pela saida de erro (desconectada de proposito) -- fica sem marcacao e volta no proximo ciclo. NAO troque por continueRegularOutput: ali o item que falhou seguiria para o no 4 e a linha seria marcada como avisada sem o e-mail ter saido.",
+      "notes": "Um e-mail por unidade que inaugura hoje, para todos os destinatarios ativos de uma vez. O campo Para (sendTo) usa $('Buscar destinatarios ativos').all().map(...).join(', ') -- ALL, nao .item. Este no itera as INAUGURACOES, e .item parearia item a item: a 1a inauguracao pegaria so o 1o destinatario, a 2a so o 2o, e quem sobrasse nao receberia nada. O .all() junta a lista inteira numa string separada por virgula, que e o formato que o no Gmail espera. Usa a credencial Gmail OAuth2 que a instancia ja tem ('Gmail account'), a mesma de outros 5 workflows -- nao e preciso criar nada. Este no roda ANTES da marcacao no banco; ver a nota do no seguinte. onError=continueErrorOutput isola a falha POR ITEM: se o envio falhar na 2a de 3 unidades, as outras duas seguem para a marcacao normalmente, e so a que falhou sai pela saida de erro (desconectada de proposito) -- fica sem marcacao e volta no proximo ciclo. NAO troque por continueRegularOutput: ali o item que falhou seguiria adiante e a linha seria marcada como avisada sem o e-mail ter saido.",
       "notesInFlow": true,
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000,
       "onError": "continueErrorOutput",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GfnvRU8IivJHJehE",
+          "name": "Gmail account"
+        }
+      },
       "parameters": {
-        "fromEmail": "PREENCHER-remetente@purepilates.com.br",
-        "toEmail": "PREENCHER-marketing@purepilates.com.br",
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Buscar destinatarios ativos').all().map(d => d.json.email).join(', ') }}",
         "subject": "=Inauguração hoje — {{ $json.nome_unidade }}",
-        "emailFormat": "html",
-        "html": "=<p>Uma unidade inaugura <strong>hoje</strong>. Estes sao os dados que o colaborador preencheu no Hub:</p>\n<table cellpadding=\"6\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:14px\">\n  <tr><td><strong>Unidade</strong></td><td>{{ $json.nome_unidade }}</td></tr>\n  <tr><td><strong>ID da unidade</strong></td><td>{{ $json.unidade_id }}</td></tr>\n  <tr><td><strong>Endereço</strong></td><td>{{ $json.endereco }}</td></tr>\n  <tr><td><strong>Data da inauguração</strong></td><td>{{ DateTime.fromFormat($json.data_inauguracao, 'yyyy-MM-dd').setLocale('pt-BR').toFormat(\"dd 'de' LLLL 'de' yyyy\") }}</td></tr>\n  <tr><td><strong>Solicitante</strong></td><td>{{ $json.solicitante_nome }} &lt;{{ $json.solicitante_email }}&gt;</td></tr>\n</table>\n<p style=\"color:#666666;font-size:12px;font-family:Arial,Helvetica,sans-serif\">Enviado automaticamente pelo Hub Pure Pilates, pelo workflow \"Aviso de inauguracao (marketing)\" do n8n. Duvidas sobre os dados: fale com o solicitante acima.</p>",
-        "options": {}
+        "emailType": "html",
+        "message": "=<p>Uma unidade inaugura <strong>hoje</strong>. Estes sao os dados que o colaborador preencheu no Hub:</p>\n<table cellpadding=\"6\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:14px\">\n  <tr><td><strong>Unidade</strong></td><td>{{ $json.nome_unidade }}</td></tr>\n  <tr><td><strong>ID da unidade</strong></td><td>{{ $json.unidade_id }}</td></tr>\n  <tr><td><strong>Endereço</strong></td><td>{{ $json.endereco }}</td></tr>\n  <tr><td><strong>Data da inauguração</strong></td><td>{{ DateTime.fromFormat($json.data_inauguracao, 'yyyy-MM-dd').setLocale('pt-BR').toFormat(\"dd 'de' LLLL 'de' yyyy\") }}</td></tr>\n  <tr><td><strong>Solicitante</strong></td><td>{{ $json.solicitante_nome }} &lt;{{ $json.solicitante_email }}&gt;</td></tr>\n</table>\n<p style=\"color:#666666;font-size:12px;font-family:Arial,Helvetica,sans-serif\">Enviado automaticamente pelo Hub Pure Pilates, pelo workflow \"Aviso de inauguracao (marketing)\" do n8n. Duvidas sobre os dados: responda este e-mail, que a resposta vai para o solicitante acima.</p>",
+        "options": {
+          "replyTo": "={{ $json.solicitante_email }}",
+          "appendAttribution": false
+        }
       }
     },
     {
@@ -81,7 +123,7 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [100, 0],
-      "notes": "NAO REMOVA ESTE NO. Ele nao e redundante, mesmo parecendo. Deixa passar so os itens que trazem messageId -- ou seja, o que o SMTP realmente aceitou. Existe por causa de uma falha de NIVEL DE NO (nao por item): se o no de e-mail estourar antes do laco -- o caso mais provavel e credencial SMTP nao selecionada, apagada ou renomeada, porque getCredentials() roda antes do laco e a validacao previa do n8n nao checa credencial --, o motor repassa os ITENS DE ENTRADA (as linhas do banco, com id e pairedItem intactos) pela saida PRINCIPAL, e a saida de erro nem chega a ser usada. Sem este filtro, o no seguinte marcaria TODAS as linhas do dia como avisadas sem nenhum e-mail ter saido: silencio total, que e exatamente o que a ordem dos nos existe para evitar. As linhas do banco nao tem messageId; a resposta do nodemailer tem. Para apertar mais, da para exigir tambem que accepted nao esteja vazio.",
+      "notes": "NAO REMOVA ESTE NO. Ele nao e redundante, mesmo parecendo. Deixa passar so os itens que trazem threadId -- ou seja, o que a API do Gmail realmente aceitou. Existe por causa de uma falha de NIVEL DE NO (nao por item): se o no de e-mail estourar antes do laco -- o caso mais provavel e credencial OAuth2 nao selecionada, apagada, renomeada ou com o consentimento revogado, porque getCredentials() roda antes do laco e a validacao previa do n8n nao checa credencial --, o motor repassa os ITENS DE ENTRADA (as linhas do banco, com id e pairedItem intactos) pela saida PRINCIPAL, e a saida de erro nem chega a ser usada. Sem este filtro, o no seguinte marcaria TODAS as linhas do dia como avisadas sem nenhum e-mail ter saido: silencio total, que e exatamente o que a ordem dos nos existe para evitar. O CAMPO TESTADO E threadId, e a escolha e critica nos dois sentidos. NAO volte para messageId: aquilo era do SMTP (nodemailer); a resposta do Gmail NAO tem messageId e o filtro bloquearia tudo -- nenhuma linha marcada e o marketing recebendo o mesmo aviso todo dia. E NAO troque por id: a resposta do Gmail tem id, mas as linhas do banco TAMBEM tem id, entao o filtro passaria tudo e a falha silenciosa voltaria inteira. threadId e o unico campo que existe na resposta do Gmail e nao existe na linha do banco.",
       "notesInFlow": true,
       "parameters": {
         "conditions": {
@@ -94,7 +136,7 @@
           "conditions": [
             {
               "id": "b1d9a7e2-3c44-4f18-9a70-2d5c8e1f0011",
-              "leftValue": "={{ $json.messageId }}",
+              "leftValue": "={{ $json.threadId }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -115,7 +157,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [320, 0],
-      "notes": "Grava email_enviado_em na linha, para o aviso nao sair de novo. Vem DEPOIS do envio de proposito: se a marcacao falhar, o marketing pode receber repetido -- incomodo. Se a ordem fosse inversa e o e-mail falhasse, a linha ficaria marcada e o aviso nunca sairia -- silencioso e pior. NAO inverta. O id vem de $('Buscar inauguracoes de hoje').item porque a saida do no de e-mail e a resposta do SMTP, nao a linha do banco; o pairedItem sobrevive ao filtro anterior, entao cada item ainda resolve a sua propria linha.",
+      "notes": "Grava email_enviado_em na linha, para o aviso nao sair de novo. Vem DEPOIS do envio de proposito: se a marcacao falhar, o marketing pode receber repetido -- incomodo. Se a ordem fosse inversa e o e-mail falhasse, a linha ficaria marcada e o aviso nunca sairia -- silencioso e pior. NAO inverta. O id vem de $('Buscar inauguracoes de hoje').item porque a saida do no de e-mail e a resposta da API do Gmail (id, threadId, labelIds), nao a linha do banco; o pairedItem sobrevive ao filtro anterior, entao cada item ainda resolve a sua propria linha.",
       "notesInFlow": true,
       "parameters": {
         "method": "PATCH",
@@ -147,6 +189,17 @@
   ],
   "connections": {
     "Todo dia as 03:00": {
+      "main": [
+        [
+          {
+            "node": "Buscar destinatarios ativos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar destinatarios ativos": {
       "main": [
         [
           {

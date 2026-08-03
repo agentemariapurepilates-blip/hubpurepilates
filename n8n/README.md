@@ -8,37 +8,54 @@ pela interface, em <https://backend.purepilates.com.br>.
 
 ## `aviso-inauguracao.workflow.json` — Aviso de inauguração (marketing)
 
-Todo dia às 03:00 (horário de São Paulo) o workflow procura na tabela
-`inauguracao_requests` as unidades cuja `data_inauguracao` é hoje e que ainda não
-foram avisadas, e manda **um e-mail por unidade** ao pessoal do marketing com os
-dados que o colaborador preencheu no Hub. Depois de enviar, marca a linha para o
-aviso não sair repetido.
+Todo dia às 03:00 (horário de São Paulo) o workflow lê no Hub a lista de quem
+recebe o aviso, procura na tabela `inauguracao_requests` as unidades cuja
+`data_inauguracao` é hoje e que ainda não foram avisadas, e manda **um e-mail por
+unidade** — pelo **Gmail** — a todos os destinatários ativos, com os dados que o
+colaborador preencheu. Depois de enviar, marca a linha para o aviso não sair
+repetido.
 
-### Os cinco nós
+### Os seis nós
 
 | # | Nó | O que faz |
 |---|---|---|
 | 1 | `Todo dia as 03:00` (Schedule Trigger) | Dispara diariamente às 03:00 em `America/Sao_Paulo` |
-| 2 | `Buscar inauguracoes de hoje` (HTTP Request, GET) | Lê `inauguracao_requests` no Supabase via PostgREST |
-| 3 | `Enviar e-mail ao marketing` (Send Email) | Um e-mail por linha retornada |
-| 4 | `So o que virou e-mail de verdade` (Filter) | Deixa passar só o que o SMTP aceitou — ver "O nó 4 é uma trava, não enfeite" |
-| 5 | `Marcar aviso como enviado` (HTTP Request, PATCH) | Grava `email_enviado_em` na linha |
+| 2 | `Buscar destinatarios ativos` (HTTP Request, GET) | Lê `inauguracao_email_recipients` (`ativo=is.true`) — a lista gerenciada no Hub |
+| 3 | `Buscar inauguracoes de hoje` (HTTP Request, GET) | Lê `inauguracao_requests` no Supabase via PostgREST |
+| 4 | `Enviar e-mail ao marketing` (**Gmail**) | Um e-mail por unidade, para todos os destinatários ativos de uma vez |
+| 5 | `So o que virou e-mail de verdade` (Filter) | Deixa passar só o que o Gmail aceitou — ver "O nó 5 é uma trava, não enfeite" |
+| 6 | `Marcar aviso como enviado` (HTTP Request, PATCH) | Grava `email_enviado_em` na linha |
+
+### O que mudou nesta versão
+
+Se você já tinha importado a versão anterior (cinco nós, SMTP), **reimporte**:
+praticamente tudo o que importa mudou.
+
+| Antes | Agora | Por quê |
+|---|---|---|
+| Cinco nós | **Seis** — entrou `Buscar destinatarios ativos` | A lista de destinatários saiu do n8n e foi para o Hub |
+| Nó **Send Email** (SMTP), credencial a criar | Nó **Gmail** (`n8n-nodes-base.gmail` v2.1), credencial **`Gmail account` já existente** (`GfnvRU8IivJHJehE`) | É o que a instância já usa em 5 workflows. **Você não precisa criar credencial nenhuma** |
+| `To Email` digitado dentro do nó | `sendTo` montado a partir da tabela do Hub | Quem cuida da lista não precisa de acesso ao n8n |
+| A trava testava `messageId` | A trava testa **`threadId`** | A resposta do Gmail não tem `messageId` — ver "O nó 5 é uma trava" |
 
 ---
 
-## ANTES DE IMPORTAR: aplique a migration
+## ANTES DE IMPORTAR: aplique as DUAS migrations
 
-O workflow depende da coluna `email_enviado_em`, que **não existe até você rodar
-o SQL**. Sem ela, o passo 2 falha logo de cara: o PostgREST devolve
-`42703 column inauguracao_requests.email_enviado_em does not exist` e nenhum
-e-mail é enviado.
+O workflow depende de duas coisas que **não existem até você rodar o SQL**:
 
-Rode no **SQL Editor do Supabase**, no projeto do Hub (`evprrtvbvjnjixogjsmn`),
-o conteúdo de:
+| Migration | O que cria | Sem ela |
+|---|---|---|
+| `supabase/migrations/20260801100000_inauguracao_email_enviado.sql` | Coluna `email_enviado_em` em `inauguracao_requests` | O nó 3 falha com `42703 column inauguracao_requests.email_enviado_em does not exist` e nenhum e-mail sai |
+| `supabase/migrations/20260801140000_inauguracao_email_recipients.sql` | Tabela `inauguracao_email_recipients` (+ RLS de admin) | O nó 2 falha com `42P01`/404 do PostgREST e o workflow para logo no começo |
 
-```
-supabase/migrations/20260801100000_inauguracao_email_enviado.sql
-```
+Rode as duas no **SQL Editor do Supabase**, no projeto do Hub
+(`evprrtvbvjnjixogjsmn`).
+
+**Depois de aplicar**, cadastre pelo menos um destinatário no Hub:
+**Inaugurações → aba Destinatários** (a aba só aparece para **admin**). A tabela
+nasce vazia de propósito — e-mail de pessoa não entra em migration versionada.
+**Sem nenhum destinatário ativo o aviso não sai** (ver "Lista vazia" abaixo).
 
 ---
 
@@ -63,9 +80,13 @@ supabase/migrations/20260801100000_inauguracao_email_enviado.sql
    `America/Sao_Paulo`. O arquivo já traz isso, mas vale conferir depois de
    importar — ver a seção "O fuso" abaixo, porque é o detalhe que mais dói se
    estiver errado.
-4. Preencha o que falta (próxima seção).
-5. Teste manualmente (seção "Como testar sem esperar até as 3h").
-6. Só então ative o workflow no botão **Active** (canto superior direito).
+4. Confira no nó `Enviar e-mail ao marketing` que a credencial **`Gmail
+   account`** ficou selecionada. O arquivo referencia a credencial pelo id que
+   já existe na instância; se por algum motivo ela aparecer em branco,
+   selecione-a na lista (não crie outra).
+5. Preencha o que falta (próxima seção).
+6. Teste manualmente (seção "Como testar sem esperar até as 3h").
+7. Só então ative o workflow no botão **Active** (canto superior direito).
    Enquanto estiver inativo, o agendamento das 3h **não roda**.
 
 ---
@@ -74,11 +95,11 @@ supabase/migrations/20260801100000_inauguracao_email_enviado.sql
 
 Nada de credencial vem preenchido no arquivo — ele vai para o Git, e chave de
 serviço em repositório é o tipo de coisa que não tem volta. Tudo abaixo é
-preenchido **na instância do n8n**, não no arquivo.
+preenchido **na instância do n8n** ou **no Hub**, não no arquivo.
 
 ### 1. As variáveis do Supabase (`SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`)
 
-Os dois nós de HTTP Request leem `{{ $env.SUPABASE_URL }}` e
+Os **três** nós de HTTP Request leem `{{ $env.SUPABASE_URL }}` e
 `{{ $env.SUPABASE_SERVICE_ROLE_KEY }}`. São **variáveis de ambiente do processo
 do n8n** — defina-as onde a instância é configurada (`docker-compose.yml`,
 arquivo `.env` do servidor, systemd unit, etc.) e reinicie o n8n.
@@ -92,55 +113,96 @@ Onde pegar os valores: painel do Supabase → projeto do **Hub**
 | `SUPABASE_SERVICE_ROLE_KEY` | A chave **`service_role`** (a *secret*, não a `anon`) |
 
 > **Atenção ao projeto.** Existe outro Supabase no ecossistema
-> (`bweyyihedqnckbtzbkie`, do Painel de Indicadores) que **não tem** a tabela
-> `inauguracao_requests`. Apontar para ele dá 404 e nenhum aviso sai.
+> (`bweyyihedqnckbtzbkie`, do Painel de Indicadores) que **não tem** as tabelas
+> `inauguracao_requests` nem `inauguracao_email_recipients`. Apontar para ele dá
+> 404 e nenhum aviso sai.
 
-> **Por que a chave de serviço?** A `inauguracao_requests` tem RLS: cada
-> colaborador só enxerga as próprias linhas. O workflow não é um usuário
-> logado — precisa ver as solicitações de todo mundo, e a chave de serviço é o
-> que passa por cima da RLS. Trate-a como senha de administrador do banco: ela
-> ignora toda a segurança de linha.
+> **Por que a chave de serviço?** As duas tabelas têm RLS: em
+> `inauguracao_requests` cada colaborador só enxerga as próprias linhas, e
+> `inauguracao_email_recipients` é visível só para admin. O workflow não é um
+> usuário logado — precisa ver tudo, e a chave de serviço é o que passa por cima
+> da RLS. Trate-a como senha de administrador do banco.
 
 **Se `$env` não funcionar na sua instância:** o n8n bloqueia acesso a variáveis
 de ambiente quando `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` (o padrão é `false`, ou
 seja, liberado — mas confira). Se estiver bloqueado, as duas alternativas são:
 
 - criar uma credencial **Header Auth** com `apikey` + `Authorization` e usar
-  *Authentication → Generic Credential Type → Header Auth* nos dois nós de HTTP
+  *Authentication → Generic Credential Type → Header Auth* nos três nós de HTTP
   Request (removendo os headers correspondentes); ou
 - trocar `$env` por `$vars` e cadastrar as **Variables** no n8n.
 
 Em nenhum dos casos escreva a chave de volta no JSON deste repositório.
 
-### 2. A credencial de e-mail (SMTP)
+### 2. A credencial de e-mail — **nada a fazer**
 
-O nó `Enviar e-mail ao marketing` é um **Send Email**, que usa uma credencial do
-tipo **SMTP**. O arquivo vem **sem credencial selecionada** de propósito.
+O nó `Enviar e-mail ao marketing` é um **Gmail** com OAuth2 e já vem apontando
+para a credencial **`Gmail account`** (id `GfnvRU8IivJHJehE`), a mesma usada por
+outros cinco workflows da instância — inclusive o de Mídia Adicional. **Não crie
+credencial nova.** Só confira, depois de importar, que ela aparece selecionada
+no nó (passo 4 da importação).
 
-Abra o nó → campo **Credential to connect with** → selecione a credencial SMTP
-existente da instância, ou **Create new credential** e preencha host, porta,
-usuário, senha e SSL/TLS do servidor de e-mail de vocês.
+O `id` da credencial no arquivo **não é segredo**: é só o identificador interno
+do n8n. O token OAuth em si nunca sai da instância.
 
-### 3. Os destinatários do marketing
+### 3. Os destinatários — **no Hub, não aqui**
 
-Abra o nó **`Enviar e-mail ao marketing`** e edite dois campos:
+A lista **não fica mais no n8n**. Quem administra é o admin, pelo Hub:
 
-| Campo na interface | Valor que vem no arquivo | O que colocar |
-|---|---|---|
-| **From Email** | `PREENCHER-remetente@purepilates.com.br` | O remetente (precisa ser um endereço que o SMTP configurado tem permissão de usar) |
-| **To Email** | `PREENCHER-marketing@purepilates.com.br` | Os e-mails do marketing, **separados por vírgula** |
+> **Hub → Inaugurações → aba Destinatários** (a aba só aparece para admin)
 
-Exemplo de **To Email** com três pessoas:
+Ali dá para adicionar, ativar/desativar e remover endereços. O nó 2 lê essa
+tabela a cada execução, filtrando `ativo=is.true` — então mudança na lista vale
+já no próximo dia, sem tocar no n8n.
+
+O nó 4 monta o campo **Para** juntando todos os e-mails ativos numa string
+separada por vírgula:
 
 ```
-Fulano <fulano@purepilates.com.br>, ciclana@purepilates.com.br, beltrano@purepilates.com.br
+{{ $('Buscar destinatarios ativos').all().map(d => d.json.email).join(', ') }}
 ```
 
-No JSON, esses campos são `nodes[2].parameters.fromEmail` e
-`nodes[2].parameters.toEmail` — mas edite pela interface do n8n, não no arquivo:
-**a lista de destinatários mora no n8n**, essa foi a decisão de projeto (§3 do
-spec). Construir uma tela no Hub para administrar três e-mails que mudam uma vez
-por ano seria desproporcional.
+> **`.all()`, não `.item`.** O nó 4 itera as **inaugurações**; se a expressão
+> usasse `.item`, o n8n parearia item a item e a 1ª inauguração receberia só o
+> 1º destinatário, a 2ª só o 2º, e quem sobrasse não receberia nada. O `.all()`
+> traz a lista inteira, independente de quantas unidades inauguram no dia.
+
+O **Reply-To** aponta para o solicitante da inauguração, então basta o marketing
+responder o e-mail para falar com quem cadastrou.
+
+---
+
+## Lista vazia: o workflow não marca nada
+
+**Se não houver nenhum destinatário ativo, não há para quem enviar** — e marcar
+as linhas nesse caso seria a pior falha possível desta automação: o aviso se
+perderia em silêncio e ninguém descobriria.
+
+A garantia é **estrutural, não uma condição escrita em algum lugar**: por isso o
+nó 2 (destinatários) vem **antes** do nó 3 (inaugurações). Sem destinatário
+ativo, o PostgREST devolve `[]`, o nó 2 **não emite nenhum item**, e o motor do
+n8n não executa nada depois dele — nem a consulta das inaugurações, nem o envio,
+nem, principalmente, a marcação. O nó 6 fica **inalcançável**.
+
+Consequência prática: as inaugurações do dia continuam com `email_enviado_em`
+`NULL` e seguem candidatas. Nada é perdido — o aviso simplesmente não sai
+naquela execução.
+
+**O preço dessa escolha, e ele é consciente:** a execução termina como
+**sucesso**, sem nó vermelho no histórico. Não é barulhenta. A alternativa
+barulhenta exigiria um sétimo nó (*Stop and Error*) só para isso, e o desenho
+preferiu a garantia estrutural — a mais forte disponível — a um alerta a mais.
+**Quem cuida da lista precisa saber disto:** desativar o último destinatário
+desliga o aviso, sem erro nenhum aparecendo.
+
+> **Não reordene os nós 2 e 3.** Com as inaugurações primeiro, o nó de e-mail
+> seria alcançado com o campo **Para** vazio, e o risco de marcar linha sem
+> aviso ter saído voltaria.
+
+O nó 3 está com **`Execute Once`** ligado justamente porque agora recebe N itens
+(os destinatários) na entrada. Sem isso, ele faria uma consulta por destinatário
+e devolveria cada inauguração N vezes — **o marketing receberia o mesmo aviso N
+vezes**. Não desligue.
 
 ---
 
@@ -154,8 +216,8 @@ dois lugares, e nenhum deles é o padrão da instância:
 - **Quando dispara:** `settings.timezone = "America/Sao_Paulo"` no próprio
   workflow. O Schedule Trigger dá prioridade ao fuso do workflow sobre o da
   instância (`GENERIC_TIMEZONE`, que num self-hosted vem `America/New_York` por
-  padrão).
-- **Qual dia é consultado:** a URL do nó 2 usa
+  padrão). O nó **não tem** campo de fuso próprio — é no workflow mesmo.
+- **Qual dia é consultado:** a URL do nó 3 usa
   `{{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}` — a data é
   calculada explicitamente em São Paulo, não no fuso da instância.
 
@@ -165,7 +227,7 @@ Se você mexer no workflow, **não troque nenhum dos dois por um valor implícit
 
 ## A ordem dos nós: e-mail ANTES da marcação
 
-O nó 5 (marcar como enviado) vem **depois** do nó 3 (enviar e-mail). Isso é
+O nó 6 (marcar como enviado) vem **depois** do nó 4 (enviar e-mail). Isso é
 deliberado, não descuido:
 
 - **Como está:** se a marcação falhar, o e-mail já saiu e o marketing pode
@@ -175,38 +237,43 @@ deliberado, não descuido:
   sabendo.
 
 Entre falhar barulhento e falhar em silêncio, o desenho escolheu barulhento.
-**Não inverta os nós 3 e 5.**
+**Não inverta os nós 4 e 6.**
 
 ---
 
-## O nó 4 é uma trava, não enfeite
+## O nó 5 é uma trava, não enfeite
 
 O nó **`So o que virou e-mail de verdade`** (um **Filter**) fica entre o envio e
-a marcação e deixa passar só os itens que têm `messageId` — ou seja, o que o
-servidor SMTP de fato aceitou. Ele parece redundante e **não é**. Se alguém
+a marcação e deixa passar só os itens que têm **`threadId`** — ou seja, o que a
+API do Gmail de fato aceitou. Ele parece redundante e **não é**. Se alguém
 apagar esse nó "para simplificar", volta o pior defeito possível deste workflow.
 
 **O que ele impede.** O nó de e-mail tem duas maneiras diferentes de falhar:
 
 | Tipo de falha | Exemplo | O que o n8n faz |
 |---|---|---|
-| **Por item** | O SMTP recusa o endereço de uma unidade | O item que falhou sai pela **saída de erro** (desconectada). As outras seguem. Tudo certo. |
-| **De nível de nó** | **Credencial SMTP não selecionada, apagada ou renomeada** | O nó estoura **antes** do laço por item, e o motor repassa os **itens de entrada** — as linhas do banco, com `id` e `pairedItem` intactos — pela **saída principal**. A saída de erro nem chega a ser usada. |
+| **Por item** | O Gmail recusa o endereço de uma unidade | O item que falhou sai pela **saída de erro** (desconectada). As outras seguem. Tudo certo. |
+| **De nível de nó** | **Credencial OAuth2 não selecionada, apagada, renomeada ou com o consentimento revogado** | O nó estoura **antes** do laço por item, e o motor repassa os **itens de entrada** — as linhas do banco, com `id` e `pairedItem` intactos — pela **saída principal**. A saída de erro nem chega a ser usada. |
 
 É a segunda linha que faz o estrago: sem o filtro, as linhas do banco chegariam
 ao nó de marcação, que gravaria `email_enviado_em` em **todas as unidades do
 dia** sem **nenhum** e-mail ter saído. Ninguém recebe, ninguém fica sabendo, e no
-dia seguinte a consulta não devolve mais nada porque está tudo marcado. É
-exatamente o silêncio que a ordem dos nós existe para evitar.
+dia seguinte a consulta não devolve mais nada porque está tudo marcado.
 
-A credencial ausente é o gatilho mais provável justamente porque o arquivo vem
-**sem** credencial preenchida — e a validação prévia do n8n não checa credencial
-antes de rodar. O filtro funciona porque as linhas do banco não têm `messageId`;
-a resposta do nodemailer tem.
+### Por que `threadId`, e por que não os outros dois campos
 
-> Se quiser apertar mais, dá para exigir também que `accepted` não esteja vazio
-> (SMTP que aceita a mensagem mas rejeita todos os destinatários). Uma condição
-> só já cobre o caso que importa.
+A resposta do nó Gmail traz `id`, `threadId` e `labelIds`. A escolha do campo
+testado é crítica **nos dois sentidos**, e as duas alternativas óbvias estão
+erradas:
+
+| Campo | Está na resposta do Gmail? | Está na linha do banco? | O que aconteceria |
+|---|---|---|---|
+| `messageId` | **não** (era do SMTP/nodemailer) | não | A trava **bloquearia tudo**: nenhuma linha marcada, e o marketing recebendo o mesmo aviso todo dia até a inauguração passar |
+| `id` | sim | **sim** (`inauguracao_requests.id`) | A trava **passaria tudo** — exatamente a falha silenciosa que ela existe para impedir |
+| **`threadId`** | **sim** | **não** | ✅ É o único campo que distingue a resposta do Gmail de uma linha do banco |
+
+Esta é a mudança mais fácil de errar na migração de SMTP para Gmail. Se você
+mexer aqui, **releia esta tabela antes**.
 
 ---
 
@@ -214,9 +281,10 @@ a resposta do nodemailer tem.
 
 1. Abra o workflow no n8n e clique em **Execute workflow** (ou **Test
    workflow**). O Schedule Trigger dispara na hora, sem esperar o agendamento.
-2. Para ter o que testar, garanta que existe pelo menos uma linha em
-   `inauguracao_requests` com `data_inauguracao` = **hoje** e
-   `email_enviado_em` = `NULL`. No SQL Editor do Supabase:
+2. Garanta que existe **pelo menos um destinatário ativo** (Hub → Inaugurações →
+   Destinatários) e **pelo menos uma linha** em `inauguracao_requests` com
+   `data_inauguracao` = **hoje** e `email_enviado_em` = `NULL`. No SQL Editor do
+   Supabase:
 
    ```sql
    -- ver o que o workflow enxergaria agora
@@ -224,6 +292,10 @@ a resposta do nodemailer tem.
      from public.inauguracao_requests
     where data_inauguracao = (now() at time zone 'America/Sao_Paulo')::date
       and email_enviado_em is null;
+
+   -- e para quem ele mandaria
+   select email from public.inauguracao_email_recipients
+    where ativo order by email;
    ```
 
 3. **Para reexecutar o teste**, limpe a marcação da linha que você usou (senão a
@@ -237,37 +309,56 @@ a resposta do nodemailer tem.
 
 4. Se quiser testar sem mandar e-mail de verdade, desabilite temporariamente o
    nó `Enviar e-mail ao marketing` (clique nele → `D`) e rode: você vê o
-   resultado da consulta sem disparar nada.
+   resultado das duas consultas sem disparar nada.
 
-**Nenhuma unidade inaugura hoje?** O nó 2 devolve lista vazia, os nós seguintes
+**Nenhuma unidade inaugura hoje?** O nó 3 devolve lista vazia, os nós seguintes
 não executam e o workflow termina em sucesso. Isso é o comportamento correto,
 não um erro.
 
-### Confira estes quatro pontos na primeira execução manual
+### Confira estes seis pontos na primeira execução manual
 
 1. **Chegou um e-mail por unidade**, não um só com tudo dentro. Se vier um só,
    veja "O único cenário que ainda exige ajuste" mais abaixo.
-2. **A data saiu por extenso em português** ("15 de setembro de 2026"). Se o mês
+2. **O campo Para trouxe TODOS os destinatários ativos**, não só um. Se vier só
+   um endereço por e-mail, alguém trocou o `.all()` da expressão do `sendTo` por
+   `.item` — ver "Os destinatários" acima.
+3. **A data saiu por extenso em português** ("15 de setembro de 2026"). Se o mês
    veio em inglês, veja a tabela de formato mais abaixo.
-3. **A linha ficou marcada:** rode o `select` do passo 2 de novo — a unidade
+4. **A linha ficou marcada:** rode o `select` do passo 2 de novo — a unidade
    avisada não deve mais aparecer.
-4. **O teste da credencial ausente** — é o que valida a trava do nó 4, e vale a
+5. **O teste da credencial ausente** — é o que valida a trava do nó 5, e vale a
    pena fazer **uma vez**, porque é o modo de falha que causaria o pior estrago
    em silêncio:
 
    1. Limpe a marcação da linha de teste (SQL do passo 3 acima).
-   2. No nó `Enviar e-mail ao marketing`, **remova a credencial SMTP**
+   2. No nó `Enviar e-mail ao marketing`, **remova a credencial do Gmail**
       (ou renomeie a credencial, que dá no mesmo).
    3. **Execute o workflow.** Ele vai falhar no nó de e-mail — é o esperado.
    4. Rode o `select` do passo 2 e confirme que a linha de teste **continua
       aparecendo**, ou seja, `email_enviado_em` continua `NULL`.
 
    Se a linha aparecer marcada mesmo sem e-mail nenhum ter saído, **a trava do
-   nó 4 não está funcionando** — pare, não ative o workflow, e confira se o nó
-   `So o que virou e-mail de verdade` está presente e conectado entre o envio e
-   a marcação.
+   nó 5 não está funcionando** — pare, não ative o workflow, e confira se o nó
+   `So o que virou e-mail de verdade` está presente, conectado entre o envio e
+   a marcação, e testando **`threadId`** (não `id`, que passaria tudo).
 
    5. Recoloque a credencial e limpe a marcação antes de seguir.
+
+6. **O teste da lista vazia** — vale uma vez, porque é a outra forma de perder o
+   aviso em silêncio:
+
+   1. Limpe a marcação da linha de teste (SQL do passo 3 acima).
+   2. No Hub (Inaugurações → Destinatários), **desative todos** os destinatários.
+   3. **Execute o workflow.** O esperado é ele terminar **sem enviar nada**: o
+      nó `Buscar destinatarios ativos` sai com **0 itens** e os nós seguintes
+      nem chegam a executar (aparecem sem execução no canvas).
+   4. Rode o `select` do passo 2 e confirme que a linha de teste **continua
+      aparecendo** com `email_enviado_em` `NULL`.
+
+   Se a linha aparecer marcada, ou se algum e-mail sair com o campo Para vazio,
+   **a ordem dos nós 2 e 3 foi invertida** — corrija antes de ativar.
+
+   5. Reative os destinatários e limpe a marcação antes de seguir.
 
 ---
 
@@ -282,13 +373,15 @@ Estão no spec (§8) e são conscientes, não bugs a corrigir:
 - **Solicitação criada depois das 3h do próprio dia não é avisada.** As 3h já
   passaram e não há segunda passada. Quem cadastra uma inauguração no mesmo dia
   já sabe dela; o valor do aviso está nas cadastradas com antecedência.
-- **A lista de destinatários vive no n8n.** Quem for mexer precisa de acesso à
-  instância. É a contrapartida consciente de não construir uma tela para isso.
+- **Lista vazia desliga o aviso em silêncio.** Sem destinatário ativo o
+  workflow termina em sucesso sem enviar nada e sem marcar nada. É a garantia
+  estrutural descrita em "Lista vazia" — e a contrapartida é que ninguém é
+  alertado.
 - **Duas unidades no mesmo dia** geram dois e-mails, um por unidade. É o
   pedido, não um defeito.
 - **Se o envio de uma unidade falhar, só ela fica para trás.** O nó de e-mail
-  está com *On Error → Continue (using error output)*. Numa falha de SMTP com
-  três unidades no dia, as outras duas seguem normalmente para a marcação; a que
+  está com *On Error → Continue (using error output)*. Numa falha com três
+  unidades no dia, as outras duas seguem normalmente para a marcação; a que
   falhou sai pela saída de erro, que está **desconectada de propósito** — a
   linha fica sem `email_enviado_em` e volta a ser candidata no próximo ciclo.
   Como a consulta é sempre "hoje", esse próximo ciclo na prática só existe se
@@ -296,9 +389,9 @@ Estão no spec (§8) e são conscientes, não bugs a corrigir:
   o aviso daquela unidade não sai mais (é a limitação "sem recuperação" acima).
 - **O *Retry On Fail* cobre menos do que o nome sugere — e na primeira unidade
   pode duplicar.** O nó está com 3 tentativas e 5s de intervalo, e isso ajuda no
-  caso transitório mais comum (SMTP fora do ar por alguns segundos). Mas o
-  retry é do **nó inteiro**, não do item, e o n8n só decide reexecutar olhando o
-  **primeiro item** da saída principal. Na prática:
+  caso transitório mais comum (API do Gmail devolvendo 5xx ou rate limit por
+  alguns segundos). Mas o retry é do **nó inteiro**, não do item, e o n8n só
+  decide reexecutar olhando o **primeiro item** da saída principal. Na prática:
   - falha na **1ª** unidade → o nó reexecuta **inteiro**, e as unidades que já
     tinham dado certo **recebem o e-mail de novo** (até 3 cópias);
   - falha na 2ª ou na 3ª, com a 1ª tendo dado certo → **nenhum retry acontece**;
@@ -313,29 +406,36 @@ Estão no spec (§8) e são conscientes, não bugs a corrigir:
   repetido é o e-mail sair e o PATCH da própria linha falhar — bem mais raro, e
   é o incômodo que o desenho aceita de propósito para nunca ficar em silêncio
   (ver "A ordem dos nós").
+- **A cota do Gmail vale.** A conta da credencial `Gmail account` tem limite
+  diário de envio, e este workflow divide essa cota com os outros cinco
+  workflows que usam a mesma credencial. Para o volume de inaugurações (uma
+  ou duas por dia) está muito longe do teto, mas é bom saber que o teto existe.
 
 ---
 
 ## Formato do workflow — o que está confirmado e onde olhar se algo reclamar
 
-Este JSON foi escrito **sem acesso a uma instância do n8n**, então nunca foi
-importado de verdade. O que dá para garantir por verificação local: é JSON
-válido, tem `name`/`nodes`/`connections`, cada nó tem `type`/`typeVersion`/
-`position`/`parameters`, e as conexões ligam os cinco nós na ordem certa.
-
-Os pontos que ficaram em dúvida na primeira escrita **foram conferidos depois no
-código-fonte do n8n** e se resolveram todos a favor do arquivo como está — não
-gaste tempo investigando os que estão marcados como confirmados.
+Este JSON foi escrito **sem acesso a uma instância do n8n** — ele nunca foi
+importado de verdade a partir deste arquivo. O que dá para garantir por
+verificação local: é JSON válido, tem `name`/`nodes`/`connections`, cada nó tem
+`type`/`typeVersion`/`position`/`parameters`, e as conexões ligam os seis nós na
+ordem certa. O tipo, a `typeVersion` e o id da credencial do nó Gmail **foram
+lidos da instância real** (do workflow `Midia Adicional - Notificacao por
+email`), não chutados.
 
 | Ponto | O que foi usado | Situação | Se der problema |
 |---|---|---|---|
 | `scheduleTrigger` `typeVersion` | `1.2` | **Confirmado** — é o que a documentação oficial usa nos exemplos de workflow | Se a instância for muito antiga, baixe para `1.1`; os parâmetros `rule.interval` são os mesmos |
 | `httpRequest` `typeVersion` | `4.2` | **Confirmado** — versão atual, usada nos exemplos oficiais | Numa instância antiga, `4.1` aceita os mesmos parâmetros |
-| `emailSend` `typeVersion` | `2.1` | **Confirmado no código-fonte do n8n** — o nó declara o array de versões `[2, 2.1]` | Nada a fazer |
+| `gmail` `typeVersion` e credencial | `n8n-nodes-base.gmail` v`2.1`, `gmailOAuth2` id `GfnvRU8IivJHJehE` | **Lido da instância real** — é exatamente o que o workflow de Mídia Adicional usa | Nada a fazer |
+| Parâmetros do nó Gmail | `sendTo`, `subject`, `message`, `options.replyTo` | **Lidos da instância real** (mesmo workflow) | Nada a fazer |
+| `emailType: "html"` e `options.appendAttribution: false` | Explicitados no arquivo | **Não verificados na instância** — o precedente não os traz. `emailType` é o padrão do nó (HTML) escrito por clareza; `appendAttribution: false` tira o rodapé "sent automatically with n8n" | Se o corpo chegar como texto cru com as tags à mostra, abra o nó e confira **Email Type = HTML**. Se `appendAttribution` for ignorado, o único efeito é o rodapé do n8n voltar |
 | Fuso declarado no workflow, não no nó | `settings.timezone` | **Confirmado no código-fonte** — o `ScheduleTrigger` chama `this.getTimezone()`, que lê `workflow.settings.timezone`; o nó **não tem** campo de fuso próprio | Confira em *Workflow settings → Timezone*. Ver o alerta sobre copiar-e-colar no passo 2 da importação |
-| Um e-mail por unidade | O HTTP Request v4 divide o array JSON da resposta em vários itens | **Confirmado no código-fonte** — `if (Array.isArray(response)) { response.forEach(...) }`, com `pairedItem` por elemento | Nada a fazer. **Não** insira um nó Split Out: ele é desnecessário e no cenário abaixo até atrapalha |
-| `$('Buscar inauguracoes de hoje').item.json.id` no nó 5 | Referência ao item pareado do nó 2 | **Confirmado no código-fonte** — o `emailSend` empurra `pairedItem: { item: itemIndex }`, então o vínculo segue item a item mesmo com várias unidades no mesmo dia; e se o pareamento quebrasse, o n8n lança erro explícito em vez de marcar a linha errada em silêncio | Nada a fazer. Foi feito assim porque a saída do nó de e-mail é a resposta do SMTP (`messageId`, `accepted`...), **não** a linha do banco — `$json.id` ali daria `undefined` |
-| `filter` `typeVersion` e o formato das condições | `2.2`, condições v2 com `operator: string/exists`, `singleValue: true` e `typeValidation: "loose"` | **Confirmado no código-fonte** — o nó registra as versões `{1, 2, 2.1, 2.2, 2.3}`, e o operador bate com a definição canônica `'string:exists': { type: 'string', operation: 'exists', singleValue: true }` (`FilterConditions/constants.ts`). O `singleValue: true` é necessário, não enfeite: é ele que faz o `filter-parameter.ts` pular a validação do `rightValue` vazio. E `={{ $json.messageId }}` é expressão única cobrindo a string inteira, então o n8n devolve o **valor cru** (`undefined` numa linha do banco), não a string `''` — se virasse `''`, o `exists` daria **true** e o guard deixaria passar tudo | Nada a fazer. **Não** troque pela alternativa do ternário na URL (descrita abaixo) sem necessidade: ela devolve a trava para dentro de uma expressão |
+| Um e-mail por unidade | O HTTP Request v4 divide o array JSON da resposta em vários itens | **Confirmado no código-fonte** — `if (Array.isArray(response)) { response.forEach(...) }`, com `pairedItem` por elemento | Nada a fazer. **Não** insira um nó Split Out: ele é desnecessário e no cenário do fim desta seção até atrapalha |
+| `executeOnce` no nó 3 | Propriedade de nó padrão do n8n (a mesma do toggle *Execute Once* na aba Settings do nó) | **Confirmado** — o motor reduz a entrada ao primeiro item; a **saída** continua sendo o array inteiro da resposta | Se o mesmo aviso chegar repetido tantas vezes quantos são os destinatários, é este toggle que foi desligado |
+| `$('Buscar destinatarios ativos').all()` no `sendTo` | Referência a **todos** os itens de um nó anterior | **Confirmado** — `.all()` é a API documentada para ler o conjunto completo; `.item` pareia item a item e é justamente o que **não** serve aqui | Se cada e-mail sair para um destinatário só, alguém trocou por `.item` |
+| `$('Buscar inauguracoes de hoje').item.json.id` no nó 6 | Referência ao item pareado do nó 3 | **Confirmado no código-fonte** para o `emailSend`, e o nó Gmail v2 empurra `pairedItem` do mesmo jeito (`constructExecutionMetaData` com `itemData`). Se o pareamento quebrasse, o n8n lança erro explícito em vez de marcar a linha errada em silêncio | Foi feito assim porque a saída do nó de e-mail é a resposta do Gmail (`id`, `threadId`, `labelIds`), **não** a linha do banco — `$json.id` ali seria o id da **mensagem**, e o PATCH não casaria linha nenhuma |
+| `filter` `typeVersion` e o formato das condições | `2.2`, condições v2 com `operator: string/exists`, `singleValue: true` e `typeValidation: "loose"` | **Confirmado no código-fonte** — o nó registra as versões `{1, 2, 2.1, 2.2, 2.3}`, e o operador bate com a definição canônica `'string:exists': { type: 'string', operation: 'exists', singleValue: true }` (`FilterConditions/constants.ts`). O `singleValue: true` é necessário, não enfeite: é ele que faz o `filter-parameter.ts` pular a validação do `rightValue` vazio. E `={{ $json.threadId }}` é expressão única cobrindo a string inteira, então o n8n devolve o **valor cru** (`undefined` numa linha do banco), não a string `''` — se virasse `''`, o `exists` daria **true** e o guard deixaria passar tudo | Nada a fazer. **Não** troque pela alternativa do ternário na URL (descrita abaixo) sem necessidade: ela devolve a trava para dentro de uma expressão |
 | Data por extenso em pt-BR | `DateTime.fromFormat(...).setLocale('pt-BR')` (Luxon) | Não verificado — depende do ICU do Node da instância | Se o mês vier em inglês, troque por `{{ $json.data_inauguracao.split('-').reverse().join('/') }}` para `dd/mm/aaaa` |
 
 ### A única ressalva de portabilidade: o Filter exige n8n ≥ 1.59.0
@@ -357,10 +457,10 @@ valor ausente acontece antes da checagem de tipo, com `strict` ou `loose`. Está
 posto por coerência, não por necessidade.
 
 **Alternativa, se por algum motivo o Filter não servir na sua instância:** apague
-o nó, ligue o e-mail direto na marcação e troque a URL do nó 5 por
+o nó, ligue o e-mail direto na marcação e troque a URL do nó 6 por
 
 ```
-?id=eq.{{ $json.messageId ? $('Buscar inauguracoes de hoje').item.json.id : '00000000-0000-0000-0000-000000000000' }}
+?id=eq.{{ $json.threadId ? $('Buscar inauguracoes de hoje').item.json.id : '00000000-0000-0000-0000-000000000000' }}
 ```
 
 O PATCH não casa nenhuma linha quando o e-mail não saiu, então protege igual.
@@ -370,21 +470,22 @@ parece ter a ver com marcar uma linha.
 
 ### O único cenário que ainda exige ajuste: a resposta interpretada como texto
 
-O nó 2 está com o **autodetect** de formato de resposta do HTTP Request. Se, por
-algum motivo, o PostgREST responder com um `Content-Type` que o n8n não
+Os nós 2 e 3 estão com o **autodetect** de formato de resposta do HTTP Request.
+Se, por algum motivo, o PostgREST responder com um `Content-Type` que o n8n não
 reconheça como JSON, ele cai no caminho de **texto** e embrulha tudo num único
 item no formato `{ "data": "<a resposta inteira como string>" }`.
 
-O sintoma é chegar **um** e-mail só, com os campos vazios ou com `undefined`, em
-vez de um por unidade.
+O sintoma no nó 3 é chegar **um** e-mail só, com os campos vazios ou com
+`undefined`, em vez de um por unidade. No nó 2, é o campo **Para** sair com
+`undefined` no lugar dos endereços.
 
 **A correção não é um Split Out.** Nesse cenário `data` é uma *string*, não um
-array — um Split Out em `data` falha. O ajuste é forçar o formato no nó 2:
+array — um Split Out em `data` falha. O ajuste é forçar o formato no nó afetado:
 
-> Abra o nó **`Buscar inauguracoes de hoje`** → **Options** → **Add Option** →
-> **Response** → **Response Format** → **JSON**.
+> Abra o nó → **Options** → **Add Option** → **Response** → **Response Format**
+> → **JSON**.
 
-No JSON isso corresponde a `nodes[1].parameters.options.response.response.responseFormat = "json"`.
+No JSON isso corresponde a `parameters.options.response.response.responseFormat = "json"`.
 
 ---
 
@@ -398,8 +499,11 @@ Antes de qualquer commit, procure por tokens longos (é o formato de qualquer
 chave do Supabase, tanto a JWT antiga quanto a `sb_`... nova):
 
 ```bash
-grep -rnE "[A-Za-z0-9_-]{60,}" n8n/
+grep -rnE "[A-Za-z0-9_+/=-]{50,}" n8n/
 ```
 
-Tem que voltar vazio. Se voltar alguma coisa, olhe linha por linha antes de
-seguir.
+O que voltar tem que ser olhado linha por linha. Hoje a única coisa que casa são
+**caminhos de arquivo** citados neste README (`supabase/migrations/...`), que
+obviamente não são segredo. O `id` da credencial do Gmail
+(`GfnvRU8IivJHJehE`, 16 caracteres) também não é — é só o identificador interno
+do n8n, não dá acesso a nada fora da instância.
