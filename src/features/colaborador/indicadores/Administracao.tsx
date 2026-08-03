@@ -20,6 +20,17 @@ import { IntegrationStatusTab } from './components/admin/IntegrationStatusTab';
 // cliente supabase do navegador: buscam pelo proxy do servidor de
 // desenvolvimento, onde a chave fica. Ver lib/indicadoresProxy.ts.
 
+// As abas Relatório e Integração leem tabelas que exigem chave de serviço, e por
+// isso buscam pelo proxy `/api-dev/indicadores` do servidor de desenvolvimento
+// (ver vite.config.ts). Esse proxy tem `apply: 'serve'` — NAO existe no build de
+// produção. Em produção as duas requisições cairiam num caminho inexistente e as
+// abas mostrariam erro, entao elas simplesmente nao aparecem la.
+//
+// Para liberá-las em produção seria preciso uma Edge Function no Supabase fazendo
+// o mesmo papel do proxy: guardar a chave de serviço do lado do servidor e devolver
+// só o JSON. Enquanto isso não existir, esconder é melhor que mostrar quebrado.
+const TEM_PROXY_LOCAL = import.meta.env.DEV;
+
 export default function Administracao() {
   return (
     <MainLayout>
@@ -50,8 +61,8 @@ export default function Administracao() {
             <TabsTrigger value="ordenacao">Ordenação</TabsTrigger>
             <TabsTrigger value="metas">Metas</TabsTrigger>
             <TabsTrigger value="unidades">Unidades</TabsTrigger>
-            <TabsTrigger value="relatorio">Relatório</TabsTrigger>
-            <TabsTrigger value="integracao">Integração</TabsTrigger>
+            {TEM_PROXY_LOCAL && <TabsTrigger value="relatorio">Relatório</TabsTrigger>}
+            {TEM_PROXY_LOCAL && <TabsTrigger value="integracao">Integração</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="analise">
@@ -75,12 +86,16 @@ export default function Administracao() {
           <TabsContent value="unidades">
             <UnidadesTab />
           </TabsContent>
-          <TabsContent value="relatorio">
-            <ReportRecipientsTab />
-          </TabsContent>
-          <TabsContent value="integracao">
-            <IntegrationStatusTab />
-          </TabsContent>
+          {TEM_PROXY_LOCAL && (
+            <TabsContent value="relatorio">
+              <ReportRecipientsTab />
+            </TabsContent>
+          )}
+          {TEM_PROXY_LOCAL && (
+            <TabsContent value="integracao">
+              <IntegrationStatusTab />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </MainLayout>
