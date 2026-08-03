@@ -8,333 +8,365 @@ pela interface, em <https://backend.purepilates.com.br>.
 
 ## `aviso-inauguracao.workflow.json` — Aviso de inauguração (marketing)
 
-Todo dia às 03:00 (horário de São Paulo) o workflow lê no Hub a lista de quem
-recebe o aviso, procura na tabela `inauguracao_requests` as unidades cuja
-`data_inauguracao` é hoje e que ainda não foram avisadas, e manda **um e-mail por
-unidade** — pelo **Gmail** — a todos os destinatários ativos, com os dados que o
-colaborador preencheu. Depois de enviar, marca a linha para o aviso não sair
-repetido.
+No dia da inauguração, o pessoal do marketing recebe **um e-mail por unidade**
+que inaugura naquele dia, com os dados que o colaborador preencheu no Hub.
+
+**A arquitetura foi invertida.** Quem manda no fluxo agora é o Supabase; o n8n
+virou o carteiro:
+
+```
+pg_cron (03:00 America/Sao_Paulo = 06:00 UTC)
+  └─> Edge Function `inauguracao-aviso-diario`   [já tem a chave de serviço]
+        1. calcula "hoje" em São Paulo
+        2. busca as inaugurações de hoje ainda não avisadas
+        3. busca os destinatários ativos
+        4. POST no webhook do n8n com tudo pronto
+             └─> n8n: Webhook → Split Out → Gmail → Filter → Set → Respond
+                  devolve { "enviados": ["id", ...] }
+        5. marca `email_enviado_em` SÓ dos ids que o n8n confirmou
+```
+
+**Nenhum segredo do Supabase entra no n8n.** A chave de serviço nunca sai de
+dentro do Supabase.
+
+### Por que mudou (leia antes de "voltar como era")
+
+A versão anterior fazia o contrário: o workflow tinha um Schedule Trigger e três
+nós de HTTP Request que liam e escreviam no Supabase via PostgREST, usando
+`{{ $env.SUPABASE_URL }}` e `{{ $env.SUPABASE_SERVICE_ROLE_KEY }}`.
+
+**Essas variáveis não existem nesta instância do n8n.** Na execução real as
+expressões resolveram para string vazia e o nó quebrou com:
+
+```
+Invalid URL: /rest/v1/inauguracao_email_recipients?select=email&ativo=is.true
+URL must start with "http" or "https"
+```
+
+Havia duas saídas: cadastrar `SUPABASE_SERVICE_ROLE_KEY` no ambiente do n8n, ou
+inverter o fluxo. **A chave de serviço ignora toda a RLS do banco** — é senha de
+administrador. Guardá-la numa segunda ferramenta, para poupar uma Edge Function,
+não se paga. A Edge Function já roda dentro do Supabase e já tem a chave no
+ambiente, sem ninguém precisar copiá-la para lugar nenhum.
 
 ### Os seis nós
 
 | # | Nó | O que faz |
 |---|---|---|
-| 1 | `Todo dia as 03:00` (Schedule Trigger) | Dispara diariamente às 03:00 em `America/Sao_Paulo` |
-| 2 | `Buscar destinatarios ativos` (HTTP Request, GET) | Lê `inauguracao_email_recipients` (`ativo=is.true`) — a lista gerenciada no Hub |
-| 3 | `Buscar inauguracoes de hoje` (HTTP Request, GET) | Lê `inauguracao_requests` no Supabase via PostgREST |
-| 4 | `Enviar e-mail ao marketing` (**Gmail**) | Um e-mail por unidade, para todos os destinatários ativos de uma vez |
-| 5 | `So o que virou e-mail de verdade` (Filter) | Deixa passar só o que o Gmail aceitou — ver "O nó 5 é uma trava, não enfeite" |
-| 6 | `Marcar aviso como enviado` (HTTP Request, PATCH) | Grava `email_enviado_em` na linha |
+| 1 | `Recebe do Supabase` (Webhook, POST) | Recebe `{ destinatarios, inauguracoes }` da Edge Function. `responseMode: responseNode` |
+| 2 | `Separar as inauguracoes` (Split Out) | Quebra `body.inauguracoes` em um item por unidade |
+| 3 | `Enviar e-mail ao marketing` (**Gmail**) | Um e-mail por unidade, para todos os destinatários de uma vez |
+| 4 | `So o que virou e-mail de verdade` (Filter) | Deixa passar só o que o Gmail aceitou — ver "O nó 4 é uma trava" |
+| 5 | `Ids que o Gmail confirmou` (Set) | Traz de volta o **id da inauguração** (a saída do Gmail é a resposta da API) |
+| 6 | `Responder ao Supabase` (Respond to Webhook) | Devolve `{ "enviados": [ids...] }` |
 
-### O que mudou nesta versão
+### O contrato entre os dois lados
 
-Se você já tinha importado a versão anterior (cinco nós, SMTP), **reimporte**:
-praticamente tudo o que importa mudou.
+**O que a Edge Function envia** (POST, `Content-Type: application/json`):
 
-| Antes | Agora | Por quê |
-|---|---|---|
-| Cinco nós | **Seis** — entrou `Buscar destinatarios ativos` | A lista de destinatários saiu do n8n e foi para o Hub |
-| Nó **Send Email** (SMTP), credencial a criar | Nó **Gmail** (`n8n-nodes-base.gmail` v2.1), credencial **`Gmail account` já existente** (`GfnvRU8IivJHJehE`) | É o que a instância já usa em 5 workflows. **Você não precisa criar credencial nenhuma** |
-| `To Email` digitado dentro do nó | `sendTo` montado a partir da tabela do Hub | Quem cuida da lista não precisa de acesso ao n8n |
-| A trava testava `messageId` | A trava testa **`threadId`** | A resposta do Gmail não tem `messageId` — ver "O nó 5 é uma trava" |
+```json
+{
+  "destinatarios": ["marketing@exemplo.com", "outro@exemplo.com"],
+  "inauguracoes": [
+    {
+      "id": "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0",
+      "nome_unidade": "Pure Pilates Exemplo",
+      "unidade_id": "1234",
+      "endereco": "Rua Exemplo, 100 - Cidade/UF",
+      "solicitante_nome": "Fulano de Tal",
+      "solicitante_email": "fulano@exemplo.com",
+      "data_inauguracao": "2026-08-20",
+      "data_inauguracao_fmt": "20/08/2026"
+    }
+  ]
+}
+```
+
+**O que o n8n tem que devolver:**
+
+```json
+{ "enviados": ["0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0"] }
+```
+
+Só esses ids são marcados como avisados. A Edge Function também aceita um array
+puro (`["id1", "id2"]`), por robustez, e **descarta qualquer id que não estava no
+lote** que ela mesma enviou.
+
+Qualquer outra coisa — HTTP != 2xx, corpo que não é JSON, JSON sem `enviados`,
+ou nenhuma resposta dentro de 60s — faz a Edge Function **não marcar nada** e
+registrar erro no log. Ver "Falhar barulhento".
 
 ---
 
-## ANTES DE IMPORTAR: aplique as DUAS migrations
-
-O workflow depende de duas coisas que **não existem até você rodar o SQL**:
+## ANTES DE IMPORTAR: aplique as TRÊS migrations e publique a function
 
 | Migration | O que cria | Sem ela |
 |---|---|---|
-| `supabase/migrations/20260801100000_inauguracao_email_enviado.sql` | Coluna `email_enviado_em` em `inauguracao_requests` | O nó 3 falha com `42703 column inauguracao_requests.email_enviado_em does not exist` e nenhum e-mail sai |
-| `supabase/migrations/20260801140000_inauguracao_email_recipients.sql` | Tabela `inauguracao_email_recipients` (+ RLS de admin) | O nó 2 falha com `42P01`/404 do PostgREST e o workflow para logo no começo |
+| `supabase/migrations/20260801100000_inauguracao_email_enviado.sql` | Coluna `email_enviado_em` em `inauguracao_requests` | A Edge Function falha na consulta (`42703`) e nenhum e-mail sai |
+| `supabase/migrations/20260801140000_inauguracao_email_recipients.sql` | Tabela `inauguracao_email_recipients` (+ RLS de admin) | A Edge Function falha ao buscar os destinatários (`42P01`) |
+| `supabase/migrations/20260803120000_inauguracao_aviso_cron.sql` | O agendamento no `pg_cron` | Nada dispara às 3h — o workflow só roda se você chamar o webhook na mão |
 
-Rode as duas no **SQL Editor do Supabase**, no projeto do Hub
+Rode as três no **SQL Editor do Supabase**, no projeto do Hub
 (`evprrtvbvjnjixogjsmn`).
 
-**Depois de aplicar**, cadastre pelo menos um destinatário no Hub:
-**Inaugurações → aba Destinatários** (a aba só aparece para **admin**). A tabela
-nasce vazia de propósito — e-mail de pessoa não entra em migration versionada.
-**Sem nenhum destinatário ativo o aviso não sai** (ver "Lista vazia" abaixo).
+**A migration do cron precisa do segredo no Vault.** Ela monta o header
+`Authorization: Bearer <segredo>` lendo `vault.decrypted_secrets` no nome
+`cron_secret`, e esse valor tem que ser **idêntico** ao segredo `CRON_SECRET` das
+Edge Functions (é ele que a function compara). Se ainda não existir:
+
+```sql
+select vault.create_secret('<o mesmo valor de CRON_SECRET>', 'cron_secret');
+```
+
+Sem isso o header sai como `Bearer ` e a function responde **401 todo dia, em
+silêncio** — o `pg_net` não reclama de um 401 do outro lado.
+
+**Publique a Edge Function** `inauguracao-aviso-diario` (`supabase functions
+deploy inauguracao-aviso-diario`, ou pelo painel). Os segredos que ela usa —
+`CRON_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — **já existem** no
+projeto; nada a cadastrar. O único opcional é `INAUGURACAO_WEBHOOK_URL`, e só se
+o endereço do webhook for diferente do default (próxima seção).
+
+**Cadastre pelo menos um destinatário no Hub:** **Inaugurações → aba
+Destinatários** (a aba só aparece para **admin**). A tabela nasce vazia de
+propósito — e-mail de pessoa não entra em migration versionada. **Sem
+destinatário ativo o aviso não sai**, e isso é registrado como erro (ver "Falhar
+barulhento").
 
 ---
 
 ## Passo a passo da importação
 
 1. Baixe/abra o arquivo `n8n/aviso-inauguracao.workflow.json` deste repositório.
-2. No n8n (<https://backend.purepilates.com.br>), no canto superior direito:
-   **Workflows → Add workflow** (ou os três pontinhos `...` de um workflow novo)
-   **→ Import from File...** e selecione o JSON.
-   - Alternativa (**copiar e colar**): abra o arquivo num editor, copie tudo,
-     crie um workflow em branco e cole (`Ctrl+V`) direto no canvas.
+2. No n8n (<https://backend.purepilates.com.br>): **Workflows → Add workflow →
+   Import from File...** e selecione o JSON.
+   - Copiar e colar também funciona e agora é **menos arriscado** que antes: o
+     `settings.timezone` continua no arquivo, mas o agendamento **não depende
+     mais dele** (quem agenda é o `pg_cron`, no Supabase). Ainda assim, prefira
+     **Import from File**.
+3. Confira no nó `Enviar e-mail ao marketing` que a credencial **`Gmail
+   account`** ficou selecionada. O arquivo referencia a credencial pelo id que já
+   existe na instância; se aparecer em branco, selecione-a na lista (não crie
+   outra).
+4. **Pegue a URL de produção do webhook.** Abra o nó `Recebe do Supabase` e copie
+   a **Production URL**. Com o `path` do arquivo ela é:
 
-     > ⚠️ **Colar traz só os nós e as conexões — o `settings.timezone` do
-     > arquivo é descartado.** O workflow fica com o fuso da instância, que num
-     > n8n self-hosted é `America/New_York` por padrão: o gatilho das 3h
-     > dispararia às 5h de São Paulo e a data consultada seria a de Nova York.
-     > Ou seja, o e-mail sai no dia errado — e nada avisa que isso aconteceu.
-     > Se você colar em vez de importar, **abra `Workflow settings → Timezone`
-     > e ponha `America/Sao_Paulo` na mão**, antes de qualquer outra coisa.
-     > Prefira **Import from File**, que preserva o `settings`.
-3. Confira em **Workflow settings (`...` → Settings) → Timezone** que está
-   `America/Sao_Paulo`. O arquivo já traz isso, mas vale conferir depois de
-   importar — ver a seção "O fuso" abaixo, porque é o detalhe que mais dói se
-   estiver errado.
-4. Confira no nó `Enviar e-mail ao marketing` que a credencial **`Gmail
-   account`** ficou selecionada. O arquivo referencia a credencial pelo id que
-   já existe na instância; se por algum motivo ela aparecer em branco,
-   selecione-a na lista (não crie outra).
-5. Preencha o que falta (próxima seção).
-6. Teste manualmente (seção "Como testar sem esperar até as 3h").
-7. Só então ative o workflow no botão **Active** (canto superior direito).
-   Enquanto estiver inativo, o agendamento das 3h **não roda**.
+   ```
+   https://backend.purepilates.com.br/webhook/aviso-inauguracao
+   ```
+
+   Esse é o **default** que a Edge Function usa. Se a sua instância montar outra
+   URL, cadastre o segredo `INAUGURACAO_WEBHOOK_URL` nas Edge Functions do
+   Supabase com o valor certo. **Não** mude o `path` no arquivo sem atualizar o
+   segredo junto — a function chamaria um endereço que não existe e o aviso do
+   dia se perderia.
+5. **Ative o workflow** (botão **Active**, canto superior direito). Isto é
+   obrigatório aqui, e é diferente da versão anterior: a **Production URL só
+   responde com o workflow ativo**. Enquanto inativo, só a *Test URL* funciona, e
+   só durante uma execução de teste — a chamada do cron levaria 404.
 
 ---
 
 ## O que você precisa preencher
 
-Nada de credencial vem preenchido no arquivo — ele vai para o Git, e chave de
-serviço em repositório é o tipo de coisa que não tem volta. Tudo abaixo é
-preenchido **na instância do n8n** ou **no Hub**, não no arquivo.
+### 1. Variáveis do Supabase — **nada a fazer**
 
-### 1. As variáveis do Supabase (`SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`)
-
-Os **três** nós de HTTP Request leem `{{ $env.SUPABASE_URL }}` e
-`{{ $env.SUPABASE_SERVICE_ROLE_KEY }}`. São **variáveis de ambiente do processo
-do n8n** — defina-as onde a instância é configurada (`docker-compose.yml`,
-arquivo `.env` do servidor, systemd unit, etc.) e reinicie o n8n.
-
-Onde pegar os valores: painel do Supabase → projeto do **Hub**
-(`evprrtvbvjnjixogjsmn`) → **Project Settings → API**:
-
-| Variável | Valor |
-|---|---|
-| `SUPABASE_URL` | O campo **Project URL** — `https://evprrtvbvjnjixogjsmn.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | A chave **`service_role`** (a *secret*, não a `anon`) |
-
-> **Atenção ao projeto.** Existe outro Supabase no ecossistema
-> (`bweyyihedqnckbtzbkie`, do Painel de Indicadores) que **não tem** as tabelas
-> `inauguracao_requests` nem `inauguracao_email_recipients`. Apontar para ele dá
-> 404 e nenhum aviso sai.
-
-> **Por que a chave de serviço?** As duas tabelas têm RLS: em
-> `inauguracao_requests` cada colaborador só enxerga as próprias linhas, e
-> `inauguracao_email_recipients` é visível só para admin. O workflow não é um
-> usuário logado — precisa ver tudo, e a chave de serviço é o que passa por cima
-> da RLS. Trate-a como senha de administrador do banco.
-
-**Se `$env` não funcionar na sua instância:** o n8n bloqueia acesso a variáveis
-de ambiente quando `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` (o padrão é `false`, ou
-seja, liberado — mas confira). Se estiver bloqueado, as duas alternativas são:
-
-- criar uma credencial **Header Auth** com `apikey` + `Authorization` e usar
-  *Authentication → Generic Credential Type → Header Auth* nos três nós de HTTP
-  Request (removendo os headers correspondentes); ou
-- trocar `$env` por `$vars` e cadastrar as **Variables** no n8n.
-
-Em nenhum dos casos escreva a chave de volta no JSON deste repositório.
+O workflow **não lê mais nada do Supabase**. `$env.SUPABASE_URL` e
+`$env.SUPABASE_SERVICE_ROLE_KEY` sumiram do arquivo, e é o ponto principal desta
+versão. Se você já tinha cadastrado essas variáveis no ambiente do n8n para a
+versão anterior, **remova-as** — chave de serviço parada num lugar onde não é
+usada é só superfície de ataque.
 
 ### 2. A credencial de e-mail — **nada a fazer**
 
-O nó `Enviar e-mail ao marketing` é um **Gmail** com OAuth2 e já vem apontando
-para a credencial **`Gmail account`** (id `GfnvRU8IivJHJehE`), a mesma usada por
-outros cinco workflows da instância — inclusive o de Mídia Adicional. **Não crie
-credencial nova.** Só confira, depois de importar, que ela aparece selecionada
-no nó (passo 4 da importação).
+O nó `Enviar e-mail ao marketing` é um **Gmail** com OAuth2 apontando para a
+credencial **`Gmail account`** (id `GfnvRU8IivJHJehE`), a mesma usada por outros
+cinco workflows da instância — inclusive o de Mídia Adicional. **Não crie
+credencial nova.**
 
 O `id` da credencial no arquivo **não é segredo**: é só o identificador interno
 do n8n. O token OAuth em si nunca sai da instância.
 
 ### 3. Os destinatários — **no Hub, não aqui**
 
-A lista **não fica mais no n8n**. Quem administra é o admin, pelo Hub:
+> **Hub → Inaugurações → aba Destinatários** (só admin)
 
-> **Hub → Inaugurações → aba Destinatários** (a aba só aparece para admin)
+Ali dá para adicionar, ativar/desativar e remover endereços. Quem lê essa tabela
+agora é a **Edge Function**, a cada execução, filtrando `ativo = true` — mudança
+na lista vale já no próximo dia, sem tocar no n8n.
 
-Ali dá para adicionar, ativar/desativar e remover endereços. O nó 2 lê essa
-tabela a cada execução, filtrando `ativo=is.true` — então mudança na lista vale
-já no próximo dia, sem tocar no n8n.
-
-O nó 4 monta o campo **Para** juntando todos os e-mails ativos numa string
-separada por vírgula:
+O nó Gmail monta o campo **Para** juntando a lista que chegou no webhook:
 
 ```
-{{ $('Buscar destinatarios ativos').all().map(d => d.json.email).join(', ') }}
+{{ $('Recebe do Supabase').first().json.body.destinatarios.join(', ') }}
 ```
 
-> **`.all()`, não `.item`.** O nó 4 itera as **inaugurações**; se a expressão
-> usasse `.item`, o n8n parearia item a item e a 1ª inauguração receberia só o
-> 1º destinatário, a 2ª só o 2º, e quem sobrasse não receberia nada. O `.all()`
-> traz a lista inteira, independente de quantas unidades inauguram no dia.
+> **`.first()`, não `.item`.** O webhook emite **um único item** com a lista
+> inteira; o nó Gmail itera as **inaugurações**. `.first()` pega esse item único
+> independentemente de quantas unidades inauguram no dia.
 
 O **Reply-To** aponta para o solicitante da inauguração, então basta o marketing
 responder o e-mail para falar com quem cadastrou.
 
 ---
 
-## Lista vazia: o workflow não marca nada
+## Falhar barulhento: os três casos que não marcam nada
 
-**Se não houver nenhum destinatário ativo, não há para quem enviar** — e marcar
-as linhas nesse caso seria a pior falha possível desta automação: o aviso se
-perderia em silêncio e ninguém descobriria.
+A regra que organiza o desenho inteiro: **como a consulta é sempre "hoje", um
+aviso que não sai hoje não sai nunca.** Entre marcar sem certeza (o aviso se
+perde em silêncio) e não marcar (risco de e-mail repetido numa reexecução do
+mesmo dia), o desenho escolhe sempre o repetido.
 
-A garantia é **estrutural, não uma condição escrita em algum lugar**: sem
-destinatário ativo o PostgREST devolve `[]`, o nó `Buscar destinatarios ativos`
-**não emite nenhum item**, e o motor do n8n não executa nada depois dele — nem a
-consulta das inaugurações, nem o envio, nem, principalmente, a marcação. Como o
-nó 6 está a jusante do nó de destinatários, ele fica **inalcançável**. Não há
-condição a manter, nem expressão a não apagar: o caminho até a marcação
-simplesmente não existe quando a lista está vazia.
-
-Consequência prática: as inaugurações do dia continuam com `email_enviado_em`
-`NULL` e seguem candidatas. Nada é perdido — o aviso simplesmente não sai
-naquela execução.
-
-**O preço dessa escolha, e ele é consciente:** a execução termina como
-**sucesso**, sem nó vermelho no histórico. Não é barulhenta. A alternativa
-barulhenta exigiria um sétimo nó (*Stop and Error*) só para isso, e o desenho
-preferiu a garantia estrutural — a mais forte disponível — a um alerta a mais.
-**Quem cuida da lista precisa saber disto:** desativar o último destinatário
-desliga o aviso, sem erro nenhum aparecendo.
-
-> **A ordem dos nós 2 e 3 não é o que protege a lista vazia** — e vale dizer,
-> porque é a conclusão errada mais fácil de tirar daqui. Com as inaugurações
-> primeiro, o nó de destinatários também sairia com 0 itens e o envio também não
-> seria alcançado; a proteção vale nos dois sentidos, porque o que importa é o
-> nó de destinatários estar **antes da marcação**, e ele está nas duas ordens.
-> A inversão existe por outro motivo, na nota abaixo — que é igualmente
-> obrigatório.
-
-## Por que os destinatários vêm ANTES das inaugurações
-
-O spec (§5) lista as inaugurações como passo 2 e os destinatários como passo 3.
-**O arquivo faz o contrário, e é obrigatório que faça** — não é preferência de
-layout.
-
-O motivo é o que alimenta o nó Gmail. **Ele precisa iterar as inaugurações**: é
-`$json.nome_unidade`, `$json.endereco`, `$json.data_inauguracao` que montam o
-corpo do e-mail, e um nó do n8n produz um item de saída por item de **entrada**.
-Como o HTTP Request sempre **substitui** a entrada pela resposta, quem estiver
-imediatamente antes do Gmail define o que ele itera:
-
-| Ordem | O que entra no Gmail | Resultado |
+| Situação | O que acontece | Marca? |
 |---|---|---|
-| Destinatários → Inaugurações → Gmail (**o arquivo**) | as linhas do banco | ✅ um e-mail por unidade, com os dados preenchidos, para a lista inteira |
-| Inaugurações → Destinatários → Gmail (a do spec) | os endereços | ❌ **um e-mail por destinatário**, cada um com os campos da unidade em branco (`undefined`), porque `$json` ali é `{ email: ... }` |
+| **Nenhuma inauguração hoje** | A function retorna **200** com `mensagem: "Nenhuma inauguracao hoje"`. **Não é erro** — e o webhook do n8n nem é chamado | Nada a marcar |
+| **Há inauguração e nenhum destinatário ativo** | A function retorna **500** com `error: "sem_destinatarios_ativos"` e grava no log que ninguém foi avisado | ❌ nada |
+| **n8n fora do ar, 4xx/5xx, timeout de 60s, ou resposta em formato inesperado** | A function retorna **502** com `error: "falha_no_webhook_n8n"` e o detalhe no log | ❌ nada |
+| **n8n confirma parte** (ex.: 2 de 3) | A function marca as 2 e grava no log que 1 ficou para trás | ✅ só os confirmados |
 
-> **Não reordene os nós 2 e 3.** O sintoma de ter reordenado é bem específico:
-> **e-mails demais** — um por pessoa da lista em vez de um por unidade — e todos
-> com Unidade, ID, Endereço, Data e Solicitante **vazios**.
+> **A lista vazia deixou de ser silenciosa.** Na versão anterior, sem
+> destinatário ativo o workflow terminava em **sucesso** sem enviar nem marcar
+> nada — a proteção era estrutural (o nó de destinatários saía com 0 itens e
+> nada depois dele executava), mas ninguém era alertado. Agora é uma verificação
+> explícita, com 500 e log. **É a melhoria mais direta desta inversão.**
 
-Não existe arranjo linear que respeite a ordem do spec e ainda assim faça o
-Gmail iterar inaugurações. As alternativas foram consideradas e descartadas: um
-**ramo paralelo** (destinatários e Gmail saindo os dois do nó de inaugurações)
-funciona, mas a ordem de execução de ramos no `executionOrder: v1` é resolvida
-pela posição dos nós no canvas — arrastar um nó mudaria o comportamento, e o
-Gmail passaria a ser alcançável com a lista vazia; e um **sétimo nó** só para
-reorganizar isso não se paga.
-
-O nó 3 está com **`Execute Once`** ligado justamente porque agora recebe N itens
-(os destinatários) na entrada. Sem isso, ele faria uma consulta por destinatário
-e devolveria cada inauguração N vezes — **o marketing receberia o mesmo aviso N
-vezes**. Não desligue.
+Onde ver esses logs: painel do Supabase → **Edge Functions →
+`inauguracao-aviso-diario` → Logs**. Todas as linhas começam com
+`[aviso-inauguracao]`.
 
 ---
 
 ## O fuso — o detalhe que mais dói se estiver errado
 
-Rodando **às 3h da manhã**, um deslocamento de fuso de poucas horas muda o *dia*
-consultado. O aviso sairia um dia cedo ou um dia tarde — exatamente o que não
-pode acontecer numa notificação de "hoje". Por isso o fuso está declarado em
-dois lugares, e nenhum deles é o padrão da instância:
+O agendamento saiu do n8n e foi para o `pg_cron`. Rodando **às 3h da manhã**, um
+deslocamento de fuso de poucas horas muda o *dia* consultado, e o aviso sairia um
+dia cedo ou um dia tarde. Agora o fuso está tratado em dois lugares, **os dois no
+lado do Supabase**:
 
-- **Quando dispara:** `settings.timezone = "America/Sao_Paulo"` no próprio
-  workflow. O Schedule Trigger dá prioridade ao fuso do workflow sobre o da
-  instância (`GENERIC_TIMEZONE`, que num self-hosted vem `America/New_York` por
-  padrão). O nó **não tem** campo de fuso próprio — é no workflow mesmo.
-- **Qual dia é consultado:** a URL do nó 3 usa
-  `{{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}` — a data é
-  calculada explicitamente em São Paulo, não no fuso da instância.
+- **Quando dispara:** `'0 6 * * *'` na migration do cron. **O `pg_cron` agenda
+  sempre em UTC**, e São Paulo é UTC−3 o ano inteiro (o Brasil não tem horário de
+  verão desde 2019) — então **06:00 UTC = 03:00 em São Paulo**. Trocar por
+  `'0 3 * * *'` faria o aviso sair à meia-noite local. Está comentado na
+  migration; leia antes de "corrigir".
+- **Qual dia é consultado:** a Edge Function calcula
+  `Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' })`, que devolve
+  `YYYY-MM-DD` — a data é calculada explicitamente em São Paulo, **não** em UTC.
+  Às 03:00 locais o dia em UTC já virou; usar `new Date().toISOString()` daria o
+  dia certo por acidente neste horário e o dia errado em qualquer outro.
 
-Se você mexer no workflow, **não troque nenhum dos dois por um valor implícito.**
-
----
-
-## A ordem dos nós: e-mail ANTES da marcação
-
-O nó 6 (marcar como enviado) vem **depois** do nó 4 (enviar e-mail). Isso é
-deliberado, não descuido:
-
-- **Como está:** se a marcação falhar, o e-mail já saiu e o marketing pode
-  receber repetido numa reexecução. Incômodo, mas visível.
-- **Se fosse invertido:** se o envio falhasse, a linha já estaria marcada como
-  avisada e o aviso **nunca sairia** — ninguém receberia nada e ninguém ficaria
-  sabendo.
-
-Entre falhar barulhento e falhar em silêncio, o desenho escolheu barulhento.
-**Não inverta os nós 4 e 6.**
+O `settings.timezone = "America/Sao_Paulo"` continua no arquivo do workflow. Ele
+é inofensivo e não agenda mais nada — fica porque qualquer expressão de data que
+alguém venha a escrever no n8n vai querer esse fuso, não o da instância
+(`America/New_York` por padrão num self-hosted).
 
 ---
 
-## O nó 5 é uma trava, não enfeite
+## O nó 4 é uma trava, não enfeite
 
 O nó **`So o que virou e-mail de verdade`** (um **Filter**) fica entre o envio e
-a marcação e deixa passar só os itens que têm **`threadId`** — ou seja, o que a
-API do Gmail de fato aceitou. Ele parece redundante e **não é**. Se alguém
-apagar esse nó "para simplificar", volta o pior defeito possível deste workflow.
+a montagem da resposta, e deixa passar só os itens que têm **`threadId`** — ou
+seja, o que a API do Gmail de fato aceitou. Ele parece redundante e **não é**.
 
 **O que ele impede.** O nó de e-mail tem duas maneiras diferentes de falhar:
 
 | Tipo de falha | Exemplo | O que o n8n faz |
 |---|---|---|
-| **Por item** | O Gmail recusa o endereço de uma unidade | O item que falhou sai pela **saída de erro** (desconectada). As outras seguem. Tudo certo. |
-| **De nível de nó** | **Credencial OAuth2 não selecionada, apagada, renomeada ou com o consentimento revogado** | O nó estoura **antes** do laço por item, e o motor repassa os **itens de entrada** — as linhas do banco, com `id` e `pairedItem` intactos — pela **saída principal**. A saída de erro nem chega a ser usada. |
+| **Por item** | O Gmail recusa o endereço de uma unidade | O item sai pela **saída de erro** (desconectada). Os outros seguem. Tudo certo. |
+| **De nível de nó** | **Credencial OAuth2 não selecionada, apagada, renomeada ou com o consentimento revogado** | O nó estoura **antes** do laço por item, e o motor repassa os **itens de entrada** — as inaugurações, com `id` e `pairedItem` intactos — pela **saída principal**. A saída de erro nem chega a ser usada. |
 
-É a segunda linha que faz o estrago: sem o filtro, as linhas do banco chegariam
-ao nó de marcação, que gravaria `email_enviado_em` em **todas as unidades do
-dia** sem **nenhum** e-mail ter saído. Ninguém recebe, ninguém fica sabendo, e no
-dia seguinte a consulta não devolve mais nada porque está tudo marcado.
+É a segunda linha que faz o estrago: sem o filtro, os ids de **todas** as
+inaugurações do dia entrariam na resposta, e a Edge Function marcaria todas como
+avisadas sem **nenhum** e-mail ter saído.
 
 ### Por que `threadId`, e por que não os outros dois campos
 
-A resposta do nó Gmail traz `id`, `threadId` e `labelIds`. A escolha do campo
-testado é crítica **nos dois sentidos**, e as duas alternativas óbvias estão
-erradas:
-
-| Campo | Está na resposta do Gmail? | Está na linha do banco? | O que aconteceria |
+| Campo | Está na resposta do Gmail? | Está no item de entrada? | O que aconteceria |
 |---|---|---|---|
-| `messageId` | **não** (era do SMTP/nodemailer) | não | A trava **bloquearia tudo**: nenhuma linha marcada, e o marketing recebendo o mesmo aviso todo dia até a inauguração passar |
-| `id` | sim | **sim** (`inauguracao_requests.id`) | A trava **passaria tudo** — exatamente a falha silenciosa que ela existe para impedir |
-| **`threadId`** | **sim** | **não** | ✅ É o único campo que distingue a resposta do Gmail de uma linha do banco |
+| `messageId` | **não** (era do SMTP/nodemailer) | não | A trava **bloquearia tudo**: nada marcado, e o marketing recebendo repetido a cada reexecução |
+| `id` | sim (o da mensagem) | **sim** (o da inauguração) | A trava **passaria tudo** — exatamente a falha silenciosa que ela existe para impedir |
+| **`threadId`** | **sim** | **não** | ✅ É o único campo que distingue a resposta do Gmail de um item de entrada |
 
-Esta é a mudança mais fácil de errar na migração de SMTP para Gmail. Se você
-mexer aqui, **releia esta tabela antes**.
+---
+
+## O nó 5 também não é enfeite (e o `Always Output Data` menos ainda)
+
+O nó `Ids que o Gmail confirmou` (um **Set**) existe por um motivo simples: **a
+saída do nó Gmail é a resposta da API do Google** (`id`, `threadId`, `labelIds`),
+não a inauguração. O `id` de lá é o da **mensagem** — devolvê-lo para a Edge
+Function não casaria linha nenhuma no banco. O nó reconstrói o campo com
+`$('Separar as inauguracoes').item.json.id`, que resolve o item pareado (o
+`pairedItem` sobrevive ao Gmail e ao Filter).
+
+E ele está com **`Always Output Data`** ligado de propósito. Se **nenhum** e-mail
+sair, o Filter não emite nada; sem o toggle, este nó também não emitiria e o
+`Responder ao Supabase` **não executaria** — a requisição da Edge Function
+ficaria pendurada até estourar o timeout de 60s. Com o toggle, sai um item vazio,
+o `.filter(Boolean)` do nó 6 o descarta, a resposta volta como
+`{ "enviados": [] }` e a function conclui **sem marcar nada**, que é o
+comportamento correto.
 
 ---
 
 ## Como testar sem esperar até as 3h
 
-1. Abra o workflow no n8n e clique em **Execute workflow** (ou **Test
-   workflow**). O Schedule Trigger dispara na hora, sem esperar o agendamento.
-2. Garanta que existe **pelo menos um destinatário ativo** (Hub → Inaugurações →
-   Destinatários) e **pelo menos uma linha** em `inauguracao_requests` com
-   `data_inauguracao` = **hoje** e `email_enviado_em` = `NULL`. No SQL Editor do
-   Supabase:
+Há **dois** testes possíveis agora, e vale fazer os dois: um exercita só o n8n,
+o outro exercita a corrente inteira.
+
+### A. Só o n8n (não toca no banco)
+
+Com o workflow **ativo**, mande o corpo na mão:
+
+```bash
+curl -X POST https://backend.purepilates.com.br/webhook/aviso-inauguracao \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "destinatarios": ["voce@exemplo.com"],
+    "inauguracoes": [{
+      "id": "00000000-0000-0000-0000-000000000001",
+      "nome_unidade": "Unidade de Teste",
+      "unidade_id": "9999",
+      "endereco": "Rua do Teste, 1",
+      "solicitante_nome": "Teste",
+      "solicitante_email": "voce@exemplo.com",
+      "data_inauguracao": "2026-08-20",
+      "data_inauguracao_fmt": "20/08/2026"
+    }]
+  }'
+```
+
+O esperado: chega um e-mail e o `curl` devolve
+`{"enviados":["00000000-0000-0000-0000-000000000001"]}`. O id é inventado, então
+**nada é marcado no banco** — o teste é seguro.
+
+### B. A corrente inteira (Edge Function → n8n → banco)
+
+1. Garanta **pelo menos um destinatário ativo** (Hub → Inaugurações →
+   Destinatários) e **pelo menos uma linha** com `data_inauguracao` = hoje e
+   `email_enviado_em` `NULL`:
 
    ```sql
-   -- ver o que o workflow enxergaria agora
+   -- o que a Edge Function enxergaria agora
    select id, nome_unidade, data_inauguracao, email_enviado_em
      from public.inauguracao_requests
     where data_inauguracao = (now() at time zone 'America/Sao_Paulo')::date
       and email_enviado_em is null;
 
-   -- e para quem ele mandaria
+   -- e para quem ela mandaria
    select email from public.inauguracao_email_recipients
     where ativo order by email;
    ```
 
-3. **Para reexecutar o teste**, limpe a marcação da linha que você usou (senão a
-   consulta não devolve mais nada):
+2. Chame a function na mão, com o mesmo `CRON_SECRET` que o cron usa:
+
+   ```bash
+   curl -X POST https://evprrtvbvjnjixogjsmn.supabase.co/functions/v1/inauguracao-aviso-diario \
+     -H "Authorization: Bearer $CRON_SECRET"
+   ```
+
+   A resposta é o resumo: `{"ok":true,"data":"...","inauguracoes":N,
+   "destinatarios":M,"marcadas":K}`.
+
+3. **Para reexecutar**, limpe a marcação da linha de teste:
 
    ```sql
    update public.inauguracao_requests
@@ -342,199 +374,117 @@ mexer aqui, **releia esta tabela antes**.
     where id = '<o id da linha de teste>';
    ```
 
-4. Se quiser testar sem mandar e-mail de verdade, desabilite temporariamente o
-   nó `Enviar e-mail ao marketing` (clique nele → `D`) e rode: você vê o
-   resultado das duas consultas sem disparar nada.
+### Confira estes pontos na primeira execução
 
-**Nenhuma unidade inaugura hoje?** O nó 3 devolve lista vazia, os nós seguintes
-não executam e o workflow termina em sucesso. Isso é o comportamento correto,
-não um erro.
-
-### Confira estes seis pontos na primeira execução manual
-
-1. **Chegou um e-mail por unidade**, não um só com tudo dentro nem um por pessoa
-   da lista. Se vier **um só**, veja "O único cenário que ainda exige ajuste"
-   mais abaixo. Se vier **um por destinatário, com os dados da unidade em
-   branco**, os nós 2 e 3 foram reordenados — ver "Por que os destinatários vêm
-   ANTES das inaugurações".
-2. **O campo Para trouxe TODOS os destinatários ativos**, não só um. Se vier só
-   um endereço por e-mail, alguém trocou o `.all()` da expressão do `sendTo` por
-   `.item` — ver "Os destinatários" acima.
-3. **A data saiu por extenso em português** ("15 de setembro de 2026"). Se o mês
-   veio em inglês, veja a tabela de formato mais abaixo.
-4. **A linha ficou marcada:** rode o `select` do passo 2 de novo — a unidade
+1. **Chegou um e-mail por unidade**, não um só com tudo dentro. Se vier **um só**
+   com os campos vazios, o `fieldToSplitOut` do nó 2 não está achando
+   `body.inauguracoes`.
+2. **O campo Para trouxe TODOS os destinatários ativos.** Se vier só um, alguém
+   trocou o `.first()` da expressão do `sendTo`.
+3. **A data saiu em `dd/mm/aaaa`.** Ela vem pronta da Edge Function — se estiver
+   errada, o problema é lá, não aqui.
+4. **A linha ficou marcada:** rode o `select` do passo 1 de novo; a unidade
    avisada não deve mais aparecer.
-5. **O teste da credencial ausente** — é o que valida a trava do nó 5, e vale a
-   pena fazer **uma vez**, porque é o modo de falha que causaria o pior estrago
-   em silêncio:
+5. **O teste da credencial ausente** — é o que valida a trava do nó 4, e vale
+   fazer **uma vez**, porque é o modo de falha que causaria o pior estrago em
+   silêncio:
+   1. Limpe a marcação da linha de teste.
+   2. No nó `Enviar e-mail ao marketing`, **remova a credencial do Gmail**.
+   3. Rode o teste **B**. A function deve responder `"marcadas":0`.
+   4. Confirme no `select` que a linha **continua** com `email_enviado_em` `NULL`.
 
-   1. Limpe a marcação da linha de teste (SQL do passo 3 acima).
-   2. No nó `Enviar e-mail ao marketing`, **remova a credencial do Gmail**
-      (ou renomeie a credencial, que dá no mesmo).
-   3. **Execute o workflow.** Ele vai falhar no nó de e-mail — é o esperado.
-   4. Rode o `select` do passo 2 e confirme que a linha de teste **continua
-      aparecendo**, ou seja, `email_enviado_em` continua `NULL`.
-
-   Se a linha aparecer marcada mesmo sem e-mail nenhum ter saído, **a trava do
-   nó 5 não está funcionando** — pare, não ative o workflow, e confira se o nó
-   `So o que virou e-mail de verdade` está presente, conectado entre o envio e
-   a marcação, e testando **`threadId`** (não `id`, que passaria tudo).
+   Se a linha aparecer marcada sem e-mail nenhum ter saído, **a trava do nó 4 não
+   está funcionando** — não ative o workflow e confira se o Filter está presente,
+   conectado entre o Gmail e o Set, e testando **`threadId`** (não `id`, que
+   passaria tudo).
 
    5. Recoloque a credencial e limpe a marcação antes de seguir.
-
-6. **O teste da lista vazia** — vale uma vez, porque é a outra forma de perder o
-   aviso em silêncio:
-
-   1. Limpe a marcação da linha de teste (SQL do passo 3 acima).
-   2. No Hub (Inaugurações → Destinatários), **desative todos** os destinatários.
-   3. **Execute o workflow.** O esperado é ele terminar **sem enviar nada**: o
-      nó `Buscar destinatarios ativos` sai com **0 itens** e os nós seguintes
-      nem chegam a executar (aparecem sem execução no canvas).
-   4. Rode o `select` do passo 2 e confirme que a linha de teste **continua
-      aparecendo** com `email_enviado_em` `NULL`.
-
-   Se a linha aparecer marcada, **a trava estrutural da lista vazia se perdeu** —
-   confira se o nó `Buscar destinatarios ativos` continua **a montante** do nó
-   `Marcar aviso como enviado`, e não em algum ramo paralelo a ele. (Um e-mail
-   com o campo Para vazio **não** é o sintoma esperado aqui: sem destinatário o
-   nó de envio nem chega a executar.)
-
-   5. Reative os destinatários e limpe a marcação antes de seguir.
+6. **O teste da lista vazia:** desative todos os destinatários no Hub e rode o
+   teste **B**. O esperado agora é um **erro explícito** (`500`,
+   `sem_destinatarios_ativos`), com a linha intacta — não mais o silêncio da
+   versão anterior. Reative os destinatários depois.
 
 ---
 
 ## Limitações conhecidas
 
-Estão no spec (§8) e são conscientes, não bugs a corrigir:
-
-- **Sem recuperação.** A consulta é sempre "hoje". Se o n8n estiver fora do ar
-  às 3h, o aviso daquele dia **não sai e não é recuperado depois**. Consultar
-  "hoje ou antes, não avisado" resolveria, mas na primeira execução dispararia
-  avisos retroativos de inaugurações antigas — pior.
-- **Solicitação criada depois das 3h do próprio dia não é avisada.** As 3h já
-  passaram e não há segunda passada. Quem cadastra uma inauguração no mesmo dia
-  já sabe dela; o valor do aviso está nas cadastradas com antecedência.
-- **Lista vazia desliga o aviso em silêncio.** Sem destinatário ativo o
-  workflow termina em sucesso sem enviar nada e sem marcar nada. É a garantia
-  estrutural descrita em "Lista vazia" — e a contrapartida é que ninguém é
-  alertado.
-- **Duas unidades no mesmo dia** geram dois e-mails, um por unidade. É o
-  pedido, não um defeito.
+- **Sem recuperação.** A consulta é sempre "hoje". Se o Supabase ou o n8n
+  estiverem fora do ar às 3h, o aviso daquele dia **não sai e não é recuperado
+  depois**. Consultar "hoje ou antes, não avisado" resolveria, mas na primeira
+  execução dispararia avisos retroativos de inaugurações antigas — pior.
+- **Solicitação criada depois das 3h do próprio dia não é avisada.** Não há
+  segunda passada. Quem cadastra uma inauguração no mesmo dia já sabe dela.
+- **Duas unidades no mesmo dia** geram dois e-mails, um por unidade. É o pedido,
+  não um defeito.
 - **Se o envio de uma unidade falhar, só ela fica para trás.** O nó de e-mail
-  está com *On Error → Continue (using error output)*. Numa falha com três
-  unidades no dia, as outras duas seguem normalmente para a marcação; a que
-  falhou sai pela saída de erro, que está **desconectada de propósito** — a
-  linha fica sem `email_enviado_em` e volta a ser candidata no próximo ciclo.
-  Como a consulta é sempre "hoje", esse próximo ciclo na prática só existe se
-  você reexecutar o workflow manualmente **no mesmo dia**; passou da meia-noite,
-  o aviso daquela unidade não sai mais (é a limitação "sem recuperação" acima).
+  está com *On Error → Continue (using error output)*: as outras seguem, entram
+  na lista `enviados` e são marcadas; a que falhou não entra, fica sem
+  `email_enviado_em` e volta a ser candidata — na prática, só se você reexecutar
+  **no mesmo dia**.
 - **O *Retry On Fail* cobre menos do que o nome sugere — e na primeira unidade
-  pode duplicar.** O nó está com 3 tentativas e 5s de intervalo, e isso ajuda no
-  caso transitório mais comum (API do Gmail devolvendo 5xx ou rate limit por
-  alguns segundos). Mas o retry é do **nó inteiro**, não do item, e o n8n só
-  decide reexecutar olhando o **primeiro item** da saída principal. Na prática:
-  - falha na **1ª** unidade → o nó reexecuta **inteiro**, e as unidades que já
-    tinham dado certo **recebem o e-mail de novo** (até 3 cópias);
-  - falha na 2ª ou na 3ª, com a 1ª tendo dado certo → **nenhum retry acontece**;
-    a que falhou simplesmente sai pela saída de erro.
-
-  Não é motivo para tirar o retry — sem ele, o caso transitório também não é
-  coberto. É motivo para **não confiar nele como rede de segurança**: com mais
-  de uma unidade no mesmo dia, o comportamento depende de qual delas falhou.
-- **Reexecutar manualmente depois de uma falha parcial não reenvia para quem já
-  recebeu.** Quem recebeu já está marcado, e a consulta filtra
-  `email_enviado_em=is.null`. O único caso em que ainda dá para receber
-  repetido é o e-mail sair e o PATCH da própria linha falhar — bem mais raro, e
-  é o incômodo que o desenho aceita de propósito para nunca ficar em silêncio
-  (ver "A ordem dos nós").
-- **A cota do Gmail vale.** A conta da credencial `Gmail account` tem limite
-  diário de envio, e este workflow divide essa cota com os outros cinco
-  workflows que usam a mesma credencial. Para o volume de inaugurações (uma
-  ou duas por dia) está muito longe do teto, mas é bom saber que o teto existe.
+  pode duplicar.** O retry é do **nó inteiro**, não do item, e o n8n decide
+  reexecutar olhando o **primeiro item** da saída principal. Falha na 1ª unidade
+  → o nó reexecuta inteiro e as que já tinham dado certo **recebem de novo**;
+  falha na 2ª ou 3ª, com a 1ª tendo dado certo → **nenhum retry**. Não é motivo
+  para tirar o retry (sem ele o caso transitório também não é coberto); é motivo
+  para não confiar nele como rede de segurança.
+- **Reexecutar depois de uma falha parcial não reenvia para quem já recebeu.**
+  Quem recebeu já está marcado e sai da consulta.
+- **O e-mail pode sair sem a linha ser marcada.** Se o n8n enviar e a resposta se
+  perder no caminho (timeout, queda entre uma coisa e outra), a function não
+  marca e uma reexecução no mesmo dia manda repetido. É o incômodo que o desenho
+  aceita de propósito para nunca ficar em silêncio.
+- **A cota do Gmail vale.** A conta da credencial `Gmail account` divide a cota
+  diária com os outros cinco workflows. Para uma ou duas inaugurações por dia
+  está muito longe do teto, mas o teto existe.
 
 ---
 
 ## Formato do workflow — o que está confirmado e onde olhar se algo reclamar
 
-Este JSON foi escrito **sem acesso a uma instância do n8n** — ele nunca foi
-importado de verdade a partir deste arquivo. O que dá para garantir por
-verificação local: é JSON válido, tem `name`/`nodes`/`connections`, cada nó tem
-`type`/`typeVersion`/`position`/`parameters`, e as conexões ligam os seis nós na
-ordem certa. O tipo, a `typeVersion` e o id da credencial do nó Gmail **foram
-lidos da instância real** (do workflow `Midia Adicional - Notificacao por
+Este JSON foi escrito **sem acesso a uma instância do n8n**. O que dá para
+garantir por verificação local: é JSON válido, tem `name`/`nodes`/`connections`,
+cada nó tem `type`/`typeVersion`/`position`/`parameters`, e as conexões ligam os
+seis nós na ordem certa. O tipo, a `typeVersion` e o id da credencial do nó Gmail
+**foram lidos da instância real** (do workflow `Midia Adicional - Notificacao por
 email`), não chutados.
 
 | Ponto | O que foi usado | Situação | Se der problema |
 |---|---|---|---|
-| `scheduleTrigger` `typeVersion` | `1.2` | **Confirmado** — é o que a documentação oficial usa nos exemplos de workflow | Se a instância for muito antiga, baixe para `1.1`; os parâmetros `rule.interval` são os mesmos |
-| `httpRequest` `typeVersion` | `4.2` | **Confirmado** — versão atual, usada nos exemplos oficiais | Numa instância antiga, `4.1` aceita os mesmos parâmetros |
-| `gmail` `typeVersion` e credencial | `n8n-nodes-base.gmail` v`2.1`, `gmailOAuth2` id `GfnvRU8IivJHJehE` | **Lido da instância real** — é exatamente o que o workflow de Mídia Adicional usa | Nada a fazer |
+| `webhook` `typeVersion` | `2` | **Confirmado** — versão atual do nó | Numa instância antiga, `1.1` aceita os mesmos parâmetros (`httpMethod`, `path`, `responseMode`) |
+| Saída do Webhook tem `body` | `body.inauguracoes` no Split Out e `body.destinatarios` no Gmail | **Confirmado** — o nó Webhook v2 devolve `{ headers, params, query, body }` | Se o Split Out reclamar de campo inexistente, abra o nó Webhook, rode o teste A e olhe a saída real. Se o corpo vier na raiz, tire o prefixo `body.` **nos dois lugares** |
+| `splitOut` `typeVersion` | `1` | **Confirmado** — é a versão do nó desde que ele existe | Nada a fazer |
+| `gmail` `typeVersion` e credencial | `n8n-nodes-base.gmail` v`2.1`, `gmailOAuth2` id `GfnvRU8IivJHJehE` | **Lido da instância real** | Nada a fazer |
 | Parâmetros do nó Gmail | `sendTo`, `subject`, `message`, `options.replyTo` | **Lidos da instância real** (mesmo workflow) | Nada a fazer |
-| `emailType: "html"` e `options.appendAttribution: false` | Explicitados no arquivo | **Não verificados na instância** — o precedente não os traz. `emailType` é o padrão do nó (HTML) escrito por clareza; `appendAttribution: false` tira o rodapé "sent automatically with n8n" | Se o corpo chegar como texto cru com as tags à mostra, abra o nó e confira **Email Type = HTML**. Se `appendAttribution` for ignorado, o único efeito é o rodapé do n8n voltar |
-| Fuso declarado no workflow, não no nó | `settings.timezone` | **Confirmado no código-fonte** — o `ScheduleTrigger` chama `this.getTimezone()`, que lê `workflow.settings.timezone`; o nó **não tem** campo de fuso próprio | Confira em *Workflow settings → Timezone*. Ver o alerta sobre copiar-e-colar no passo 2 da importação |
-| Um e-mail por unidade | O HTTP Request v4 divide o array JSON da resposta em vários itens | **Confirmado no código-fonte** — `if (Array.isArray(response)) { response.forEach(...) }`, com `pairedItem` por elemento | Nada a fazer. **Não** insira um nó Split Out: ele é desnecessário e no cenário do fim desta seção até atrapalha |
-| `executeOnce` no nó 3 | Propriedade de nó padrão do n8n (a mesma do toggle *Execute Once* na aba Settings do nó) | **Confirmado** — o motor reduz a entrada ao primeiro item; a **saída** continua sendo o array inteiro da resposta | Se o mesmo aviso chegar repetido tantas vezes quantos são os destinatários, é este toggle que foi desligado |
-| `$('Buscar destinatarios ativos').all()` no `sendTo` | Referência a **todos** os itens de um nó anterior | **Confirmado** — `.all()` é a API documentada para ler o conjunto completo; `.item` pareia item a item e é justamente o que **não** serve aqui | Se cada e-mail sair para um destinatário só, alguém trocou por `.item` |
-| `$('Buscar inauguracoes de hoje').item.json.id` no nó 6 | Referência ao item pareado do nó 3 | **Confirmado no código-fonte** para o `emailSend`, e o nó Gmail v2 empurra `pairedItem` do mesmo jeito (`constructExecutionMetaData` com `itemData`). Se o pareamento quebrasse, o n8n lança erro explícito em vez de marcar a linha errada em silêncio | Foi feito assim porque a saída do nó de e-mail é a resposta do Gmail (`id`, `threadId`, `labelIds`), **não** a linha do banco — `$json.id` ali seria o id da **mensagem**, e o PATCH não casaria linha nenhuma |
-| `filter` `typeVersion` e o formato das condições | `2.2`, condições v2 com `operator: string/exists`, `singleValue: true` e `typeValidation: "loose"` | **Confirmado no código-fonte** — o nó registra as versões `{1, 2, 2.1, 2.2, 2.3}`, e o operador bate com a definição canônica `'string:exists': { type: 'string', operation: 'exists', singleValue: true }` (`FilterConditions/constants.ts`). O `singleValue: true` é necessário, não enfeite: é ele que faz o `filter-parameter.ts` pular a validação do `rightValue` vazio. E `={{ $json.threadId }}` é expressão única cobrindo a string inteira, então o n8n devolve o **valor cru** (`undefined` numa linha do banco), não a string `''` — se virasse `''`, o `exists` daria **true** e o guard deixaria passar tudo | Nada a fazer. **Não** troque pela alternativa do ternário na URL (descrita abaixo) sem necessidade: ela devolve a trava para dentro de uma expressão |
-| Data por extenso em pt-BR | `DateTime.fromFormat(...).setLocale('pt-BR')` (Luxon) | Não verificado — depende do ICU do Node da instância | Se o mês vier em inglês, troque por `{{ $json.data_inauguracao.split('-').reverse().join('/') }}` para `dd/mm/aaaa` |
+| `emailType: "html"` e `options.appendAttribution: false` | Explicitados no arquivo | **Não verificados na instância** — o precedente não os traz | Se o corpo chegar como texto cru com as tags à mostra, abra o nó e confira **Email Type = HTML**. Se `appendAttribution` for ignorado, volta só o rodapé do n8n |
+| `filter` `typeVersion` e o formato das condições | `2.2`, condições v2 com `operator: string/exists`, `singleValue: true`, `typeValidation: "loose"` | **Confirmado no código-fonte** — o operador bate com `'string:exists': { type: 'string', operation: 'exists', singleValue: true }`. O `singleValue: true` faz o `filter-parameter.ts` pular a validação do `rightValue` vazio. E `={{ $json.threadId }}` é expressão única cobrindo a string inteira, então o n8n devolve o **valor cru** (`undefined`), não `''` — se virasse `''`, o `exists` daria **true** e a trava deixaria passar tudo | Ver a ressalva de versão logo abaixo |
+| `set` `typeVersion` | `3.4` com `assignments` | **Formato atual do nó Set (Edit Fields)** — não verificado nesta instância | Se o nó importar estranho, recrie-o pela interface: um campo `id` (string) com valor `{{ $('Separar as inauguracoes').item.json.id }}`, e **ligue o `Always Output Data`** na aba Settings |
+| `alwaysOutputData` no nó 5 | Propriedade de nó padrão do n8n | **Confirmado** — é o mesmo toggle *Always Output Data* da aba Settings, e vale em execução de produção, não só em teste | Se a Edge Function passar a estourar timeout quando nenhum e-mail sai, é este toggle que foi desligado |
+| `respondToWebhook` `typeVersion` | `1.1`, `respondWith: "json"` com `responseBody` por expressão | **Confirmado** — `respondWith: json` faz `jsonParse` do corpo, então `JSON.stringify({...})` numa expressão devolve JSON de verdade | Se a Edge Function reclamar de "formato inesperado", rode o teste A e olhe o que o `curl` recebeu |
+| `$('Ids que o Gmail confirmou').all()` no nó 6 | Referência a **todos** os itens de um nó anterior | **Confirmado** — `.all()` é a API documentada para ler o conjunto completo | Se voltar só um id, alguém trocou por `.item` |
+| `$('Separar as inauguracoes').item` no nó 5 | Referência ao item pareado | **Confirmado** — o nó Gmail v2 empurra `pairedItem` (`constructExecutionMetaData` com `itemData`) e o Filter o preserva. Se o pareamento quebrasse, o n8n lança erro explícito em vez de devolver o id errado em silêncio | Nada a fazer |
 
 ### A única ressalva de portabilidade: o Filter exige n8n ≥ 1.59.0
 
 O nó `So o que virou e-mail de verdade` usa `typeVersion 2.2`, que **existe a
-partir do n8n 1.59.0**. Numa instância mais antiga o nó importa como **versão
-desconhecida** — ele aparece no canvas quebrado/não reconhecido, não com a
-condição em branco. É o único ponto do workflow com piso de versão.
+partir do n8n 1.59.0**. Numa instância mais antiga o nó importa como versão
+desconhecida (aparece quebrado no canvas, não com a condição em branco).
 
-**O fallback é seguro:** baixe o `typeVersion` do Filter para `2` ou `2.1` (no
-JSON, ou removendo e recriando o nó pela interface). **Isso não muda nada neste
-guard.** A condição usada é `exists` sobre um valor ausente, e o `filter-parameter`
-devolve o veredito para `null`/`undefined` **antes** de qualquer código sensível
-a versão — o `version` das condições só afeta comparação de *boolean* e *number*,
-que este filtro não usa.
-
-Pelo mesmo motivo, `typeValidation: "loose"` é inócuo aqui: o curto-circuito do
-valor ausente acontece antes da checagem de tipo, com `strict` ou `loose`. Está
-posto por coerência, não por necessidade.
-
-**Alternativa, se por algum motivo o Filter não servir na sua instância:** apague
-o nó, ligue o e-mail direto na marcação e troque a URL do nó 6 por
-
-```
-?id=eq.{{ $json.threadId ? $('Buscar inauguracoes de hoje').item.json.id : '00000000-0000-0000-0000-000000000000' }}
-```
-
-O PATCH não casa nenhuma linha quando o e-mail não saiu, então protege igual.
-**Só use se precisar** — a trava fica escondida numa expressão, dentro do próprio
-nó que ela protege, que é justamente onde alguém vai "limpar" um ternário que não
-parece ter a ver com marcar uma linha.
-
-### O único cenário que ainda exige ajuste: a resposta interpretada como texto
-
-Os nós 2 e 3 estão com o **autodetect** de formato de resposta do HTTP Request.
-Se, por algum motivo, o PostgREST responder com um `Content-Type` que o n8n não
-reconheça como JSON, ele cai no caminho de **texto** e embrulha tudo num único
-item no formato `{ "data": "<a resposta inteira como string>" }`.
-
-O sintoma no nó 3 é chegar **um** e-mail só, com os campos vazios ou com
-`undefined`, em vez de um por unidade. No nó 2, é o campo **Para** sair com
-`undefined` no lugar dos endereços.
-
-**A correção não é um Split Out.** Nesse cenário `data` é uma *string*, não um
-array — um Split Out em `data` falha. O ajuste é forçar o formato no nó afetado:
-
-> Abra o nó → **Options** → **Add Option** → **Response** → **Response Format**
-> → **JSON**.
-
-No JSON isso corresponde a `parameters.options.response.response.responseFormat = "json"`.
+**O fallback é seguro:** baixe o `typeVersion` do Filter para `2` ou `2.1`. Isso
+não muda nada neste guard: a condição é `exists` sobre um valor ausente, e o
+`filter-parameter` devolve o veredito para `null`/`undefined` **antes** de
+qualquer código sensível a versão — o `version` das condições só afeta comparação
+de *boolean* e *number*, que este filtro não usa. Pelo mesmo motivo,
+`typeValidation: "loose"` é inócuo aqui.
 
 ---
 
 ## Nunca comite chave no arquivo
 
-O JSON desta pasta vai para o Git. Se você preencher credenciais direto no
-arquivo para testar, **não comite** — a chave de serviço ignora toda a RLS do
-banco, e um segredo que entrou no histórico do Git não sai mais de verdade.
+O JSON desta pasta vai para o Git. **Nesta versão o workflow não precisa de
+nenhum segredo do Supabase** — se você se pegar colando uma chave aqui, pare: é
+sinal de que voltou a ler o banco pelo n8n, que é exatamente o que esta inversão
+desfez.
 
 Antes de qualquer commit, procure por tokens longos (é o formato de qualquer
 chave do Supabase, tanto a JWT antiga quanto a `sb_`... nova):
@@ -543,8 +493,7 @@ chave do Supabase, tanto a JWT antiga quanto a `sb_`... nova):
 grep -rnE "[A-Za-z0-9_+/=-]{50,}" n8n/
 ```
 
-O que voltar tem que ser olhado linha por linha. Hoje a única coisa que casa são
-**caminhos de arquivo** citados neste README (`supabase/migrations/...`), que
-obviamente não são segredo. O `id` da credencial do Gmail
-(`GfnvRU8IivJHJehE`, 16 caracteres) também não é — é só o identificador interno
-do n8n, não dá acesso a nada fora da instância.
+O que voltar tem que ser olhado linha por linha. Hoje o que casa são **caminhos
+de arquivo** e **URLs** citados neste README, que obviamente não são segredo. O
+`id` da credencial do Gmail (`GfnvRU8IivJHJehE`, 16 caracteres) também não é — é
+só o identificador interno do n8n, não dá acesso a nada fora da instância.

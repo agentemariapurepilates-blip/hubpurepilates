@@ -4,6 +4,12 @@
 **Status:** Decisões tomadas pelo Claude a pedido do usuário ("tudo será SIM, sem questionamentos")
 **Depende de:** [2026-07-31-inauguracoes-design.md](2026-07-31-inauguracoes-design.md) — a tabela `inauguracao_requests` já existe no banco
 
+> ⚠️ **A arquitetura foi invertida em 2026-08-03, depois de uma falha em
+> execução real.** As seções 3 a 6 abaixo descrevem o desenho **original** (o n8n
+> lendo o Supabase direto) e ficam como registro do raciocínio. **O que vale hoje
+> está na [§9](#9-revisão-2026-08-03-a-inversão-o-supabase-empurra-o-n8n-só-envia).**
+> Leia a §9 antes de mexer em qualquer coisa daqui.
+
 ---
 
 ## 1. Objetivo
@@ -164,4 +170,109 @@ Você faz três coisas: roda o SQL no Supabase, importa o JSON no N8N, e preench
 
 - **Sem recuperação.** A consulta é sempre "hoje". Se o N8N estiver fora do ar às 3h, aquele dia não é avisado. Consultar "hoje ou antes, não avisado" resolveria, mas avisaria retroativamente inaugurações antigas na primeira execução — pior. Fica como está.
 - **Solicitação criada depois das 3h do próprio dia não é avisada.** Quem cadastra uma inauguração no mesmo dia já sabe dela; o valor do aviso está nas cadastradas com antecedência.
-- **A lista de destinatários vive no N8N.** Quem for mexer precisa de acesso lá. É a contrapartida consciente de não construir uma tela para isso.
+- **A lista de destinatários vive no N8N.** Quem for mexer precisa de acesso lá. É a contrapartida consciente de não construir uma tela para isso. *(Superado pela §3.1: a lista foi para o Hub.)*
+
+---
+
+## 9. Revisão (2026-08-03): a inversão — o Supabase empurra, o N8N só envia
+
+### 9.1 O que quebrou
+
+O workflow desenhado na §5 lia o Supabase direto, via PostgREST, com
+`{{ $env.SUPABASE_URL }}` e `{{ $env.SUPABASE_SERVICE_ROLE_KEY }}`. **Essas
+variáveis de ambiente não existem na instância do N8N.** Na primeira execução
+real as expressões resolveram para string vazia, a URL virou um caminho relativo
+e o nó quebrou com:
+
+```
+Invalid URL: /rest/v1/inauguracao_email_recipients?select=email&ativo=is.true
+URL must start with "http" or "https"
+```
+
+O erro é do primeiro nó de HTTP Request — nenhum e-mail chegou a ser cogitado.
+
+### 9.2 A decisão: não colocar a chave de serviço no N8N
+
+A correção óbvia seria cadastrar `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` no
+ambiente do N8N e reiniciar. **Foi descartada.**
+
+A chave de serviço ignora **toda** a RLS do banco — é senha de administrador do
+Postgres. Guardá-la numa segunda ferramenta, com outro ciclo de vida, outro
+backup e outro conjunto de pessoas com acesso, para poupar uma Edge Function,
+não se paga. A premissa da §3 ("é como o N8N já toca este banco") era verdadeira
+mas fraca: o precedente do `brand_health_reports` escreve numa tabela sem dado
+sensível, e não é razão para ampliar a superfície.
+
+O Supabase já tem a chave no ambiente das Edge Functions, sem ninguém precisar
+copiá-la para lugar nenhum. Então o fluxo foi invertido.
+
+### 9.3 A arquitetura nova
+
+```
+pg_cron (03:00 America/Sao_Paulo = 06:00 UTC)
+  └─> Edge Function `inauguracao-aviso-diario`   [já tem a chave de serviço]
+        1. calcula "hoje" em São Paulo
+        2. busca as inaugurações de hoje ainda não avisadas
+        3. busca os destinatários ativos
+        4. POST no webhook do N8N com a lista pronta
+             └─> N8N: Webhook → Split Out → Gmail → Filter → Set → Respond
+                  devolve { "enviados": ["id", ...] }
+        5. marca `email_enviado_em` SÓ dos ids que o N8N confirmou
+```
+
+| Antes (§5) | Agora | Por quê |
+|---|---|---|
+| Schedule Trigger no N8N | **`pg_cron`** (`supabase/migrations/20260803120000_inauguracao_aviso_cron.sql`) | O agendamento fica junto de quem tem os dados. `'0 6 * * *'` porque o `pg_cron` agenda em UTC e SP é UTC−3 o ano inteiro |
+| 3 nós de HTTP Request lendo/escrevendo o banco | **Edge Function** `inauguracao-aviso-diario` | Nenhum segredo do Supabase entra no N8N |
+| `$now.setZone('America/Sao_Paulo')` (Luxon, no N8N) | `Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' })` (na function) | Mesma intenção, outro lugar. `en-CA` devolve `YYYY-MM-DD`, o formato da coluna `date` |
+| Data por extenso com Luxon + locale pt-BR | `dd/mm/aaaa` calculado na function | Tira a dependência do ICU do Node da instância do N8N — era uma incerteza registrada no README |
+| A marcação era um PATCH dentro do workflow | A function marca, **só os ids devolvidos** | O N8N não escreve mais no banco |
+| **6 nós** | **6 nós**, outros: Webhook, Split Out, Gmail, Filter, Set, Respond | Coincidência de contagem, não de desenho |
+
+### 9.4 O que a inversão preservou
+
+As duas travas do desenho original continuam, com a mesma justificativa:
+
+- **E-mail antes da marcação.** A function só marca depois que o N8N responde. Se
+  a marcação falhar, o marketing pode receber repetido — incômodo e visível. Se
+  fosse o contrário, o aviso se perderia em silêncio. Entre barulhento e
+  silencioso, segue barulhento.
+- **A trava do `threadId` (§3.2).** O Filter continua entre o Gmail e a resposta,
+  pelo mesmo motivo: numa falha de **nível de nó** (credencial ausente) o motor
+  repassa os itens de entrada pela saída principal, e sem o filtro os ids de
+  todas as inaugurações do dia entrariam na resposta. `threadId` continua sendo o
+  único campo presente na resposta do Gmail e ausente no item de entrada — `id`
+  passaria tudo, `messageId` bloquearia tudo.
+
+### 9.5 O que a inversão melhorou
+
+**A lista vazia deixou de ser silenciosa.** A §5 pedia que sem destinatário nada
+fosse marcado, e o workflow entregava isso de forma **estrutural** (o nó de
+destinatários saía com 0 itens e nada depois dele executava) — mas terminando em
+**sucesso**, sem nó vermelho, sem ninguém alertado. Registrado no README anterior
+como um preço consciente.
+
+Na function isso virou uma verificação explícita: havendo inauguração e **nenhum
+destinatário ativo**, ela responde **500** (`sem_destinatarios_ativos`), grava no
+log quantas inaugurações ficaram sem aviso, e **não marca nada**. É o caso que
+mais precisa ser ruidoso, porque a consulta é sempre "hoje": um aviso que não sai
+hoje não sai nunca.
+
+Pelo mesmo raciocínio, a function **não marca nada** quando o N8N não responde,
+responde erro, estoura o timeout de 60s ou devolve um formato que não é
+`{ enviados: [...] }` (array puro também é aceito, por robustez) — sempre com log
+explícito. E ids que não estavam no lote enviado são descartados antes do
+`UPDATE`.
+
+### 9.6 O que isso muda para quem opera
+
+- **Aplicar a migration do cron** e **publicar a Edge Function** (a §7 já dizia
+  que aplicar migration é com o usuário; agora tem uma function junto).
+- **O workflow do N8N precisa ficar ATIVO.** Antes, inativo significava só "não
+  agenda". Agora a *Production URL* do webhook **só responde com o workflow
+  ativo** — inativo, o cron leva 404 todo dia.
+- **O segredo do Vault.** A migration monta `Authorization: Bearer <segredo>`
+  lendo `vault.decrypted_secrets` no nome `cron_secret`; o valor tem que ser
+  idêntico ao `CRON_SECRET` das Edge Functions.
+- **Se `SUPABASE_SERVICE_ROLE_KEY` chegou a ser cadastrada no N8N**, remova.
+- O passo a passo completo está em [`n8n/README.md`](../../../n8n/README.md).
