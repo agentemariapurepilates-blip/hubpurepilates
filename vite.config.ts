@@ -104,6 +104,26 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [react(), indicadoresDevProxy(env)],
+    build: {
+      // Os chunks saem em /app/ e não no /assets/ padrão do Vite.
+      //
+      // POR QUE: em 03/08/2026 o Hub ficou fora do ar com tela branca. O
+      // `web.config` transforma QUALQUER 404 em `/index.html` com status 200
+      // (httpErrors existingResponse="Replace"). Durante o upload do deploy, os
+      // chunks que ainda não tinham chegado foram pedidos e receberam esse HTML
+      // com 200 -- e o Cloudflare, que fica na frente do domínio, guardou o HTML
+      // como se fosse o JavaScript, com max-age=14400 (4 horas). O navegador
+      // recusa por MIME type e a tela fica branca.
+      //
+      // Não temos acesso ao Cloudflare para purgar, então a saída foi mudar o
+      // caminho: URLs que ele nunca viu não têm entrada envenenada em cache.
+      //
+      // Isto trata o SINTOMA. A causa é o `web.config` responder 200 para
+      // arquivo inexistente, e está corrigida separadamente em
+      // publish/root-web.config -- com 404 de verdade, o Cloudflare não cacheia
+      // e um deploy incompleto vira erro isolado em vez de site fora do ar.
+      assetsDir: 'app',
+    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
