@@ -10,7 +10,7 @@ import type { InauguracaoRequest } from '../types';
 // Esta é a linha de negócio mais importante da feature (ver
 // ListaInauguracoes.tsx): `isAdmin || podeAlterar(...)`. Trocar o `||` por
 // `&&`, ou remover o `isAdmin`, faz o admin perder Editar/Excluir em toda
-// solicitação dentro da janela de 48h — e nada mais no arquivo acusaria isso.
+// solicitação ainda dentro do prazo — e nada mais no arquivo acusaria isso.
 // Os três casos abaixo cobrem exatamente a tabela-verdade que a regra promete.
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -30,7 +30,7 @@ const CONTATO_MARKETING = 'Para alterar, entre em contato com o marketing.';
 // roda.
 const DATA_DENTRO_DO_PRAZO = format(addDays(new Date(), 60), 'yyyy-MM-dd');
 // Uma data no passado já reprova até a checagem mais frouxa possível (a
-// própria data da inauguração já passou, então o corte de 48h antes também).
+// própria data da inauguração já passou, então a meia-noite dela também).
 const DATA_FORA_DO_PRAZO = format(subDays(new Date(), 10), 'yyyy-MM-dd');
 
 function item(data_inauguracao: string): InauguracaoRequest {
@@ -68,7 +68,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('ListaInauguracoes — regra das 48h', () => {
+describe('ListaInauguracoes — prazo de alteração', () => {
   it('colaborador dentro do prazo vê Editar e Excluir', () => {
     preparar({ isAdmin: false, lista: [item(DATA_DENTRO_DO_PRAZO)] });
     render(<ListaInauguracoes />);
@@ -90,7 +90,7 @@ describe('ListaInauguracoes — regra das 48h', () => {
   it('admin fora do prazo vê Editar e Excluir assim mesmo', () => {
     // Este é o caso que o mutante `isAdmin && podeAlterar(...)` (ou a remoção
     // do `isAdmin`) quebraria: sem o `||`, o admin ficaria preso à mesma
-    // janela de 48h do colaborador.
+    // janela de prazo do colaborador.
     preparar({ isAdmin: true, lista: [item(DATA_FORA_DO_PRAZO)] });
     render(<ListaInauguracoes />);
 

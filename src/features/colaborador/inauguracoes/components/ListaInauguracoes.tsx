@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { format, parseISO, startOfDay } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { AlertTriangle, CalendarIcon, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useEditarInauguracao, useExcluirInauguracao, useInauguracoes } from '../hooks/useInauguracoes';
-import { podeAlterar } from '../lib/prazo';
+import { podeAgendarPara, podeAlterar } from '../lib/prazo';
 import type { InauguracaoRequest, NovaInauguracao } from '../types';
 
 // Diálogo de edição escrito com os próprios campos em vez de reaproveitar
@@ -103,7 +103,14 @@ function EditarInauguracaoDialog({
       novosErros.solicitanteEmail = 'E-mail em formato inválido.';
     }
 
-    if (!dataInauguracao) novosErros.dataInauguracao = 'Informe a data de inauguração.';
+    if (!dataInauguracao) {
+      novosErros.dataInauguracao = 'Informe a data de inauguração.';
+    } else if (!podeAgendarPara(format(dataInauguracao, 'yyyy-MM-dd'))) {
+      // Vale na edição também: mover uma solicitação para hoje a deixaria sem
+      // aviso, porque o e-mail das 03:00 daquele dia já teria passado. A RLS
+      // recusa do mesmo jeito.
+      novosErros.dataInauguracao = 'A inauguração precisa ser a partir de amanhã.';
+    }
 
     return novosErros;
   }
@@ -227,7 +234,7 @@ function EditarInauguracaoDialog({
                   mode="single"
                   selected={dataInauguracao}
                   onSelect={setDataInauguracao}
-                  disabled={(date) => startOfDay(date) < startOfDay(new Date())}
+                  disabled={(date) => !podeAgendarPara(format(date, 'yyyy-MM-dd'))}
                   initialFocus
                   locale={ptBR}
                 />
@@ -263,7 +270,8 @@ function EditarInauguracaoDialog({
 
 /**
  * Lista as solicitações de inauguração e, para cada uma, decide se mostra
- * Editar/Excluir ou a frase de contato — a regra das 48h fica visível aqui.
+ * Editar/Excluir ou a frase de contato — o prazo de alteração (até as 23:59
+ * da véspera) fica visível aqui.
  *
  * Quem PROTEGE de verdade é a RLS do banco (ver useEditarInauguracao /
  * useExcluirInauguracao): esta tela só explica a regra antes de o usuário

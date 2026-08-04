@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Loader2 } from 'lucide-react';
-import { format, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { cn } from '@/lib/utils';
 import { useCriarInauguracao } from '../hooks/useInauguracoes';
+import { podeAgendarPara } from '../lib/prazo';
 import type { NovaInauguracao } from '../types';
 
 // Formulário de 6 campos — não precisa de react-hook-form/zod (ambos existem
@@ -73,13 +74,14 @@ export function NovaInauguracaoForm({ aoSalvar }: { aoSalvar?: () => void }) {
 
     if (!dataInauguracao) {
       novosErros.dataInauguracao = 'Informe a data de inauguração.';
-    } else if (startOfDay(dataInauguracao) < startOfDay(new Date())) {
-      // Só data no passado é bloqueada aqui. Menos de 48h de antecedência é
-      // PERMITIDO na criação — essa regra vale para ALTERAR uma solicitação
-      // já existente, não para criá-la. Uma unidade que inaugura em cima da
-      // hora é justamente o caso em que o marketing mais precisa ser avisado;
-      // a solicitação simplesmente já nasce travada para edição.
-      novosErros.dataInauguracao = 'A data não pode ser no passado.';
+    } else if (!podeAgendarPara(format(dataInauguracao, 'yyyy-MM-dd'))) {
+      // A data precisa ser posterior a hoje. Uma inauguração marcada para o
+      // mesmo dia da solicitação nasceria sem aviso: o e-mail ao marketing sai
+      // às 03:00 do dia da inauguração, horário que já teria passado.
+      //
+      // Quem decide de fato é a RLS da tabela (ver a migration); isto aqui
+      // evita a viagem até o banco e explica o motivo na hora.
+      novosErros.dataInauguracao = 'A inauguração precisa ser a partir de amanhã.';
     }
 
     return novosErros;
@@ -120,8 +122,8 @@ export function NovaInauguracaoForm({ aoSalvar }: { aoSalvar?: () => void }) {
       <CardHeader>
         <CardTitle>Nova solicitação de inauguração</CardTitle>
         <CardDescription>
-          Preencha os dados da unidade para avisar o marketing. Depois de enviada, a edição fica
-          disponível só até 48h antes da data de inauguração.
+          Preencha os dados da unidade para avisar o marketing. A inauguração precisa ser a partir
+          de amanhã, e você pode editar a solicitação até as 23:59 do dia anterior à data marcada.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -215,7 +217,10 @@ export function NovaInauguracaoForm({ aoSalvar }: { aoSalvar?: () => void }) {
                   mode="single"
                   selected={dataInauguracao}
                   onSelect={setDataInauguracao}
-                  disabled={(date) => startOfDay(date) < startOfDay(new Date())}
+                  // Mesma função da validação e da RLS: hoje e o passado saem
+                  // desabilitados, e o usuário nem chega a escolher uma data
+                  // que o banco recusaria.
+                  disabled={(date) => !podeAgendarPara(format(date, 'yyyy-MM-dd'))}
                   initialFocus
                   locale={ptBR}
                 />

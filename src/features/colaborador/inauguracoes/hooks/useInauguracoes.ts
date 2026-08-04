@@ -90,7 +90,7 @@ export function useCriarInauguracao() {
 /**
  * Edita uma solicitação existente.
  *
- * Fora do prazo de 48h, a RLS não devolve erro: devolve sucesso com zero
+ * Fora do prazo de alteração, a RLS não devolve erro: devolve sucesso com zero
  * linhas afetadas. Por isso o `.select()` no update e a checagem do array —
  * sem isso a tela diria "salvo!" sem ter mudado nada.
  */
@@ -125,7 +125,7 @@ export function useEditarInauguracao() {
 /**
  * Exclui uma solicitação existente.
  *
- * Mesmo caso do update: fora do prazo de 48h a RLS devolve sucesso com zero
+ * Mesmo caso do update: fora do prazo a RLS devolve sucesso com zero
  * linhas em vez de erro, então o `.select()` no delete é o que permite
  * detectar a recusa silenciosa.
  */
