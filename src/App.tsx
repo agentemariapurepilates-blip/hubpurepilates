@@ -82,6 +82,18 @@ function App() {
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          {/* DOIS boundaries, de propósito.
+              O externo não usa MainLayout: se o que quebrar for o próprio
+              layout (ou a rota de login, que não tem menu), um fallback que
+              dependesse dele quebraria junto e a tela ficaria branca de novo.
+              O interno usa, para o usuário manter a navegação e conseguir sair
+              da tela quebrada sozinho.
+
+              Cobrem TODAS as rotas. Antes só o Dashboard tinha boundary, e em
+              03/08/2026 a aba Inaugurações ficou totalmente em branco quando o
+              chunk dela não carregou, enquanto o Dashboard mostrou o aviso. */}
+          <ErrorBoundary withLayout={false}>
+          <ErrorBoundary>
           <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/auth" element={<Auth />} />
@@ -157,6 +169,8 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </ErrorBoundary>
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
