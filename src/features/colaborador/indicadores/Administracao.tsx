@@ -40,16 +40,6 @@ export default function Administracao() {
           <p className="text-muted-foreground">Configuração do Painel de Indicadores</p>
         </div>
 
-        {/* Banner de somente consulta: sem ele, quem procura o botão de salvar
-            conclui que a tela está quebrada. */}
-        <div className="bg-pure-red/5 border border-pure-red/20 text-pure-black text-sm rounded-lg px-4 py-3 flex items-start gap-3">
-          <span className="font-bold text-pure-red shrink-0">Somente consulta</span>
-          <span className="text-pure-gray">
-            Esta área mostra a configuração do Painel de Indicadores. Para alterar qualquer
-            coisa, use o painel em <code>pure-pilates-insights.pages.dev</code>.
-          </span>
-        </div>
-
         <Tabs defaultValue="analise">
           {/* Em telas estreitas as abas rolam horizontalmente em vez de
               quebrar linha ou estourar a largura da página. */}
