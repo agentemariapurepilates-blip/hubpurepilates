@@ -126,9 +126,25 @@ Deno.serve(async (req) => {
 
   const hoje = hojeEmSaoPaulo();
 
+  // Disparo manual: `{"forcar": true}` no corpo pula a guarda do dia.
+  //
+  // POR QUE EXISTE: sem isto, a unica forma de conferir que esta cadeia
+  // funciona seria esperar o penultimo dia do mes -- e descobrir um problema
+  // justamente no dia em que o relatorio deveria sair. Com o disparo manual da
+  // para validar quando quiser.
+  //
+  // NAO E UMA PORTA ABERTA: a requisicao ja passou pela checagem do Bearer
+  // acima, entao so quem tem o segredo do cron chega aqui. O pg_cron manda
+  // `{}`, e nunca aciona isto sozinho.
+  let forcar = false;
+  try {
+    const corpo = await req.json().catch(() => ({}));
+    forcar = corpo?.forcar === true;
+  } catch { /* corpo vazio ou invalido: segue como disparo normal */ }
+
   // A guarda do dia vem ANTES de qualquer consulta: nos outros ~29 dias do mes
   // a invocacao termina aqui, sem tocar em banco nenhum.
-  if (!ehPenultimoDia(hoje)) {
+  if (!forcar && !ehPenultimoDia(hoje)) {
     return json({ ok: true, data: hoje, enviado: false, motivo: 'nao_e_o_penultimo_dia' });
   }
 
