@@ -32,7 +32,11 @@ const COLUNA = 'cli_matriculados_total';
 // frontend. Ficam como default para a function nao depender de segredo novo.
 const INDICADORES_URL = Deno.env.get('INDICADORES_SUPABASE_URL')
   || 'https://bweyyihedqnckbtzbkie.supabase.co';
-const INDICADORES_ANON = Deno.env.get('INDICADORES_SUPABASE_ANON_KEY') || '';
+// Sem segredo: esta chave ja e distribuida no bundle do frontend, entao
+// mante-la aqui nao expoe nada novo. A variavel de ambiente continua tendo
+// prioridade, para o dia em que o projeto rotacionar a chave.
+const INDICADORES_ANON = Deno.env.get('INDICADORES_SUPABASE_ANON_KEY')
+  || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3ZXl5aWhlZHFuY2tidHpia2llIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzNzI3NjIsImV4cCI6MjA4MDk0ODc2Mn0.y87s13__DraHC-1ANCMknr1Uo4-TZzdr1tov2phr9rI';
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
