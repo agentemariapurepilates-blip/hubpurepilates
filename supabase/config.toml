@@ -26,3 +26,22 @@ verify_jwt = false
 # e o aviso falharia todo dia em silêncio.
 [functions.inauguracao-aviso-diario]
 verify_jwt = false
+
+# Relatório semanal de inaugurações: chamado por pg_cron toda segunda às 07:00
+# de São Paulo (10:00 UTC). Mesmo motivo da entrada acima — o Bearer é o
+# segredo lido do Vault, não um JWT, e sem esta linha a plataforma rejeitaria
+# com 401 antes de chegar no código.
+[functions.inauguracao-relatorio-semanal]
+verify_jwt = false
+
+# Relatorio mensal de clusters: chamado por pg_cron todo dia 1 as 03:00 de
+# Sao Paulo (06:00 UTC). Mesmo motivo das entradas acima -- o Bearer e o
+# segredo do Vault, nao um JWT.
+[functions.cluster-relatorio-mensal]
+verify_jwt = false
+
+# Relatorio de clusters de aulas experimentais: chamado por pg_cron todo dia
+# as 03:00 de Sao Paulo; a propria function decide se hoje e o penultimo dia
+# do mes. Bearer do Vault, nao JWT.
+[functions.experimentais-relatorio-mensal]
+verify_jwt = false
