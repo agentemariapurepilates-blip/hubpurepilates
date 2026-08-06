@@ -36,6 +36,62 @@ interface RawDataRow {
   [key: string]: unknown;
 }
 
+/** Quantas linhas o servidor devolve por resposta, no máximo. */
+const LIMITE_POR_RESPOSTA = 1000;
+
+/**
+ * Busca as linhas dos dias informados, paginando até acabar.
+ *
+ * POR QUE PAGINAR, e por que `.range(0, 4999)` não resolve:
+ * o PostgREST deste projeto corta TODA resposta em 1000 linhas, e o corte não
+ * vem como erro — vem como uma lista curta. Pedir `range(0, 4999)` devolve
+ * 1000 do mesmo jeito (conferido contra a API: 4999 e 99999 dão o mesmo).
+ *
+ * Com 3 meses selecionados são ~1.376 linhas, então a consulta antiga perdia
+ * ~376 EM SILÊNCIO e a tela mostrava 334 das 475 unidades. E como não havia
+ * `.order()`, as 1.000 que voltavam variavam entre execuções — o total mudava
+ * sozinho de uma consulta para outra, o que é o sintoma clássico disso.
+ *
+ * O `.order()` aqui não é enfeite: sem uma ordenação estável, as páginas podem
+ * repetir e pular linhas. Ele também dá sentido à agregação 'last', que antes
+ * pegava "a última que chegou" e agora pega a do dia mais recente.
+ *
+ * Só as colunas usadas são pedidas, e não `*`: são ~40 colunas por linha, e
+ * trazer todas multiplica o tráfego por nada.
+ */
+async function fetchTodasAsLinhas(
+  dias: string[],
+  coluna: string,
+): Promise<Array<Record<string, unknown>>> {
+  const todas: Array<Record<string, unknown>> = [];
+
+  for (let inicio = 0; ; inicio += LIMITE_POR_RESPOSTA) {
+    const { data, error } = await supabaseIndicadores
+      .from('raw_consolidated_daily')
+      .select(`unit_id, ${coluna}`)
+      .in('date', dias)
+      .not('unit_id', 'is', null)
+      .order('unit_id', { ascending: true })
+      .order('date', { ascending: true })
+      .range(inicio, inicio + LIMITE_POR_RESPOSTA - 1);
+
+    if (error) throw error;
+
+    // Passa por `unknown` porque o nome da coluna só é conhecido em tempo de
+    // execução: o supabase-js tenta analisar a string do `select` no nível de
+    // tipos e não consegue com um template literal, então devolve um tipo de
+    // erro em vez do formato da linha.
+    const lote = (data ?? []) as unknown as Array<Record<string, unknown>>;
+    todas.push(...lote);
+
+    // Lote incompleto significa que acabou. Também encerra quando vem vazio,
+    // então uma resposta inesperada não vira laço infinito.
+    if (lote.length < LIMITE_POR_RESPOSTA) break;
+  }
+
+  return todas;
+}
+
 export function useClusterData(config: ClusterConfig | null) {
   return useQuery({
     queryKey: ['indicadores_cluster-data', config],
@@ -80,19 +136,12 @@ export function useClusterData(config: ClusterConfig | null) {
 
       const unitMap = new Map(units?.map(u => [u.id, u.name]) || []);
 
-      // Fetch all data for selected months' last days
-      const { data: rawData, error } = await supabaseIndicadores
-        .from('raw_consolidated_daily')
-        .select('*')
-        .in('date', lastDays)
-        .not('unit_id', 'is', null);
-
-      if (error) throw error;
+      const rawData = await fetchTodasAsLinhas(lastDays, config.metricKey);
 
       // Aggregate data by unit
       const unitAggregates = new Map<number, number[]>();
 
-      rawData?.forEach((row) => {
+      rawData.forEach((row) => {
         const unitId = row.unit_id as number;
         // Access the metric dynamically
         const value = (row as Record<string, unknown>)[config.metricKey] as number | null;
@@ -150,16 +199,31 @@ export function useClusterData(config: ClusterConfig | null) {
         units: []
       }));
 
+      // A faixa é decidida SÓ pelo piso, e não por `valor >= min && valor <= max`.
+      //
+      // POR QUÊ: as faixas são digitadas em inteiros (0–19, 20–29, 30+) mas o
+      // valor agregado é uma MÉDIA, que quase sempre tem decimal. Uma unidade
+      // com média 19,67 não é `<= 19` nem `>= 20`: com a regra antiga ela não
+      // casava com faixa nenhuma e SUMIA da tela, sem erro e sem entrar em
+      // nenhum total. Eram 8 unidades das 475 em maio–julho, todas paradas nos
+      // vãos entre 19–20 e 29–30.
+      //
+      // Percorrendo do maior piso para o menor, a primeira faixa cujo mínimo
+      // couber é a certa, e os vãos deixam de existir. O `max` continua valendo
+      // como rótulo na tela; para classificar, ele é redundante — a faixa
+      // seguinte já define onde esta termina.
       unitValues.forEach(unit => {
         for (let i = sortedRanges.length - 1; i >= 0; i--) {
-          const range = sortedRanges[i];
-          const max = range.max ?? Infinity;
-
-          if (unit.value >= range.min && unit.value <= max) {
+          if (unit.value >= sortedRanges[i].min) {
             results[i].units.push(unit);
-            break;
+            return;
           }
         }
+
+        // Abaixo do piso mais baixo (faixas que não começam em zero). Vai para a
+        // primeira em vez de desaparecer — some da tela é o que se está
+        // corrigindo aqui.
+        if (results.length > 0) results[0].units.push(unit);
       });
 
       // Sort units within each cluster by value (descending)

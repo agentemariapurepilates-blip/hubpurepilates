@@ -115,7 +115,11 @@ export function ClusterGeneratorTab() {
       });
     });
 
-    const metricName = availableIndicators.find(m => m.metric_key === selectedMetric)?.display_name || selectedMetric;
+    // O seletor guarda o raw_column_name (ver o SelectItem abaixo), entao a busca
+    // tem que ser por essa coluna. Comparando com metric_key nunca casava, e o
+    // arquivo exportado saia com nome tecnico ('cli_experimentais') em vez do
+    // nome do indicador.
+    const metricName = availableIndicators.find(m => m.raw_column_name === selectedMetric)?.display_name || selectedMetric;
     const filename = `clusters_${metricName.replace(/\s+/g, '_')}`;
 
     if (type === 'csv') {

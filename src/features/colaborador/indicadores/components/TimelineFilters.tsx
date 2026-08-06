@@ -23,6 +23,12 @@ interface TimelineFiltersProps {
   units: Unit[] | undefined;
   hideUnitFilter?: boolean;
   unitName?: string;
+  /**
+   * Esconde o seletor Por dia / Por mês. Para telas cuja regra é mensal por
+   * definição (Clusters de Matriculados): deixar o botão visível prometeria
+   * uma visão diária que a tela não tem.
+   */
+  hideGranularity?: boolean;
 }
 
 export function TimelineFilters({
@@ -36,6 +42,7 @@ export function TimelineFilters({
   units,
   hideUnitFilter = false,
   unitName,
+  hideGranularity = false,
 }: TimelineFiltersProps) {
   const months = getRecentMonths(12);
 
@@ -50,18 +57,20 @@ export function TimelineFilters({
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center">
-      <Tabs value={granularity} onValueChange={(v) => onGranularityChange(v as Granularity)}>
-        <TabsList>
-          <TabsTrigger value="day" className="gap-2">
-            <CalendarDays className="h-4 w-4" />
-            Por dia
-          </TabsTrigger>
-          <TabsTrigger value="month" className="gap-2">
-            <CalendarRange className="h-4 w-4" />
-            Por mês
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {!hideGranularity && (
+        <Tabs value={granularity} onValueChange={(v) => onGranularityChange(v as Granularity)}>
+          <TabsList>
+            <TabsTrigger value="day" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              Por dia
+            </TabsTrigger>
+            <TabsTrigger value="month" className="gap-2">
+              <CalendarRange className="h-4 w-4" />
+              Por mês
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
 
       <div className="flex items-center gap-2">
         <label htmlFor="timeline-from" className="text-sm text-muted-foreground">

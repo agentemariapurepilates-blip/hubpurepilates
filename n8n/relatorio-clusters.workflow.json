@@ -1,0 +1,104 @@
+{
+  "name": "Relatorio mensal de clusters",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "nodes": [
+    {
+      "id": "a1c4e7f2-5b39-4d81-9e60-3f7a2c8d5e01",
+      "name": "Recebe do Supabase",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        0
+      ],
+      "webhookId": "f1a7c3e9-2b58-4d64-9e07-6c2f8a4b1d33",
+      "notes": "QUEM MANDA AQUI E O SUPABASE. A Edge Function cluster-relatorio-mensal roda todo dia 1 as 03:00 de Sao Paulo (pg_cron) e faz POST com { destinatarios, assunto, corpo }. O HTML e montado LA porque o corpo tem uma tabela de 5 faixas com comparacao mes a mes -- montar isso com expressoes do n8n vira um no de codigo ilegivel. AUTENTICACAO: mesmo header e mesmo token dos outros webhooks (x-inauguracao-token); sem ela o no do Gmail obedeceria a qualquer um que descobrisse a URL, porque assunto, corpo E destinatarios vem todos do corpo do POST.",
+      "notesInFlow": true,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "relatorio-clusters",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "6R2vnkHZ1UQ5Lmgq",
+          "name": "Aviso inauguracao - token do webhook"
+        }
+      }
+    },
+    {
+      "id": "b2d5f8a3-6c40-4e92-8f71-4a8b3d9e6f12",
+      "name": "Enviar o relatorio de clusters",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -360,
+        0
+      ],
+      "notes": "UM e-mail so, para todos os destinatarios. O conteudo e identico para todo mundo, entao dividir geraria copias iguais.",
+      "notesInFlow": true,
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.body.destinatarios.join(', ') }}",
+        "subject": "={{ $json.body.assunto }}",
+        "emailType": "html",
+        "message": "={{ $json.body.corpo }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GfnvRU8IivJHJehE",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "id": "c3e6a9b4-7d51-4fa3-9082-5b9c4e0f7a23",
+      "name": "Responder ao Supabase",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -80,
+        0
+      ],
+      "notes": "A Edge Function espera na mesma requisicao. Responde com o id que o Gmail devolveu -- a function so registra no log, mas um id ausente denuncia que o no do Gmail passou sem enviar. O Gmail devolve id/threadId/labelIds; NAO existe messageId.",
+      "notesInFlow": true,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ enviado: Boolean($json.id), id: $json.id || null }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Recebe do Supabase": {
+      "main": [
+        [
+          {
+            "node": "Enviar o relatorio de clusters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar o relatorio de clusters": {
+      "main": [
+        [
+          {
+            "node": "Responder ao Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
