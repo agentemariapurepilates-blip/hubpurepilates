@@ -40,6 +40,7 @@ import {
   PlayCircle,
   FileSignature,
   LayoutDashboard,
+  Layers,
   Trophy,
   Calendar,
   LineChart,
@@ -82,7 +83,7 @@ import { useHasUnitAccess } from '@/features/colaborador/dashboard/hooks/useHasU
 
 // Accordion: apenas uma seção aberta por vez. Abrir uma fecha a anterior.
 // Persistido em sessionStorage — sobrevive à navegação e ao reload; reseta ao fechar a aba.
-type SectionKey = 'geral' | 'colaboradores' | 'agentes' | 'minha-area' | 'admin' | 'dashboard';
+type SectionKey = 'geral' | 'colaboradores' | 'agentes' | 'minha-area' | 'admin' | 'dashboard' | 'inauguracoes';
 
 export const MobileMenuButton = ({ mobileOpen, setMobileOpen }: { mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) => (
   <Button
@@ -110,7 +111,11 @@ const TUTORIAIS_PATHS = [
 
 export const sectionFromPath = (path: string): SectionKey | null => {
   if (AGENTES_DE_IA_ROUTE_PREFIXES.some((p) => path.startsWith(p))) return 'agentes';
-  if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais', '/inauguracoes'].some((p) => path.startsWith(p))) return 'colaboradores';
+  // Antes de 'colaboradores': Inaugurações saiu de dentro daquela seção e virou
+  // seção própria. Se o teste ficasse depois, '/inauguracoes' continuaria
+  // casando com a lista de colaboradores e a seção errada abriria.
+  if (path.startsWith('/inauguracoes')) return 'inauguracoes';
+  if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais'].some((p) => path.startsWith(p))) return 'colaboradores';
   // Antes de '/minha-area': o Hub tem /minha-area/dashboard (Mídia Adicional),
   // que NÃO pertence a esta seção. Por isso o teste é '/dashboard/' com barra.
   if (path.startsWith('/dashboard/')) return 'dashboard';
@@ -189,7 +194,25 @@ const Sidebar = () => {
     { name: 'Feed da Sede', href: '/feed', icon: Newspaper },
     { name: 'Solicitação de demandas', href: '/pedidos-demanda', icon: ClipboardList },
     { name: 'Visão Geral das Unidades', href: '/midia-adicional/unidades', icon: Building2 },
-    { name: 'Inaugurações', href: '/inauguracoes', icon: PartyPopper },
+  ];
+
+  // Inaugurações — seção própria. Os três itens eram abas dentro da página; o
+  // "Destinatários" continua exclusivo de admin (some da lista, não fica
+  // desabilitado) e o rótulo do meio continua variando conforme o alcance de
+  // quem olha, exatamente como era na TabsList.
+  const inauguracoesNavigation = [
+    { name: 'Nova solicitação', href: '/inauguracoes/nova', icon: PartyPopper },
+    {
+      name: isAdmin ? 'Todas as solicitações' : 'Minhas solicitações',
+      href: '/inauguracoes/solicitacoes',
+      icon: ClipboardList,
+    },
+    ...(isAdmin
+      ? [
+          { name: 'Destinatários', href: '/inauguracoes/destinatarios', icon: Inbox },
+          { name: 'Relatório semanal', href: '/inauguracoes/relatorio', icon: ScrollText },
+        ]
+      : []),
   ];
 
   // Sub-grupo Academy (dentro de Colaboradores)
@@ -238,6 +261,7 @@ const Sidebar = () => {
     { name: 'Top 10 Unidades', href: '/dashboard/top-10-unidades', icon: Trophy },
     { name: 'Visão Diária', href: '/dashboard/visao-diaria', icon: Calendar },
     { name: 'Cronologia', href: '/dashboard/cronologia', icon: LineChart },
+    { name: 'Clusters de Matriculados', href: '/dashboard/clusters-matriculados', icon: Layers },
     { name: 'Administração', href: '/dashboard/administracao', icon: SlidersHorizontal },
   ];
 
@@ -545,8 +569,45 @@ const Sidebar = () => {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Dashboard — Painel de Indicadores */}
+        {/* Inaugurações — mesmo alcance da seção Colaboradores, de onde saiu */}
         {(isColaborador || isAdmin) && (
+          <Collapsible open={openSection === 'inauguracoes'} onOpenChange={(o) => setOpenSection(o ? 'inauguracoes' : null)}>
+            <CollapsibleTrigger asChild>
+              <button type="button" className="w-full">
+                <SectionHeader icon={PartyPopper} label="Inaugurações" open={openSection === 'inauguracoes'} onMouseDown={(e) => e.preventDefault()} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+              <div className="space-y-0.5 pb-1">
+                {inauguracoesNavigation.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                      )
+                    }
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </NavLink>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* Dashboard — Painel de Indicadores. SÓ ADMIN: a área lê um banco de
+            produção compartilhado com o painel do Cloudflare, com os números de
+            todas as unidades da rede. Colaborador não deve nem ver que existe —
+            esconder o menu é a primeira camada; quem barra de verdade é o
+            requireAdmin das rotas em App.tsx. */}
+        {isAdmin && (
           <Collapsible open={openSection === 'dashboard'} onOpenChange={(o) => setOpenSection(o ? 'dashboard' : null)}>
             <CollapsibleTrigger asChild>
               <button type="button" className="w-full">

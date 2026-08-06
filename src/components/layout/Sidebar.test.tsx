@@ -21,7 +21,21 @@ describe('sectionFromPath', () => {
     expect(sectionFromPath('/avisos')).toBe(null);
   });
 
-  it('abre a seção Colaboradores na tela de Inaugurações', () => {
-    expect(sectionFromPath('/inauguracoes')).toBe('colaboradores');
+  it('abre a seção Inaugurações em todas as rotas dela', () => {
+    // Inaugurações saiu de dentro de Colaboradores e virou seção própria.
+    expect(sectionFromPath('/inauguracoes')).toBe('inauguracoes');
+    expect(sectionFromPath('/inauguracoes/nova')).toBe('inauguracoes');
+    expect(sectionFromPath('/inauguracoes/solicitacoes')).toBe('inauguracoes');
+    expect(sectionFromPath('/inauguracoes/destinatarios')).toBe('inauguracoes');
+  });
+
+  it('a ordem dos testes importa: Inaugurações vem antes de Colaboradores', () => {
+    // Se o teste de '/inauguracoes' ficasse depois da lista de Colaboradores,
+    // esta rota casaria com aquela lista e a seção errada abriria. Este caso
+    // falha se alguém reordenar as verificações em sectionFromPath.
+    expect(sectionFromPath('/inauguracoes/nova')).not.toBe('colaboradores');
+    // E as rotas de Colaboradores continuam intactas.
+    expect(sectionFromPath('/pedidos-demanda')).toBe('colaboradores');
+    expect(sectionFromPath('/colaborador/midias-sociais/pure')).toBe('colaboradores');
   });
 });
