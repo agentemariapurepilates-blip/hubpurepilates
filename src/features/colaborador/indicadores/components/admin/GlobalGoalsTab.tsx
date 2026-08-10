@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useGlobalGoals } from '../../hooks/useGlobalGoals';
+import { useMesesComMeta } from '../../hooks/useMesesComMeta';
 import { useIndicatorMappings } from '../../hooks/useIndicatorMapping';
 import { Loader2, Target } from 'lucide-react';
 
@@ -18,6 +19,7 @@ export function GlobalGoalsTab() {
   });
 
   const { data: existingGoals, isLoading: isLoadingGoals } = useGlobalGoals(selectedMonth);
+  const { data: mesesDisponiveis } = useMesesComMeta();
   const { data: indicators } = useIndicatorMappings();
 
   // Indicadores que costumam ter meta cadastrada.
@@ -45,22 +47,26 @@ export function GlobalGoalsTab() {
     return mapa;
   }, [existingGoals]);
 
-  // Lista de meses para consulta (mês atual e os 11 seguintes).
+  // Meses para consulta: os que TÊM meta cadastrada, mais o corrente e o
+  // seguinte (ver useMesesComMeta).
+  //
+  // A versão anterior gerava "o mês atual e os 11 seguintes" num laço. Como as
+  // metas são cadastradas mês a mês, isso listava 11 meses vazios e escondia
+  // todos os passados — em agosto/2026 havia meta em 7 meses anteriores e
+  // nenhum aparecia, então não havia como conferir a meta de junho.
   const monthOptions = useMemo(() => {
-    const options: { value: string; label: string }[] = [];
     const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
                     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    const hoje = new Date();
 
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
-      const year = date.getFullYear();
-      const month = date.getMonth();
-      const value = `${year}-${(month + 1).toString().padStart(2, '0')}`;
-      options.push({ value, label: `${months[month]} ${year}` });
-    }
-    return options;
-  }, []);
+    // Enquanto a consulta não volta, o mês corrente sozinho — assim o seletor
+    // nunca aparece vazio nem perde o valor já selecionado.
+    const lista = mesesDisponiveis?.length ? mesesDisponiveis : [selectedMonth];
+
+    return lista.map((value) => {
+      const [year, month] = value.split('-').map(Number);
+      return { value, label: `${months[month - 1]} ${year}` };
+    });
+  }, [mesesDisponiveis, selectedMonth]);
 
   const getValue = (day: number, metricKey: string): number | undefined => {
     return goalsByDay[`${day}-${metricKey}`];
