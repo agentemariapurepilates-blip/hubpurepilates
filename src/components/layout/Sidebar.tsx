@@ -32,7 +32,6 @@ import {
   Building2,
   Bot,
   ChevronDown,
-  Globe,
   Inbox,
   Image as ImageIcon,
   Radar,
@@ -83,7 +82,7 @@ import { useHasUnitAccess } from '@/features/colaborador/dashboard/hooks/useHasU
 
 // Accordion: apenas uma seção aberta por vez. Abrir uma fecha a anterior.
 // Persistido em sessionStorage — sobrevive à navegação e ao reload; reseta ao fechar a aba.
-type SectionKey = 'geral' | 'colaboradores' | 'agentes' | 'minha-area' | 'admin' | 'dashboard' | 'inauguracoes';
+type SectionKey = 'colaboradores' | 'agentes' | 'minha-area' | 'admin' | 'dashboard' | 'inauguracoes';
 
 export const MobileMenuButton = ({ mobileOpen, setMobileOpen }: { mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) => (
   <Button
@@ -100,6 +99,10 @@ const AGENTES_DE_IA_ROUTE_PREFIXES = [
   '/agente-design',
   '/agente-monitoramento',
 ];
+
+// Agentes de IA: seção oculta da produção (não estamos usando).
+// Trocar para true reexibe a seção inteira (as rotas continuam existindo).
+const MOSTRAR_AGENTES_IA = false;
 
 // Página-hub de Tutoriais + as filhas (usadas pra abrir o dropdown sozinho).
 const TUTORIAIS_PATHS = [
@@ -119,7 +122,9 @@ export const sectionFromPath = (path: string): SectionKey | null => {
   // Antes de '/minha-area': o Hub tem /minha-area/dashboard (Mídia Adicional),
   // que NÃO pertence a esta seção. Por isso o teste é '/dashboard/' com barra.
   if (path.startsWith('/dashboard/')) return 'dashboard';
-  if (path.startsWith('/minha-area')) return 'minha-area';
+  // '/autorizar-midia-adicional' (Solicitar Mídia adicional) faz parte do fluxo
+  // da Minha Área, então abre/destaca essa seção mesmo estando fora do prefixo.
+  if (path.startsWith('/minha-area') || path.startsWith('/autorizar-midia-adicional')) return 'minha-area';
   if (path.startsWith('/admin')) return 'admin';
   return null;
 };
@@ -138,10 +143,11 @@ const Sidebar = () => {
     TUTORIAIS_PATHS.includes(location.pathname),
   );
 
-  // A cada carga/reload: abre a seção da rota atual; se a rota não pertencer a
-  // nenhuma seção específica (páginas "Geral"), a seção "Geral" já vem aberta.
+  // A cada carga/reload: abre a seção da rota atual (accordion). Os itens do topo
+  // (Timeline, Página Inicial, etc.) são soltos e ficam sempre visíveis — não há
+  // mais seção "Geral" pra abrir por padrão.
   const [openSection, setOpenSection] = useState<SectionKey | null>(
-    () => sectionFromPath(location.pathname) ?? 'geral',
+    () => sectionFromPath(location.pathname),
   );
 
   // Ao mudar de rota (não no mount inicial), se a nova rota pertencer a uma seção,
@@ -169,13 +175,14 @@ const Sidebar = () => {
     return 'Colaborador';
   };
 
-  // Main navigation - accessible by everyone (no section label)
+  // Itens soltos no topo (acessíveis por todos, sem grupo "Geral").
   const mainNavigation = [
-    { name: 'Comece aqui', href: '/', icon: Home },
+    { name: 'Página Inicial', href: '/', icon: Home },
     { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
-    { name: 'Mídia adicional', href: '/autorizar-midia-adicional', icon: Megaphone },
     { name: 'Avisos', href: '/avisos', icon: Megaphone },
-    { name: 'Parcerias', href: '/parcerias', icon: Handshake },
+    // Parcerias: oculto da produção a pedido (a rota /parcerias continua existindo).
+    // Para reexibir, basta descomentar a linha abaixo.
+    // { name: 'Parcerias', href: '/parcerias', icon: Handshake },
     { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
     { name: 'Pure Design', href: '/pure-design', icon: Paintbrush },
@@ -251,6 +258,7 @@ const Sidebar = () => {
     ...(isAdmin
       ? [{ name: 'Mídia adicional', href: '/minha-area/midia-adicional', icon: Megaphone, disabled: false }]
       : []),
+    { name: 'Solicitar Mídia adicional', href: '/autorizar-midia-adicional', icon: ImageIcon, disabled: false },
     { name: 'Minhas solicitações', href: '/minha-area/minhas-solicitacoes', icon: Inbox, disabled: false },
   ];
 
@@ -273,20 +281,13 @@ const Sidebar = () => {
   const NavContent = () => (
     <>
       <div className="p-4 border-b border-sidebar-border">
-        <img src={logo} alt="Pure Pilates" className="h-12 mx-auto" />
+        <img src={logo} alt="Pure Pilates" className="h-20 mx-auto" />
       </div>
 
       <nav className="flex-1 p-4 space-y-0.5 overflow-y-auto" style={{ overflowAnchor: 'none' }}>
-        {/* Geral Section */}
-        <Collapsible open={openSection === 'geral'} onOpenChange={(o) => setOpenSection(o ? 'geral' : null)}>
-          <CollapsibleTrigger asChild>
-            <button type="button" className="w-full">
-              <SectionHeader icon={Globe} label="Geral" open={openSection === 'geral'} onMouseDown={(e) => e.preventDefault()} />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
-            <div className="space-y-0.5 pb-1">
-              {mainNavigation.map((item) => (
+        {/* Itens soltos no topo — sem grupo "Geral", sempre visíveis. */}
+        <div className="space-y-0.5 pb-1">
+          {mainNavigation.map((item) => (
                 <NavLink
                   key={item.name}
                   to={item.href}
@@ -358,9 +359,7 @@ const Sidebar = () => {
                   </div>
                 </CollapsibleContent>
               </Collapsible>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+        </div>
 
         {/* Colaboradores Section */}
         {(isColaborador || isAdmin) && (
@@ -443,8 +442,8 @@ const Sidebar = () => {
           </Collapsible>
         )}
 
-        {/* Agentes de IA Section */}
-        {(isColaborador || isAdmin) && (
+        {/* Agentes de IA Section — oculto da produção (não estamos usando). */}
+        {MOSTRAR_AGENTES_IA && (isColaborador || isAdmin) && (
           <Collapsible open={openSection === 'agentes'} onOpenChange={(o) => setOpenSection(o ? 'agentes' : null)}>
             <CollapsibleTrigger asChild>
               <button type="button" className="w-full">
@@ -527,11 +526,11 @@ const Sidebar = () => {
           </Collapsible>
         )}
 
-        {/* Minha Área Section */}
+        {/* Minha(s) Unidade(s) Section */}
         <Collapsible open={openSection === 'minha-area'} onOpenChange={(o) => setOpenSection(o ? 'minha-area' : null)}>
           <CollapsibleTrigger asChild>
             <button type="button" className="w-full">
-              <SectionHeader icon={FolderOpen} label="Minha Área" open={openSection === 'minha-area'} onMouseDown={(e) => e.preventDefault()} />
+              <SectionHeader icon={FolderOpen} label="Minha(s) Unidade(s)" open={openSection === 'minha-area'} onMouseDown={(e) => e.preventDefault()} />
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">

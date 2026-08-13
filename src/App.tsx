@@ -109,7 +109,7 @@ function App() {
             <Route path="/pedidos-demanda" element={<ProtectedRoute><PedidosDemanda /></ProtectedRoute>} />
             <Route path="/notificacoes" element={<ProtectedRoute><Notificacoes /></ProtectedRoute>} />
             {/* Artes Prontas foi descontinuada â€” tudo agora em Pure Design. */}
-            <Route path="/artes-prontas" element={<Navigate to="/pure-design" replace />} />
+            <Route path="/artes-prontas" element={<Navigate to="/pure-design?tab=prontas" replace />} />
             <Route path="/materiais-implantacao" element={<ProtectedRoute><MateriaisImplantacao /></ProtectedRoute>} />
             <Route path="/parcerias" element={<ProtectedRoute><Parcerias /></ProtectedRoute>} />
             <Route path="/tutorial-marketing" element={<ProtectedRoute><TutorialMarketing /></ProtectedRoute>} />
