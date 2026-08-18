@@ -40,3 +40,8 @@ supabase/.temp/
 
 # Videos pesados — usar .mp4 comprimido em vez de .mov original
 *.mov
+
+# Prévia local do módulo Leads RH: contém nome, e-mail e telefone de
+# candidatos reais, capturados da Graph API. NUNCA pode ir para o repositório.
+# O arquivo de insights ao lado é agregado (gasto e contagem) e pode ficar.
+src/features/colaborador/leads-rh/dados-locais/leads-rh.json
