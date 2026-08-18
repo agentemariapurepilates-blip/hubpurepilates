@@ -100,9 +100,17 @@ Deno.serve(async (req) => {
   try {
     // Só o cron, com o segredo. A função grava com a service role, então uma
     // porta aberta aqui seria uma porta aberta na tabela.
-    const segredo = Deno.env.get('CRON_SECRET');
-    const enviado = req.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!segredo || enviado !== segredo) return json({ erro: 'não autorizado' }, 401);
+    // O segredo tem que ser o MESMO que o pg_cron envia, e o pg_cron lê do
+    // Vault. `CRON_SECRET` existe como variável das functions mas NÃO está no
+    // Vault — usá-lo faria o agendamento falhar com 401 toda madrugada, em
+    // silêncio. É o mesmo compromisso das outras functions do Hub: o ideal é
+    // um segredo dedicado, e enquanto ele não existe cai-se no do Instagram,
+    // que é o único presente nos dois lugares.
+    const segredo =
+      Deno.env.get('RH_LEADS_CRON_SECRET') || Deno.env.get('INSTAGRAM_CRON_SECRET') || '';
+    if (!segredo || req.headers.get('authorization') !== `Bearer ${segredo}`) {
+      return json({ erro: 'não autorizado' }, 401);
+    }
 
     // Um token por página: `/{form_id}/leads` recusa o token de usuário.
     const tokens: Record<string, string> = JSON.parse(

@@ -6,6 +6,11 @@
 -- Depende de `20260818140000_leads_rh.sql` (as tabelas) e da função de borda
 -- `rh-leads-sync` publicada.
 --
+-- O segredo vem do VAULT (`instagram_cron_secret`), e a função valida contra
+-- `INSTAGRAM_CRON_SECRET`. Não use `CRON_SECRET`: ele existe como variável das
+-- functions mas não está no Vault, e o cron falharia com 401 toda madrugada
+-- sem ninguém perceber.
+--
 -- ────────────────────────────────────────────────────────────────────────────
 -- POR QUE 06:00 UTC
 -- ────────────────────────────────────────────────────────────────────────────
