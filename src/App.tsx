@@ -21,6 +21,8 @@ const MidiasSociais = lazy(() => import("./features/geral/marketing/MidiasSociai
 const QuantoValeDomingo = lazy(() => import("./features/geral/domingos/QuantoValeDomingo"));
 const MateriaisImplantacao = lazy(() => import("./features/geral/artes/MateriaisImplantacao"));
 const PureDesign = lazy(() => import("./features/geral/artes/PureDesign"));
+const PureStore = lazy(() => import("./features/geral/pure-store/PureStore"));
+const CatalogoPublico = lazy(() => import("./features/geral/pure-store/CatalogoPublico"));
 const PureDesignEditor = lazy(() => import("./features/geral/artes/PureDesignEditor"));
 const Parcerias = lazy(() => import("./features/geral/parcerias/Parcerias"));
 const ManualSistema = lazy(() => import("./features/geral/manual/ManualSistema"));
@@ -98,11 +100,14 @@ function App() {
           <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            {/* Catálogo digital público de uma unidade — rota aberta (cliente final, sem login) */}
+            <Route path="/catalogo/:slug" element={<CatalogoPublico />} />
             <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
             <Route path="/novidades" element={<ProtectedRoute><NovidadesDoMes /></ProtectedRoute>} />
             <Route path="/avisos" element={<ProtectedRoute><Avisos /></ProtectedRoute>} />
+            <Route path="/pure-store" element={<ProtectedRoute><PureStore /></ProtectedRoute>} />
             <Route path="/calendario-marketing" element={<ProtectedRoute><CalendarioMarketing /></ProtectedRoute>} />
             <Route path="/midias-sociais" element={<ProtectedRoute><MidiasSociais /></ProtectedRoute>} />
             <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />

@@ -35,6 +35,18 @@ Motivo: o `deploy.sh` envia o build direto por SFTP, então é possível ter pro
 
 **NÃO alterar o `deploy.sh`.** É a versão estável e validada em produção. Tentativas de "modernizar" (lftp mirror, deploy incremental, etc.) já quebraram o hub no passado. Qualquer mudança no `deploy.sh` requer aprovação explícita do usuário antes de implementar.
 
+## Pure Store — catálogo (lembrete de manutenção)
+
+A aba **Pure Store** (`src/features/geral/pure-store/` — ver o `README.md` de lá) tem um **catálogo digital** cujos produtos vêm de `src/data/pureStoreCatalogo.ts`, uma lista **gerada a partir da loja oficial** (loja.purepilates.com.br, Nuvemshop) — **NÃO editar à mão**.
+
+**Sempre que a conversa envolver a Pure Store ou o catálogo, LEMBRAR o usuário de que a lista pode estar desatualizada em relação ao site e PERGUNTAR se ele quer atualizar agora.** Recomendação: atualizar ~1x por semana. Para atualizar:
+
+```bash
+node scripts/gerar-catalogo-pure-store.mjs   # regenera src/data/pureStoreCatalogo.ts a partir do site
+```
+
+Depois: commit + `./deploy.sh` (seguindo o protocolo de deploy acima). Os links das unidades **não mudam** — todos passam a mostrar a lista nova automaticamente.
+
 ## Repositório
 
 GitHub: https://github.com/agentemariapurepilates-blip/hubpurepilates (branch `main`)

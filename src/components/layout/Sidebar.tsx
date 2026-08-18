@@ -24,6 +24,7 @@ import {
   Paintbrush,
   Megaphone,
   Package,
+  ShoppingBag,
   Handshake,
   BookOpen,
   ScrollText,
@@ -180,6 +181,7 @@ const Sidebar = () => {
     { name: 'Página Inicial', href: '/', icon: Home },
     { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
     { name: 'Avisos', href: '/avisos', icon: Megaphone },
+    { name: 'Pure Store', href: '/pure-store', icon: ShoppingBag },
     // Parcerias: oculto da produção a pedido (a rota /parcerias continua existindo).
     // Para reexibir, basta descomentar a linha abaixo.
     // { name: 'Parcerias', href: '/parcerias', icon: Handshake },
