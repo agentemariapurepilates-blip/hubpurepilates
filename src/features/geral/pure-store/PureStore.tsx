@@ -239,7 +239,7 @@ const normalize = (s: string) =>
 // altura A), não do corpo.
 interface MedidaGrupo {
   titulo?: string;
-  linhas: { tam: string; largura: string; altura: string }[];
+  linhas: { tam: string; largura: string; altura: string; costas?: string }[];
 }
 interface MedidaTabela {
   produto: string;
@@ -247,7 +247,7 @@ interface MedidaTabela {
   /** Foto do produto (capa do card). */
   foto: string;
   /** Desenho esquemático (aparece no modal, ao lado da tabela). */
-  diagram: 'camiseta' | 'bata' | 'polo';
+  diagram: 'camiseta' | 'bata' | 'polo' | 'colete';
   grupos: MedidaGrupo[];
 }
 
@@ -334,6 +334,23 @@ const TABELAS_MEDIDAS: MedidaTabela[] = [
           { tam: 'M', largura: '42 cm', altura: '60 cm' },
           { tam: 'G', largura: '44 cm', altura: '62 cm' },
           { tam: 'GG', largura: '46 cm', altura: '64 cm' },
+        ],
+      },
+    ],
+  },
+  {
+    produto: 'Colete (unissex)',
+    foto: '/images/uniformes/medidas/colete.jpg',
+    diagram: 'colete',
+    grupos: [
+      {
+        linhas: [
+          { tam: 'P', largura: '55 cm', altura: '63 cm', costas: '40 cm' },
+          { tam: 'M', largura: '57 cm', altura: '66 cm', costas: '42 cm' },
+          { tam: 'G', largura: '59 cm', altura: '68 cm', costas: '44 cm' },
+          { tam: 'GG', largura: '61 cm', altura: '70 cm', costas: '46 cm' },
+          { tam: 'EG', largura: '63 cm', altura: '73 cm', costas: '47 cm' },
+          { tam: 'EXG', largura: '66 cm', altura: '75 cm', costas: '48 cm' },
         ],
       },
     ],
@@ -979,19 +996,21 @@ const PureBoxTab = () => (
 // Uniformes
 // ————————————————————————————————————————————————————————————————
 // Desenho esquemático da peça com as setas de Largura (L) e Altura (A).
-const GarmentDiagram = ({ type }: { type: 'camiseta' | 'bata' | 'polo' }) => {
+const GarmentDiagram = ({ type }: { type: 'camiseta' | 'bata' | 'polo' | 'colete' }) => {
   const uid = `arw-${type}`;
   const camisetaD =
     'M100,34 L80,36 L40,60 L54,84 L76,74 L76,182 L164,182 L164,74 L186,84 L200,60 L160,36 L140,34 Q120,50 100,34 Z';
   const bataD =
     'M100,34 L82,36 L58,62 L72,72 L86,64 L80,150 Q80,182 120,186 Q160,182 160,150 L154,64 L168,72 L182,62 L158,36 L140,34 L120,54 Z';
-  const d = type === 'bata' ? bataD : camisetaD;
+  const coleteD =
+    'M96,44 L80,44 Q66,50 68,72 L68,180 L172,180 L172,72 Q174,50 160,44 L144,44 L120,58 Z';
+  const d = type === 'bata' ? bataD : type === 'colete' ? coleteD : camisetaD;
   const Ly = type === 'bata' ? 96 : 112;
-  const Lx1 = type === 'bata' ? 88 : 78;
-  const Lx2 = type === 'bata' ? 152 : 162;
-  const Ax = 120;
+  const Lx1 = type === 'bata' ? 88 : type === 'colete' ? 70 : 78;
+  const Lx2 = type === 'bata' ? 152 : type === 'colete' ? 170 : 162;
+  const Ax = type === 'colete' ? 132 : 120;
   const Ay1 = 46;
-  const Ay2 = type === 'bata' ? 184 : 180;
+  const Ay2 = type === 'bata' ? 184 : type === 'colete' ? 178 : 180;
   const muted = 'hsl(var(--muted-foreground))';
   const primary = 'hsl(var(--primary))';
   return (
@@ -1011,6 +1030,12 @@ const GarmentDiagram = ({ type }: { type: 'camiseta' | 'bata' | 'polo' }) => {
           <circle cx="120" cy="75" r="1.8" fill={muted} />
         </>
       )}
+      {type === 'colete' && (
+        <>
+          <path d="M96,44 Q98,32 120,32 Q142,32 144,44" fill="none" stroke={muted} strokeWidth="2" strokeLinejoin="round" opacity="0.55" />
+          <line x1="120" y1="46" x2="120" y2="180" stroke={muted} strokeWidth="1.5" strokeDasharray="3 3" opacity="0.5" />
+        </>
+      )}
       <line x1={Lx1} y1={Ly} x2={Lx2} y2={Ly} stroke={primary} strokeWidth="1.5" markerStart={`url(#${uid})`} markerEnd={`url(#${uid})`} />
       <text x={Lx2 + 6} y={Ly + 5} fill={primary} fontSize="15" fontWeight="700">L</text>
       <line x1={Ax} y1={Ay1} x2={Ax} y2={Ay2} stroke={primary} strokeWidth="1.5" markerStart={`url(#${uid})`} markerEnd={`url(#${uid})`} />
@@ -1020,42 +1045,48 @@ const GarmentDiagram = ({ type }: { type: 'camiseta' | 'bata' | 'polo' }) => {
 };
 
 // Tabela de medidas (usada dentro do modal).
-const MedidaTabelaView = ({ t }: { t: MedidaTabela }) => (
-  <div className="space-y-2">
-    <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-primary text-primary-foreground">
-            <th className="px-3 py-2 text-left font-semibold">Tamanho</th>
-            <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">Largura (L)</th>
-            <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">Altura (A)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {t.grupos.map((g, gi) => (
-            <Fragment key={gi}>
-              {g.titulo && (
-                <tr className="bg-muted/60">
-                  <td colSpan={3} className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {g.titulo}
-                  </td>
-                </tr>
-              )}
-              {g.linhas.map((l) => (
-                <tr key={l.tam} className="border-t border-border">
-                  <td className="px-3 py-2 font-semibold text-foreground">{l.tam}</td>
-                  <td className="px-3 py-2 text-right text-muted-foreground">{l.largura}</td>
-                  <td className="px-3 py-2 text-right text-muted-foreground">{l.altura}</td>
-                </tr>
-              ))}
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
+const MedidaTabelaView = ({ t }: { t: MedidaTabela }) => {
+  const temCostas = t.grupos.some((g) => g.linhas.some((l) => l.costas));
+  const nCols = temCostas ? 4 : 3;
+  return (
+    <div className="space-y-2">
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-primary text-primary-foreground">
+              <th className="px-3 py-2 text-left font-semibold">Tamanho</th>
+              <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">Largura (L)</th>
+              <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">Altura (A)</th>
+              {temCostas && <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">Costas</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {t.grupos.map((g, gi) => (
+              <Fragment key={gi}>
+                {g.titulo && (
+                  <tr className="bg-muted/60">
+                    <td colSpan={nCols} className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {g.titulo}
+                    </td>
+                  </tr>
+                )}
+                {g.linhas.map((l) => (
+                  <tr key={l.tam} className="border-t border-border">
+                    <td className="px-3 py-2 font-semibold text-foreground">{l.tam}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{l.largura}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{l.altura}</td>
+                    {temCostas && <td className="px-3 py-2 text-right text-muted-foreground">{l.costas ?? '—'}</td>}
+                  </tr>
+                ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {t.obs && <p className="text-xs text-muted-foreground italic">{t.obs}</p>}
     </div>
-    {t.obs && <p className="text-xs text-muted-foreground italic">{t.obs}</p>}
-  </div>
-);
+  );
+};
 
 // Galeria das tabelas de medidas: card com foto de capa → clica → modal com foto + tabela.
 const MedidasGaleria = () => {
