@@ -90,10 +90,10 @@ export async function gerarCatalogoPdf({ unidade, whats, onProgress }: GerarCata
   const W = 210;
   const H = 297;
   const M = 12;
-  const HEADER_H = 26;
+  const HEADER_H = 34;
   const FOOTER_H = 12;
-  const contentTop = HEADER_H + 4;
-  const contentBottom = H - FOOTER_H - 4;
+  const contentTop = HEADER_H + 2;
+  const contentBottom = H - FOOTER_H - 2;
 
   const whatsDigits = whats.replace(/\D/g, '');
   const waUrl = whatsDigits ? `https://wa.me/${whatsDigits}` : '';
@@ -101,7 +101,7 @@ export async function gerarCatalogoPdf({ unidade, whats, onProgress }: GerarCata
 
   const drawHeader = () => {
     if (logo) {
-      const lw = 24;
+      const lw = 26;
       const lh = (lw * logo.h) / logo.w;
       doc.addImage(logo.dataUrl, 'JPEG', M, 8, lw, Math.min(lh, 16));
     }
@@ -110,16 +110,25 @@ export async function gerarCatalogoPdf({ unidade, whats, onProgress }: GerarCata
     doc.setFontSize(9);
     doc.text('CATÁLOGO PURE STORE', W - M, 12, { align: 'right' });
     doc.setTextColor(...DARK);
-    doc.setFontSize(13);
+    doc.setFontSize(14);
     doc.text(unidade, W - M, 18.5, { align: 'right' });
+
+    // Botão WhatsApp em destaque (verde) — clicável.
     if (waDisp) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(...GRAY);
-      const t = `Pedidos: ${waDisp}`;
-      const tw = doc.getTextWidth(t);
-      doc.textWithLink(t, W - M - tw, 23.5, { url: waUrl });
+      const label = `PEDIDOS NO WHATSAPP: ${waDisp}`;
+      const bh = 9;
+      const by = 22;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      const bw = Math.min(W - 2 * M, doc.getTextWidth(label) + 14);
+      const bx = W - M - bw;
+      doc.setFillColor(...GREEN);
+      doc.roundedRect(bx, by, bw, bh, 2, 2, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.text(label, bx + bw / 2, by + bh / 2 + 1.4, { align: 'center' });
+      if (waUrl) doc.link(bx, by, bw, bh, { url: waUrl });
     }
+
     doc.setDrawColor(...RED);
     doc.setLineWidth(0.6);
     doc.line(M, HEADER_H, W - M, HEADER_H);
@@ -129,14 +138,16 @@ export async function gerarCatalogoPdf({ unidade, whats, onProgress }: GerarCata
     doc.setDrawColor(230, 230, 230);
     doc.setLineWidth(0.2);
     doc.line(M, H - FOOTER_H, W - M, H - FOOTER_H);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
     if (waDisp) {
       doc.setTextColor(...GREEN);
-      doc.textWithLink(`Faça seu pedido no WhatsApp: ${waDisp}`, M, H - 6, { url: waUrl });
+      doc.textWithLink(`Faça seu pedido no WhatsApp: ${waDisp}`, M, H - 5.5, { url: waUrl });
     }
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
     doc.setTextColor(...GRAY);
-    doc.text(`Pág. ${page}`, W - M, H - 6, { align: 'right' });
+    doc.text(`Pág. ${page}`, W - M, H - 5.5, { align: 'right' });
   };
 
   const cols = 3;
@@ -204,13 +215,13 @@ export async function gerarCatalogoPdf({ unidade, whats, onProgress }: GerarCata
         doc.text('ESGOTADO', cx + 3.5, y + 5.6);
       }
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
+      doc.setFontSize(12);
       doc.setTextColor(...RED);
-      doc.text(brl(p.preco), cx, y + imgS + 5);
+      doc.text(brl(p.preco), cx, y + imgS + 6);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
+      doc.setFontSize(9);
       doc.setTextColor(...DARK);
-      doc.text(doc.splitTextToSize(p.nome, colW).slice(0, 2), cx, y + imgS + 9.5);
+      doc.text(doc.splitTextToSize(p.nome, colW).slice(0, 2), cx, y + imgS + 11);
       col += 1;
       if (col === cols) {
         col = 0;
