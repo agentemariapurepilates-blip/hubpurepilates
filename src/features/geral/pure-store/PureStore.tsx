@@ -31,7 +31,9 @@ import {
   Copy,
   Check,
   Link2,
+  Loader2,
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { precosStore, PRECOS_REFERENCIA, type PrecoStore } from '@/data/pureStorePrecos';
 import { catalogoProdutos } from '@/data/pureStoreCatalogo';
 
@@ -455,15 +457,23 @@ const normalizarWhats = (s: string) => {
 };
 
 const CATALOGO_LS_KEY = 'pureStore:meuCatalogo';
+type CatalogoSalvo = { slug: string; nome: string; whats: string };
 
-const buildCatalogoLink = (nomeUnidade: string, whatsDigitos: string) =>
-  `${window.location.origin}/catalogo/${slugify(nomeUnidade)}?u=${encodeURIComponent(nomeUnidade.trim())}&w=${whatsDigitos}`;
+// Link limpo: o slug fica salvo na tabela `catalogos` (slug -> nome + WhatsApp).
+// Base configurável via VITE_CATALOGO_BASE_URL — permite trocar pro domínio público
+// (ex.: catalogo.purepilates.com.br) sem re-trabalho. Sem a env, usa o domínio atual.
+const CATALOGO_BASE = (
+  (import.meta.env as Record<string, string | undefined>).VITE_CATALOGO_BASE_URL ||
+  window.location.origin
+).replace(/\/$/, '');
+const buildCatalogoLink = (slug: string) => `${CATALOGO_BASE}/catalogo/${slug}`;
 
 const CatalogoTab = () => {
-  const [saved, setSaved] = useState<{ nome: string; whats: string } | null>(() => {
+  const [saved, setSaved] = useState<CatalogoSalvo | null>(() => {
     try {
       const raw = localStorage.getItem(CATALOGO_LS_KEY);
-      return raw ? (JSON.parse(raw) as { nome: string; whats: string }) : null;
+      const p = raw ? JSON.parse(raw) : null;
+      return p && p.slug && p.whats ? (p as CatalogoSalvo) : null;
     } catch {
       return null;
     }
@@ -472,29 +482,66 @@ const CatalogoTab = () => {
   const [nome, setNome] = useState(saved?.nome ?? '');
   const [tel, setTel] = useState(saved?.whats ?? '');
   const [copiado, setCopiado] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState('');
 
   const whats = normalizarWhats(tel);
-  const slug = slugify(nome);
   const whatsOk = whats.length === 12 || whats.length === 13;
-  const valido = slug.length >= 2 && whatsOk;
-  const link = saved ? buildCatalogoLink(saved.nome, saved.whats) : '';
+  const valido = slugify(nome).length >= 2 && whatsOk;
+  const link = saved ? buildCatalogoLink(saved.slug) : '';
 
-  const gerar = () => {
-    if (!valido) return;
-    const dados = { nome: nome.trim(), whats };
+  const persist = (dados: CatalogoSalvo) => {
     try {
       localStorage.setItem(CATALOGO_LS_KEY, JSON.stringify(dados));
     } catch {
       /* localStorage indisponível — segue só em memória nesta sessão */
     }
-    setSaved(dados);
-    setEditando(false);
-    setCopiado(false);
+  };
+
+  const gerar = async () => {
+    if (!valido || salvando) return;
+    setSalvando(true);
+    setErro('');
+    try {
+      if (saved?.slug) {
+        // Editar: atualiza o próprio registro (RLS garante que é o dono).
+        const { error } = await supabase
+          .from('catalogos')
+          .update({ nome: nome.trim(), whatsapp: whats, updated_at: new Date().toISOString() })
+          .eq('slug', saved.slug);
+        if (error) throw error;
+        const dados: CatalogoSalvo = { slug: saved.slug, nome: nome.trim(), whats };
+        persist(dados);
+        setSaved(dados);
+      } else {
+        // Novo: encontra um slug livre a partir do nome da unidade.
+        const base = slugify(nome);
+        let slug = base;
+        for (let i = 2; i <= 30; i += 1) {
+          const { data, error } = await supabase.from('catalogos').select('slug').eq('slug', slug).maybeSingle();
+          if (error) throw error;
+          if (!data) break;
+          slug = `${base}-${i}`;
+        }
+        const { error } = await supabase.from('catalogos').insert({ slug, nome: nome.trim(), whatsapp: whats });
+        if (error) throw error;
+        const dados: CatalogoSalvo = { slug, nome: nome.trim(), whats };
+        persist(dados);
+        setSaved(dados);
+      }
+      setEditando(false);
+      setCopiado(false);
+    } catch {
+      setErro('Não consegui salvar o catálogo agora. Tente novamente.');
+    } finally {
+      setSalvando(false);
+    }
   };
 
   const editar = () => {
     setNome(saved?.nome ?? '');
     setTel(saved?.whats ?? '');
+    setErro('');
     setEditando(true);
   };
 
@@ -598,19 +645,20 @@ const CatalogoTab = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" className="gap-2" disabled={!valido} onClick={gerar}>
-            <BookOpen className="h-4 w-4" />
-            {saved ? 'Salvar alterações' : 'Gerar meu catálogo'}
+          <Button type="button" className="gap-2" disabled={!valido || salvando} onClick={gerar}>
+            {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+            {salvando ? 'Gerando...' : saved ? 'Salvar alterações' : 'Gerar meu catálogo'}
           </Button>
-          {saved && (
-            <Button type="button" variant="ghost" onClick={() => setEditando(false)}>
+          {saved && !salvando && (
+            <Button type="button" variant="ghost" onClick={() => { setEditando(false); setErro(''); }}>
               Cancelar
             </Button>
           )}
-          {!valido && (
+          {!valido && !salvando && (
             <span className="text-xs text-muted-foreground">Preencha o nome e o WhatsApp para gerar.</span>
           )}
         </div>
+        {erro && <p className="text-sm text-destructive">{erro}</p>}
       </Card>
     </div>
   );

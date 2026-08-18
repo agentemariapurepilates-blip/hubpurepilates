@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { MessageCircle, ExternalLink, ShoppingBag } from 'lucide-react';
+import { MessageCircle, ExternalLink, ShoppingBag, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-pure-pilates.png';
 import { catalogoProdutos, type CatalogoProduto } from '@/data/pureStoreCatalogo';
 
@@ -36,8 +37,42 @@ const ORDEM_SECOES = [
 const CatalogoPublico = () => {
   const { slug } = useParams();
   const [sp] = useSearchParams();
-  const whats = (sp.get('w') || '').replace(/\D/g, '');
-  const unidade = sp.get('u')?.trim() || (slug ? deslug(slug) : 'Pure Pilates');
+  const [carregando, setCarregando] = useState(true);
+  const [unidade, setUnidade] = useState('Pure Pilates');
+  const [whats, setWhats] = useState('');
+
+  // A unidade (nome + WhatsApp) vem da tabela `catalogos` pelo slug (link limpo).
+  // Fallback: parâmetros ?u=&w= (links antigos, antes do backend).
+  useEffect(() => {
+    let ativo = true;
+    (async () => {
+      let nome = sp.get('u')?.trim() || (slug ? deslug(slug) : 'Pure Pilates');
+      let w = (sp.get('w') || '').replace(/\D/g, '');
+      if (slug) {
+        try {
+          const { data } = await supabase
+            .from('catalogos')
+            .select('nome, whatsapp')
+            .eq('slug', slug)
+            .maybeSingle();
+          if (data) {
+            nome = data.nome;
+            w = (data.whatsapp || '').replace(/\D/g, '');
+          }
+        } catch {
+          /* sem registro / offline → usa o fallback dos parâmetros */
+        }
+      }
+      if (ativo) {
+        setUnidade(nome);
+        setWhats(w);
+        setCarregando(false);
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, [slug, sp]);
 
   const waHref = (msg: string) =>
     whats ? `https://wa.me/${whats}?text=${encodeURIComponent(msg)}` : undefined;
@@ -57,6 +92,14 @@ const CatalogoPublico = () => {
     ];
     return nomes.map((nome) => ({ nome, produtos: map.get(nome)! }));
   }, []);
+
+  if (carregando) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
