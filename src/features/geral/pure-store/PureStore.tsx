@@ -28,14 +28,12 @@ import {
   Lock,
   Search,
   BookOpen,
-  Copy,
-  Check,
-  Link2,
   Loader2,
+  Download,
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { precosStore, PRECOS_REFERENCIA, type PrecoStore } from '@/data/pureStorePrecos';
 import { catalogoProdutos } from '@/data/pureStoreCatalogo';
+import { gerarCatalogoPdf } from './catalogoPdf';
 
 // ————————————————————————————————————————————————————————————————
 // Contatos e links da Pure Store.
@@ -440,16 +438,8 @@ const CentralTab = ({ onNavigate }: { onNavigate: (t: TabId) => void }) => {
 };
 
 // ————————————————————————————————————————————————————————————————
-// Catálogo digital — gera o link exclusivo da unidade (WhatsApp embutido no link).
+// Catálogo digital — gera um PDF da unidade (foto + preço + WhatsApp).
 // ————————————————————————————————————————————————————————————————
-const slugify = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
 const normalizarWhats = (s: string) => {
   let d = s.replace(/\D/g, '');
   if (d && !d.startsWith('55') && (d.length === 10 || d.length === 11)) d = `55${d}`;
@@ -457,23 +447,25 @@ const normalizarWhats = (s: string) => {
 };
 
 const CATALOGO_LS_KEY = 'pureStore:meuCatalogo';
-type CatalogoSalvo = { slug: string; nome: string; whats: string };
+type CatalogoSalvo = { nome: string; whats: string };
 
-// Link limpo: o slug fica salvo na tabela `catalogos` (slug -> nome + WhatsApp).
-// Base configurável via VITE_CATALOGO_BASE_URL — permite trocar pro domínio público
-// (ex.: catalogo.purepilates.com.br) sem re-trabalho. Sem a env, usa o domínio atual.
-const CATALOGO_BASE = (
-  (import.meta.env as Record<string, string | undefined>).VITE_CATALOGO_BASE_URL ||
-  window.location.origin
-).replace(/\/$/, '');
-const buildCatalogoLink = (slug: string) => `${CATALOGO_BASE}/catalogo/${slug}`;
+function baixarBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
 
 const CatalogoTab = () => {
   const [saved, setSaved] = useState<CatalogoSalvo | null>(() => {
     try {
       const raw = localStorage.getItem(CATALOGO_LS_KEY);
       const p = raw ? JSON.parse(raw) : null;
-      return p && p.slug && p.whats ? (p as CatalogoSalvo) : null;
+      return p && p.nome && p.whats ? { nome: p.nome as string, whats: p.whats as string } : null;
     } catch {
       return null;
     }
@@ -481,14 +473,13 @@ const CatalogoTab = () => {
   const [editando, setEditando] = useState(!saved);
   const [nome, setNome] = useState(saved?.nome ?? '');
   const [tel, setTel] = useState(saved?.whats ?? '');
-  const [copiado, setCopiado] = useState(false);
-  const [salvando, setSalvando] = useState(false);
+  const [gerando, setGerando] = useState(false);
+  const [prog, setProg] = useState({ done: 0, total: 0 });
   const [erro, setErro] = useState('');
 
   const whats = normalizarWhats(tel);
   const whatsOk = whats.length === 12 || whats.length === 13;
-  const valido = slugify(nome).length >= 2 && whatsOk;
-  const link = saved ? buildCatalogoLink(saved.slug) : '';
+  const valido = nome.trim().length >= 2 && whatsOk;
 
   const persist = (dados: CatalogoSalvo) => {
     try {
@@ -498,44 +489,32 @@ const CatalogoTab = () => {
     }
   };
 
-  const gerar = async () => {
-    if (!valido || salvando) return;
-    setSalvando(true);
+  const baixar = async (dados: CatalogoSalvo) => {
+    if (gerando) return;
+    setGerando(true);
     setErro('');
+    setProg({ done: 0, total: catalogoProdutos.length });
     try {
-      if (saved?.slug) {
-        // Editar: atualiza o próprio registro (RLS garante que é o dono).
-        const { error } = await supabase
-          .from('catalogos')
-          .update({ nome: nome.trim(), whatsapp: whats, updated_at: new Date().toISOString() })
-          .eq('slug', saved.slug);
-        if (error) throw error;
-        const dados: CatalogoSalvo = { slug: saved.slug, nome: nome.trim(), whats };
-        persist(dados);
-        setSaved(dados);
-      } else {
-        // Novo: encontra um slug livre a partir do nome da unidade.
-        const base = slugify(nome);
-        let slug = base;
-        for (let i = 2; i <= 30; i += 1) {
-          const { data, error } = await supabase.from('catalogos').select('slug').eq('slug', slug).maybeSingle();
-          if (error) throw error;
-          if (!data) break;
-          slug = `${base}-${i}`;
-        }
-        const { error } = await supabase.from('catalogos').insert({ slug, nome: nome.trim(), whatsapp: whats });
-        if (error) throw error;
-        const dados: CatalogoSalvo = { slug, nome: nome.trim(), whats };
-        persist(dados);
-        setSaved(dados);
-      }
-      setEditando(false);
-      setCopiado(false);
+      const blob = await gerarCatalogoPdf({
+        unidade: dados.nome,
+        whats: dados.whats,
+        onProgress: (done, total) => setProg({ done, total }),
+      });
+      baixarBlob(blob, `Catalogo Pure Store - ${dados.nome}.pdf`);
     } catch {
-      setErro('Não consegui salvar o catálogo agora. Tente novamente.');
+      setErro('Não consegui gerar o PDF agora. Tente novamente.');
     } finally {
-      setSalvando(false);
+      setGerando(false);
     }
+  };
+
+  const gerar = async () => {
+    if (!valido) return;
+    const dados = { nome: nome.trim(), whats };
+    persist(dados);
+    setSaved(dados);
+    setEditando(false);
+    await baixar(dados);
   };
 
   const editar = () => {
@@ -545,16 +524,19 @@ const CatalogoTab = () => {
     setEditando(true);
   };
 
-  const copiar = async () => {
-    if (!link) return;
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopiado(true);
-      window.setTimeout(() => setCopiado(false), 2000);
-    } catch {
-      /* clipboard indisponível — o usuário pode copiar manualmente */
-    }
-  };
+  const barra = gerando ? (
+    <div className="space-y-1">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full bg-primary transition-all"
+          style={{ width: `${prog.total ? Math.round((prog.done / prog.total) * 100) : 0}%` }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Montando o PDF… {prog.done}/{prog.total} produtos.
+      </p>
+    </div>
+  ) : null;
 
   // Catálogo já gerado
   if (saved && !editando) {
@@ -567,48 +549,32 @@ const CatalogoTab = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-foreground">Meu catálogo digital</h2>
-              <p className="text-sm text-muted-foreground">Unidade: {saved.nome}</p>
+              <p className="text-sm text-muted-foreground">
+                Unidade: {saved.nome} · Pedidos: {saved.whats}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
-            <Check className="h-4 w-4 shrink-0" />
-            Catálogo gerado. Compartilhe o link abaixo com seus alunos.
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Baixe o catálogo em PDF (foto + preço dos {catalogoProdutos.length} produtos, com o seu WhatsApp) e envie para os seus alunos.
+          </p>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Link2 className="h-4 w-4 text-primary" />
-              Link exclusivo da sua unidade
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input readOnly value={link} className="flex-1 text-xs" onFocus={(e) => e.currentTarget.select()} />
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" className="gap-2" onClick={copiar}>
-                  {copiado ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                  {copiado ? 'Copiado' : 'Copiar'}
-                </Button>
-                <a href={link} target="_blank" rel="noopener noreferrer">
-                  <Button type="button" className="gap-2">
-                    <ExternalLink className="h-4 w-4" />
-                    Ver catálogo
-                  </Button>
-                </a>
-              </div>
-            </div>
+          {barra}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" className="gap-2" disabled={gerando} onClick={() => baixar(saved)}>
+              {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {gerando ? 'Gerando...' : 'Atualizar catálogo (baixar PDF)'}
+            </Button>
+            <Button type="button" variant="ghost" disabled={gerando} onClick={editar}>
+              Editar dados
+            </Button>
           </div>
+          {erro && <p className="text-sm text-destructive">{erro}</p>}
 
           <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-            <strong className="text-foreground">Atualiza sozinho:</strong> este é o seu link fixo. Quando a loja ganha novos produtos, muda preços ou esgota itens, o catálogo é atualizado automaticamente — você não precisa gerar outro link.
+            <strong className="text-foreground">Manter atualizado:</strong> o PDF é uma foto do momento. Quando a loja tiver novidades ou mudança de preço, clique em <strong>Atualizar catálogo</strong> para baixar a versão nova.
           </div>
-
-          <button
-            type="button"
-            onClick={editar}
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-          >
-            Editar nome ou WhatsApp
-          </button>
         </Card>
       </div>
     );
@@ -625,7 +591,7 @@ const CatalogoTab = () => {
           <div>
             <h2 className="text-lg font-bold text-foreground">Criar meu catálogo digital</h2>
             <p className="text-sm text-muted-foreground">
-              Um link exclusivo da sua unidade com os {catalogoProdutos.length} produtos da Pure Store. Seus alunos pedem direto no seu WhatsApp — e o catálogo se atualiza sozinho.
+              Gera um PDF com os {catalogoProdutos.length} produtos da Pure Store (foto + preço) e o seu WhatsApp para pedidos.
             </p>
           </div>
         </div>
@@ -644,17 +610,19 @@ const CatalogoTab = () => {
           </div>
         </div>
 
+        {barra}
+
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" className="gap-2" disabled={!valido || salvando} onClick={gerar}>
-            {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
-            {salvando ? 'Gerando...' : saved ? 'Salvar alterações' : 'Gerar meu catálogo'}
+          <Button type="button" className="gap-2" disabled={!valido || gerando} onClick={gerar}>
+            {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {gerando ? 'Gerando...' : 'Gerar catálogo (PDF)'}
           </Button>
-          {saved && !salvando && (
+          {saved && !gerando && (
             <Button type="button" variant="ghost" onClick={() => { setEditando(false); setErro(''); }}>
               Cancelar
             </Button>
           )}
-          {!valido && !salvando && (
+          {!valido && !gerando && (
             <span className="text-xs text-muted-foreground">Preencha o nome e o WhatsApp para gerar.</span>
           )}
         </div>

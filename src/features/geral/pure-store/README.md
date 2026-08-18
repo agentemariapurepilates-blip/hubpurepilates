@@ -4,22 +4,22 @@ Central de apoio ao franqueado: **FAQ**, **Pure Box**, **Uniformes** (tabelas de
 
 Rota: `/pure-store` (logado). Menu lateral: item solto "Pure Store".
 
-## ⚠️ Catálogo digital — precisa de manutenção periódica
+## ⚠️ Catálogo digital (PDF) — precisa de manutenção periódica
 
-O que é: cada unidade gera um **link público exclusivo**
-`/catalogo/<slug>?u=<nome>&w=<whatsapp>` com todos os produtos do site. O aluno
-abre **sem login** e pede pelo **WhatsApp da unidade** (rota pública em `App.tsx`,
-componente `CatalogoPublico.tsx`).
+O que é: a unidade preenche **nome + WhatsApp** e o Hub **gera um PDF** (foto +
+preço de cada produto, com o WhatsApp da unidade clicável) para ela enviar aos
+alunos. Componente `catalogoPdf.ts` (jsPDF) + aba no `PureStore.tsx`. **Não há
+link público nem backend** — a decisão foi PDF justamente para não expor o Hub.
 
-Arquitetura (sem backend):
-- O **WhatsApp da unidade vai no próprio link** → cada link é exclusivo, sem QR e
-  sem banco. A unidade gera **um único link** (mesmo nome+WhatsApp → mesmo slug).
-- Os produtos vêm de **`src/data/pureStoreCatalogo.ts`** (lista central). Logo,
-  quando essa lista é atualizada + deploy, **todos os links das unidades
-  atualizam sozinhos** — a unidade não precisa gerar de novo.
-- **Esgotado:** produto sem estoque aparece só com a tag "Esgotado" (sem "Pedir"
-  nem "Ver no site").
-- **PURE BOX:** kits B2B — **não** entram no catálogo do cliente (o gerador remove).
+Detalhes:
+- Botões **Gerar catálogo** / **Atualizar catálogo** (baixa o PDF novo com a lista
+  mais recente). Nome + WhatsApp ficam salvos no `localStorage` da unidade.
+- Fotos vêm do CDN da loja (CORS liberado) → carregadas no navegador e embutidas
+  no PDF. Produtos: **`src/data/pureStoreCatalogo.ts`** (lista central).
+- **Esgotado:** aparece só com a tag "Esgotado".
+- **PURE BOX:** kits B2B — **não** entram no catálogo (o gerador remove).
+- O PDF é uma **foto do momento**: para pegar novidades, a unidade clica em
+  **Atualizar catálogo** (que usa a lista central já deployada).
 
 ### Como atualizar o catálogo (manual, ~1x por semana)
 
