@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react';
+import { useState, Fragment, memo, useMemo, useCallback } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import {
   ShoppingBag,
@@ -30,9 +37,10 @@ import {
   BookOpen,
   Loader2,
   Download,
+  Trash2,
 } from 'lucide-react';
 import { precosStore, PRECOS_REFERENCIA, type PrecoStore } from '@/data/pureStorePrecos';
-import { catalogoProdutos } from '@/data/pureStoreCatalogo';
+import { catalogoProdutos, type CatalogoProduto } from '@/data/pureStoreCatalogo';
 import { gerarCatalogoPdf } from './catalogoPdf';
 
 // ————————————————————————————————————————————————————————————————
@@ -204,6 +212,13 @@ const PURE_BOX_BENEFITS = [
   'Gera uma fonte de receita complementar, que pode contribuir para despesas operacionais da unidade.',
 ];
 
+const PURE_BOX_BRINDES_BENEFITS = [
+  'Valoriza os primeiros alunos que fazem parte do início da sua história;',
+  'Cria uma experiência positiva desde os primeiros contatos;',
+  'Fortalece o relacionamento com os alunos;',
+  'Torna o momento de inauguração ainda mais especial.',
+];
+
 // Faixas de desconto da tabela de preços.
 const DISCOUNTS = [
   { id: 'todos', label: 'Todos' },
@@ -229,7 +244,10 @@ interface MedidaGrupo {
 interface MedidaTabela {
   produto: string;
   obs?: string;
-  diagram?: 'camiseta' | 'bata';
+  /** Foto do produto (capa do card). */
+  foto: string;
+  /** Desenho esquemático (aparece no modal, ao lado da tabela). */
+  diagram: 'camiseta' | 'bata' | 'polo';
   grupos: MedidaGrupo[];
 }
 
@@ -237,6 +255,7 @@ const TABELAS_MEDIDAS: MedidaTabela[] = [
   {
     produto: 'Camiseta Básica',
     obs: 'As medidas têm variação de + ou – 3%.',
+    foto: '/images/uniformes/medidas/camiseta-basica.jpg',
     diagram: 'camiseta',
     grupos: [
       {
@@ -262,6 +281,7 @@ const TABELAS_MEDIDAS: MedidaTabela[] = [
   },
   {
     produto: 'Bata Básica',
+    foto: '/images/uniformes/medidas/bata-basica.jpg',
     diagram: 'bata',
     grupos: [
       {
@@ -271,6 +291,49 @@ const TABELAS_MEDIDAS: MedidaTabela[] = [
           { tam: 'G', largura: '47 cm', altura: '64 cm' },
           { tam: 'GG', largura: '59 cm', altura: '66 cm' },
           { tam: 'XGG', largura: '61 cm', altura: '68 cm' },
+        ],
+      },
+    ],
+  },
+  {
+    produto: 'Polo Básica',
+    obs: 'As medidas têm variação de + ou – 3%.',
+    foto: '/images/uniformes/medidas/polo-masculino.jpg',
+    diagram: 'polo',
+    grupos: [
+      {
+        linhas: [
+          { tam: 'PP', largura: '49 cm', altura: '67 cm' },
+          { tam: 'P', largura: '50 cm', altura: '69 cm' },
+          { tam: 'M', largura: '52 cm', altura: '71 cm' },
+          { tam: 'G', largura: '54 cm', altura: '73 cm' },
+          { tam: 'GG', largura: '56 cm', altura: '75 cm' },
+          { tam: 'EXGG', largura: '58 cm', altura: '77 cm' },
+        ],
+      },
+      {
+        titulo: 'Tamanhos especiais',
+        linhas: [
+          { tam: 'G2', largura: '61 cm', altura: '80 cm' },
+          { tam: 'G3', largura: '64 cm', altura: '84 cm' },
+          { tam: 'G4', largura: '72 cm', altura: '86 cm' },
+          { tam: 'G5', largura: '77 cm', altura: '90 cm' },
+        ],
+      },
+    ],
+  },
+  {
+    produto: 'Polo Básica Baby Look',
+    obs: 'As medidas têm variação de + ou – 3%.',
+    foto: '/images/uniformes/medidas/polo-feminino.jpg',
+    diagram: 'polo',
+    grupos: [
+      {
+        linhas: [
+          { tam: 'P', largura: '40 cm', altura: '58 cm' },
+          { tam: 'M', largura: '42 cm', altura: '60 cm' },
+          { tam: 'G', largura: '44 cm', altura: '62 cm' },
+          { tam: 'GG', largura: '46 cm', altura: '64 cm' },
         ],
       },
     ],
@@ -447,7 +510,8 @@ const normalizarWhats = (s: string) => {
 };
 
 const CATALOGO_LS_KEY = 'pureStore:meuCatalogo';
-type CatalogoSalvo = { nome: string; whats: string };
+type PrecoTexto = { encomenda: boolean; valor: string };
+type CatalogoSalvo = { nome: string; whats: string; precos: Record<string, PrecoTexto> };
 
 function baixarBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -460,19 +524,94 @@ function baixarBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+const precoParaTexto = (n: number) => n.toFixed(2).replace('.', ',');
+const textoParaPreco = (s: string) => {
+  const v = parseFloat(s.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, ''));
+  return Number.isFinite(v) ? v : 0;
+};
+
+// Inicializa os preços por produto: usa os já salvos e, para produtos novos,
+// entra com o preço do site como ponto de partida.
+function initPrecos(salvos?: Record<string, PrecoTexto>): Record<string, PrecoTexto> {
+  const out: Record<string, PrecoTexto> = {};
+  for (const p of catalogoProdutos) {
+    const s = salvos?.[p.url];
+    out[p.url] = s ? { encomenda: !!s.encomenda, valor: s.valor } : { encomenda: false, valor: precoParaTexto(p.preco) };
+  }
+  return out;
+}
+
+// Converte os preços (texto) para o formato numérico do gerador de PDF.
+const precosParaPdf = (precos: Record<string, PrecoTexto>) =>
+  Object.fromEntries(
+    Object.entries(precos).map(([url, e]) => [url, { encomenda: e.encomenda, valor: textoParaPreco(e.valor) }]),
+  );
+
+// Linha do editor de preço (memoizada — só re-renderiza a própria linha ao editar).
+const PrecoRowEditor = memo(function PrecoRowEditor({
+  produto,
+  entrada,
+  onChange,
+}: {
+  produto: CatalogoProduto;
+  entrada: PrecoTexto;
+  onChange: (url: string, e: PrecoTexto) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <img src={produto.foto} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded object-cover" />
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-1 text-sm text-foreground">{produto.nome}</p>
+        <p className="text-xs text-muted-foreground">Ref. site: {brl(produto.preco)}</p>
+      </div>
+      {produto.esgotado ? (
+        <Badge variant="outline" className="text-[10px]">Esgotado</Badge>
+      ) : (
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="relative">
+            <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+            <Input
+              value={entrada.encomenda ? '' : entrada.valor}
+              onChange={(e) => onChange(produto.url, { encomenda: false, valor: e.target.value })}
+              disabled={entrada.encomenda}
+              inputMode="decimal"
+              className="h-9 w-24 pl-7 text-sm"
+              placeholder="—"
+            />
+          </div>
+          <label className="flex cursor-pointer items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={entrada.encomenda}
+              onChange={(e) => onChange(produto.url, { encomenda: e.target.checked, valor: entrada.valor })}
+              className="accent-primary"
+            />
+            Sob encomenda
+          </label>
+        </div>
+      )}
+    </div>
+  );
+});
+
 const CatalogoTab = () => {
-  const [saved, setSaved] = useState<CatalogoSalvo | null>(() => {
+  const inicial = (() => {
     try {
       const raw = localStorage.getItem(CATALOGO_LS_KEY);
       const p = raw ? JSON.parse(raw) : null;
-      return p && p.nome && p.whats ? { nome: p.nome as string, whats: p.whats as string } : null;
+      return p && p.nome && p.whats
+        ? ({ nome: p.nome, whats: p.whats, precos: p.precos ?? {} } as CatalogoSalvo)
+        : null;
     } catch {
       return null;
     }
-  });
-  const [editando, setEditando] = useState(!saved);
-  const [nome, setNome] = useState(saved?.nome ?? '');
-  const [tel, setTel] = useState(saved?.whats ?? '');
+  })();
+
+  const [saved, setSaved] = useState<CatalogoSalvo | null>(inicial);
+  const [nome, setNome] = useState(inicial?.nome ?? '');
+  const [tel, setTel] = useState(inicial?.whats ?? '');
+  const [precos, setPrecos] = useState<Record<string, PrecoTexto>>(() => initPrecos(inicial?.precos));
+  const [busca, setBusca] = useState('');
   const [gerando, setGerando] = useState(false);
   const [prog, setProg] = useState({ done: 0, total: 0 });
   const [erro, setErro] = useState('');
@@ -481,13 +620,24 @@ const CatalogoTab = () => {
   const whatsOk = whats.length === 12 || whats.length === 13;
   const valido = nome.trim().length >= 2 && whatsOk;
 
-  const persist = (dados: CatalogoSalvo) => {
-    try {
-      localStorage.setItem(CATALOGO_LS_KEY, JSON.stringify(dados));
-    } catch {
-      /* localStorage indisponível — segue só em memória nesta sessão */
+  const setPreco = useCallback((url: string, e: PrecoTexto) => {
+    setPrecos((prev) => ({ ...prev, [url]: e }));
+  }, []);
+
+  // Agrupa produtos por seção (para o editor), filtrando pela busca.
+  const grupos = useMemo(() => {
+    const nq = normalize(busca);
+    const lista = catalogoProdutos.filter((p) => !nq || normalize(p.nome).includes(nq));
+    const ORDER = ['Acessórios', 'Moletons', 'Lançamentos', 'Camisetas', 'Cropped', 'Legging', 'Meias', 'Outros'];
+    const map = new Map<string, CatalogoProduto[]>();
+    for (const p of lista) {
+      const l = map.get(p.categoria) ?? [];
+      l.push(p);
+      map.set(p.categoria, l);
     }
-  };
+    const nomes = [...ORDER.filter((s) => map.has(s)), ...[...map.keys()].filter((s) => !ORDER.includes(s))];
+    return nomes.map((s) => ({ sec: s, itens: map.get(s)! }));
+  }, [busca]);
 
   const baixar = async (dados: CatalogoSalvo) => {
     if (gerando) return;
@@ -498,6 +648,7 @@ const CatalogoTab = () => {
       const blob = await gerarCatalogoPdf({
         unidade: dados.nome,
         whats: dados.whats,
+        precos: precosParaPdf(dados.precos),
         onProgress: (done, total) => setProg({ done, total }),
       });
       baixarBlob(blob, `Catalogo Pure Store - ${dados.nome}.pdf`);
@@ -509,19 +660,29 @@ const CatalogoTab = () => {
   };
 
   const gerar = async () => {
-    if (!valido) return;
-    const dados = { nome: nome.trim(), whats };
-    persist(dados);
+    if (!valido || gerando) return;
+    const dados: CatalogoSalvo = { nome: nome.trim(), whats, precos };
+    try {
+      localStorage.setItem(CATALOGO_LS_KEY, JSON.stringify(dados));
+    } catch {
+      /* localStorage indisponível — segue só em memória nesta sessão */
+    }
     setSaved(dados);
-    setEditando(false);
     await baixar(dados);
   };
 
-  const editar = () => {
-    setNome(saved?.nome ?? '');
-    setTel(saved?.whats ?? '');
+  const excluir = () => {
+    try {
+      localStorage.removeItem(CATALOGO_LS_KEY);
+    } catch {
+      /* noop */
+    }
+    setSaved(null);
+    setNome('');
+    setTel('');
+    setPrecos(initPrecos());
+    setBusca('');
     setErro('');
-    setEditando(true);
   };
 
   const barra = gerando ? (
@@ -538,60 +699,60 @@ const CatalogoTab = () => {
     </div>
   ) : null;
 
-  // Catálogo já gerado
-  if (saved && !editando) {
-    return (
-      <div className="space-y-4">
-        <Card className="p-6 bg-card space-y-4">
+  return (
+    <div className="space-y-4">
+      {/* Catálogo gerado — acima de tudo, só download */}
+      {saved && (
+        <Card className="p-5 bg-card space-y-3">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <BookOpen className="h-5 w-5 text-primary" />
+            <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+              <Download className="h-5 w-5 text-green-700" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-foreground">Meu catálogo digital</h2>
-              <p className="text-sm text-muted-foreground">
-                Unidade: {saved.nome} · Pedidos: {saved.whats}
-              </p>
+              <h3 className="text-base font-bold text-foreground">Catálogo gerado</h3>
+              <p className="text-sm text-muted-foreground">{saved.nome} · Pedidos: {saved.whats}</p>
             </div>
           </div>
-
-          <p className="text-sm text-muted-foreground">
-            Baixe o catálogo em PDF (foto + preço dos {catalogoProdutos.length} produtos, com o seu WhatsApp) e envie para os seus alunos.
-          </p>
-
-          {barra}
-
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" className="gap-2" disabled={gerando} onClick={() => baixar(saved)}>
               {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {gerando ? 'Gerando...' : 'Atualizar catálogo (baixar PDF)'}
+              {gerando ? 'Gerando...' : 'Baixar catálogo (PDF)'}
             </Button>
-            <Button type="button" variant="ghost" disabled={gerando} onClick={editar}>
-              Editar dados
+            <Button
+              type="button"
+              variant="ghost"
+              className="gap-2 text-destructive hover:text-destructive"
+              disabled={gerando}
+              onClick={() => {
+                if (window.confirm('Excluir o catálogo gerado? Você poderá gerar um novo depois.')) excluir();
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir
             </Button>
           </div>
-          {erro && <p className="text-sm text-destructive">{erro}</p>}
-
-          <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-            <strong className="text-foreground">Manter atualizado:</strong> o PDF é uma foto do momento. Quando a loja tiver novidades ou mudança de preço, clique em <strong>Atualizar catálogo</strong> para baixar a versão nova.
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Ajustou os preços abaixo? Clique em <strong>Gerar catálogo atualizado</strong> para baixar a versão nova.
+          </p>
         </Card>
-      </div>
-    );
-  }
+      )}
 
-  // Criar / editar
-  return (
-    <div className="space-y-4">
-      <Card className="p-6 bg-card space-y-4">
+      {/* Chamada em destaque */}
+      <h2 className="pt-1 text-xl font-extrabold leading-snug text-foreground sm:text-2xl">
+        Precisa atualizar alguma informação?{' '}
+        <span className="text-primary">Gere um novo catálogo!</span>
+      </h2>
+
+      {/* Dados da unidade */}
+      <Card className="p-5 bg-card space-y-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
             <BookOpen className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-foreground">Criar meu catálogo digital</h2>
+            <h2 className="text-lg font-bold text-foreground">Catálogo digital</h2>
             <p className="text-sm text-muted-foreground">
-              Gera um PDF com os {catalogoProdutos.length} produtos da Pure Store (foto + preço) e o seu WhatsApp para pedidos.
+              Preencha os dados, ajuste os preços e gere o PDF (foto + preço) para enviar aos seus alunos.
             </p>
           </div>
         </div>
@@ -609,19 +770,55 @@ const CatalogoTab = () => {
             )}
           </div>
         </div>
+      </Card>
+
+      {/* Editor de preços — sempre visível */}
+      <Card className="p-5 bg-card space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Preços do seu catálogo</h3>
+          <p className="text-xs text-muted-foreground">
+            Edite os preços conforme os que são praticados na sua unidade — ou marque <strong>Sob encomenda</strong>. O preço padrão é a <strong>referência do site</strong>, que aparece só para você (no catálogo sai apenas o preço que você escolher).
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar produto..." className="pl-9 h-9" />
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={() => setPrecos(initPrecos())}>
+            Usar preço do site em tudo
+          </Button>
+        </div>
+
+        <div className="max-h-[26rem] overflow-y-auto rounded-lg border border-border divide-y divide-border px-3">
+          {grupos.map((g) => (
+            <div key={g.sec} className="py-1">
+              <p className="sticky top-0 z-10 bg-card py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                {g.sec}
+              </p>
+              {g.itens.map((p) => (
+                <PrecoRowEditor
+                  key={p.url}
+                  produto={p}
+                  entrada={precos[p.url] ?? { encomenda: false, valor: precoParaTexto(p.preco) }}
+                  onChange={setPreco}
+                />
+              ))}
+            </div>
+          ))}
+          {grupos.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">Nenhum produto encontrado.</p>
+          )}
+        </div>
 
         {barra}
 
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" className="gap-2" disabled={!valido || gerando} onClick={gerar}>
             {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            {gerando ? 'Gerando...' : 'Gerar catálogo (PDF)'}
+            {gerando ? 'Gerando...' : saved ? 'Gerar catálogo atualizado (PDF)' : 'Gerar catálogo (PDF)'}
           </Button>
-          {saved && !gerando && (
-            <Button type="button" variant="ghost" onClick={() => { setEditando(false); setErro(''); }}>
-              Cancelar
-            </Button>
-          )}
           {!valido && !gerando && (
             <span className="text-xs text-muted-foreground">Preencha o nome e o WhatsApp para gerar.</span>
           )}
@@ -721,9 +918,59 @@ const PureBoxTab = () => (
       </div>
     </Card>
 
+    <Card className="p-6 bg-card space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <Package className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Pure Box – Kit Brindes</h2>
+          <p className="text-sm text-muted-foreground">Brindes obrigatórios para novas unidades</p>
+        </div>
+      </div>
+
+      <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+        <p className="rounded-lg border-l-2 border-primary bg-primary/5 px-3 py-2 text-foreground font-medium">
+          Sim. A aquisição do Pure Box – Kit Brindes é obrigatória para todas as novas unidades da rede Pure Pilates.
+        </p>
+        <p>
+          O kit é composto por <strong>30 brindes</strong>, que deverão ser entregues aos <strong>30 primeiros alunos</strong> da unidade.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-foreground">Por que adquirir o Kit Brindes?</p>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          A ação faz parte da estratégia de inauguração da unidade e tem como objetivo valorizar os primeiros alunos, fortalecer o relacionamento desde o início e proporcionar uma recepção alinhada à experiência da marca.
+        </p>
+        <p className="text-sm font-semibold text-foreground pt-1">Ao iniciar a operação com essa ação, sua unidade:</p>
+        <ul className="space-y-1.5">
+          {PURE_BOX_BRINDES_BENEFITS.map((b, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+              <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <span>{b}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="space-y-2 border-t pt-4">
+        <p className="text-sm font-semibold text-foreground">Escolha dos brindes</p>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          A Pure Store disponibiliza diferentes opções de brindes, como canetas, canetas com marca-texto, lápis infinito, chaveiros, entre outros itens disponíveis.
+        </p>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          A escolha do brinde fica a critério do franqueado. No momento da compra, a unidade poderá selecionar a opção que considerar mais adequada e que mais agregue à sua estratégia de inauguração.
+        </p>
+        <p className="rounded-lg border-l-2 border-primary bg-primary/5 px-3 py-2 text-sm text-foreground">
+          <strong>Importante:</strong> o Kit Brindes deve conter 30 unidades, destinadas aos 30 primeiros alunos da nova unidade.
+        </p>
+      </div>
+    </Card>
+
     <ContactBar
       titulo="Adquirir o Pure Box ou tirar dúvidas"
-      descricao="Fale com a equipe da Pure Store para adesão do Kit Inauguração Arara de Vendas."
+      descricao="Fale com a equipe da Pure Store para adesão do Pure Box (Arara de Vendas e Kit Brindes)."
     />
   </div>
 );
@@ -732,99 +979,139 @@ const PureBoxTab = () => (
 // Uniformes
 // ————————————————————————————————————————————————————————————————
 // Desenho esquemático da peça com as setas de Largura (L) e Altura (A).
-const GarmentDiagram = ({ type }: { type: 'camiseta' | 'bata' }) => {
+const GarmentDiagram = ({ type }: { type: 'camiseta' | 'bata' | 'polo' }) => {
   const uid = `arw-${type}`;
-  const d =
-    type === 'camiseta'
-      ? 'M100,34 L80,36 L40,60 L54,84 L76,74 L76,182 L164,182 L164,74 L186,84 L200,60 L160,36 L140,34 Q120,50 100,34 Z'
-      : 'M100,34 L82,36 L58,62 L72,72 L86,64 L80,150 Q80,182 120,186 Q160,182 160,150 L154,64 L168,72 L182,62 L158,36 L140,34 L120,54 Z';
-  const Ly = type === 'camiseta' ? 112 : 96;
-  const Lx1 = type === 'camiseta' ? 78 : 88;
-  const Lx2 = type === 'camiseta' ? 162 : 152;
+  const camisetaD =
+    'M100,34 L80,36 L40,60 L54,84 L76,74 L76,182 L164,182 L164,74 L186,84 L200,60 L160,36 L140,34 Q120,50 100,34 Z';
+  const bataD =
+    'M100,34 L82,36 L58,62 L72,72 L86,64 L80,150 Q80,182 120,186 Q160,182 160,150 L154,64 L168,72 L182,62 L158,36 L140,34 L120,54 Z';
+  const d = type === 'bata' ? bataD : camisetaD;
+  const Ly = type === 'bata' ? 96 : 112;
+  const Lx1 = type === 'bata' ? 88 : 78;
+  const Lx2 = type === 'bata' ? 152 : 162;
   const Ax = 120;
   const Ay1 = 46;
-  const Ay2 = type === 'camiseta' ? 180 : 184;
+  const Ay2 = type === 'bata' ? 184 : 180;
+  const muted = 'hsl(var(--muted-foreground))';
+  const primary = 'hsl(var(--primary))';
   return (
-    <svg
-      viewBox="0 0 240 220"
-      className="w-full h-auto max-h-52"
-      fill="none"
-      role="img"
-      aria-label={`Onde medir — ${type}`}
-    >
+    <svg viewBox="0 0 240 220" className="w-full h-auto max-h-56" fill="none" role="img" aria-label={`Onde medir — ${type}`}>
       <defs>
-        <marker
-          id={uid}
-          viewBox="0 0 10 10"
-          refX="5"
-          refY="5"
-          markerWidth="5"
-          markerHeight="5"
-          orient="auto-start-reverse"
-        >
-          <path d="M0,0 L10,5 L0,10 z" fill="hsl(var(--primary))" />
+        <marker id={uid} viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill={primary} />
         </marker>
       </defs>
-      <path d={d} stroke="hsl(var(--muted-foreground))" strokeWidth="2" strokeLinejoin="round" opacity="0.5" />
-      {/* Largura (L) */}
-      <line x1={Lx1} y1={Ly} x2={Lx2} y2={Ly} stroke="hsl(var(--primary))" strokeWidth="1.5" markerStart={`url(#${uid})`} markerEnd={`url(#${uid})`} />
-      <text x={Lx2 + 6} y={Ly + 5} fill="hsl(var(--primary))" fontSize="15" fontWeight="700">L</text>
-      {/* Altura (A) */}
-      <line x1={Ax} y1={Ay1} x2={Ax} y2={Ay2} stroke="hsl(var(--primary))" strokeWidth="1.5" markerStart={`url(#${uid})`} markerEnd={`url(#${uid})`} />
-      <text x={Ax + 8} y={(Ay1 + Ay2) / 2 + 24} fill="hsl(var(--primary))" fontSize="15" fontWeight="700">A</text>
+      <path d={d} stroke={muted} strokeWidth="2" strokeLinejoin="round" opacity="0.5" />
+      {type === 'polo' && (
+        <>
+          <path d="M94,41 L120,60 L146,41" fill="none" stroke={muted} strokeWidth="2" strokeLinejoin="round" opacity="0.55" />
+          <path d="M94,41 L104,52 M146,41 L136,52" stroke={muted} strokeWidth="2" opacity="0.55" />
+          <line x1="120" y1="60" x2="120" y2="82" stroke={muted} strokeWidth="2" opacity="0.55" />
+          <circle cx="120" cy="67" r="1.8" fill={muted} />
+          <circle cx="120" cy="75" r="1.8" fill={muted} />
+        </>
+      )}
+      <line x1={Lx1} y1={Ly} x2={Lx2} y2={Ly} stroke={primary} strokeWidth="1.5" markerStart={`url(#${uid})`} markerEnd={`url(#${uid})`} />
+      <text x={Lx2 + 6} y={Ly + 5} fill={primary} fontSize="15" fontWeight="700">L</text>
+      <line x1={Ax} y1={Ay1} x2={Ax} y2={Ay2} stroke={primary} strokeWidth="1.5" markerStart={`url(#${uid})`} markerEnd={`url(#${uid})`} />
+      <text x={Ax + 8} y={(Ay1 + Ay2) / 2 + 24} fill={primary} fontSize="15" fontWeight="700">A</text>
     </svg>
   );
 };
 
-const MedidaCard = ({ t }: { t: MedidaTabela }) => (
-  <Card className="p-5 bg-card space-y-3">
-    <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-      <Shirt className="h-4 w-4 text-primary" />
-      {t.produto}
-    </h3>
-    <div className="flex flex-col sm:flex-row gap-4">
-      {t.diagram && (
-        <div className="sm:w-44 shrink-0 flex items-center justify-center rounded-lg bg-muted/30 p-3">
-          <GarmentDiagram type={t.diagram} />
-        </div>
-      )}
-      <div className="flex-1 min-w-0 space-y-2">
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-primary text-primary-foreground">
-                <th className="px-3 py-2 text-left font-semibold">Tamanho</th>
-                <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">Largura (L)</th>
-                <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">Altura (A)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {t.grupos.map((g, gi) => (
-                <Fragment key={gi}>
-                  {g.titulo && (
-                    <tr className="bg-muted/60">
-                      <td colSpan={3} className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        {g.titulo}
-                      </td>
-                    </tr>
-                  )}
-                  {g.linhas.map((l) => (
-                    <tr key={l.tam} className="border-t border-border">
-                      <td className="px-3 py-2 font-semibold text-foreground">{l.tam}</td>
-                      <td className="px-3 py-2 text-right text-muted-foreground">{l.largura}</td>
-                      <td className="px-3 py-2 text-right text-muted-foreground">{l.altura}</td>
-                    </tr>
-                  ))}
-                </Fragment>
+// Tabela de medidas (usada dentro do modal).
+const MedidaTabelaView = ({ t }: { t: MedidaTabela }) => (
+  <div className="space-y-2">
+    <div className="overflow-x-auto rounded-lg border border-border">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-primary text-primary-foreground">
+            <th className="px-3 py-2 text-left font-semibold">Tamanho</th>
+            <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">Largura (L)</th>
+            <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">Altura (A)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {t.grupos.map((g, gi) => (
+            <Fragment key={gi}>
+              {g.titulo && (
+                <tr className="bg-muted/60">
+                  <td colSpan={3} className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {g.titulo}
+                  </td>
+                </tr>
+              )}
+              {g.linhas.map((l) => (
+                <tr key={l.tam} className="border-t border-border">
+                  <td className="px-3 py-2 font-semibold text-foreground">{l.tam}</td>
+                  <td className="px-3 py-2 text-right text-muted-foreground">{l.largura}</td>
+                  <td className="px-3 py-2 text-right text-muted-foreground">{l.altura}</td>
+                </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-        {t.obs && <p className="text-xs text-muted-foreground italic">{t.obs}</p>}
-      </div>
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
     </div>
-  </Card>
+    {t.obs && <p className="text-xs text-muted-foreground italic">{t.obs}</p>}
+  </div>
 );
+
+// Galeria das tabelas de medidas: card com foto de capa → clica → modal com foto + tabela.
+const MedidasGaleria = () => {
+  const [selected, setSelected] = useState<MedidaTabela | null>(null);
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {TABELAS_MEDIDAS.map((t) => (
+          <button key={t.produto} type="button" onClick={() => setSelected(t)} className="group text-left">
+            <Card className="overflow-hidden bg-card transition-shadow hover:shadow-md">
+              <div className="aspect-square overflow-hidden bg-muted">
+                <img
+                  src={t.foto}
+                  alt={t.produto}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+              <div className="p-3">
+                <h4 className="text-sm font-semibold text-foreground transition-colors group-hover:text-primary">
+                  {t.produto}
+                </h4>
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                  <Ruler className="h-3 w-3" />
+                  Ver medidas
+                </p>
+              </div>
+            </Card>
+          </button>
+        ))}
+      </div>
+
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shirt className="h-5 w-5 text-primary" />
+              {selected?.produto}
+            </DialogTitle>
+            <DialogDescription>
+              Tabela de medidas — medida da peça (largura L e altura A), não do corpo.
+            </DialogDescription>
+          </DialogHeader>
+          {selected && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex items-center justify-center rounded-lg bg-muted/30 p-3">
+                <GarmentDiagram type={selected.diagram} />
+              </div>
+              <MedidaTabelaView t={selected} />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
 
 const UniformesTab = () => (
   <div className="space-y-5">
@@ -863,11 +1150,7 @@ const UniformesTab = () => (
           Confira e confirme as numerações antes de fazer o pedido. Os valores se referem à medida da peça (largura L e altura A), não do corpo.
         </p>
       </div>
-      <div className="space-y-4">
-        {TABELAS_MEDIDAS.map((t) => (
-          <MedidaCard key={t.produto} t={t} />
-        ))}
-      </div>
+      <MedidasGaleria />
     </div>
   </div>
 );

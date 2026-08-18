@@ -66,13 +66,22 @@ async function pool<T>(items: T[], n: number, fn: (t: T) => Promise<void>) {
 
 const SECTION_ORDER = ['Acessórios', 'Moletons', 'Lançamentos', 'Camisetas', 'Cropped', 'Legging', 'Meias', 'Outros'];
 
+export interface PrecoEntrada {
+  /** Marcado como "Sob Encomenda" (nesse caso o valor é ignorado). */
+  encomenda: boolean;
+  /** Preço que o franqueado pratica (R$). */
+  valor: number;
+}
+
 export interface GerarCatalogoOpts {
   unidade: string;
   whats: string;
+  /** Preço/Sob Encomenda escolhido pelo franqueado, por produto (chave = url). */
+  precos?: Record<string, PrecoEntrada>;
   onProgress?: (done: number, total: number) => void;
 }
 
-export async function gerarCatalogoPdf({ unidade, whats, onProgress }: GerarCatalogoOpts): Promise<Blob> {
+export async function gerarCatalogoPdf({ unidade, whats, precos, onProgress }: GerarCatalogoOpts): Promise<Blob> {
   const produtos = catalogoProdutos;
   const total = produtos.length;
 
@@ -214,10 +223,23 @@ export async function gerarCatalogoPdf({ unidade, whats, onProgress }: GerarCata
         doc.setFontSize(6.5);
         doc.text('ESGOTADO', cx + 3.5, y + 5.6);
       }
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.setTextColor(...RED);
-      doc.text(brl(p.preco), cx, y + imgS + 6);
+      const entry = precos?.[p.url];
+      if (p.esgotado) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(...GRAY);
+        doc.text('Esgotado', cx, y + imgS + 6);
+      } else if (entry?.encomenda) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(...DARK);
+        doc.text('Sob Encomenda', cx, y + imgS + 6);
+      } else {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(...RED);
+        doc.text(brl(entry?.valor ?? p.preco), cx, y + imgS + 6);
+      }
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(...DARK);
