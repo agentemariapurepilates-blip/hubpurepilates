@@ -1,11 +1,14 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import type { LucideIcon } from 'lucide-react';
 import {
   ChevronLeft,
   Download,
+  Copy,
   Check,
   Film,
   CalendarDays,
@@ -92,6 +95,104 @@ const Bullet = ({ children }: { children: ReactNode }) => (
   </li>
 );
 
+// Mensagem que o franqueado envia ao instrutor no WhatsApp junto com o PDF.
+// Fica FORA do <article> do material de onboarding — é conteúdo operacional do
+// franqueado, não faz parte do guia entregue ao instrutor.
+const montarMensagem = (nome: string) => `Olá, ${nome}! ❤️ Seja muito bem-vindo(a) à equipe Pure Pilates!
+
+Estamos muito felizes em ter você com a gente! 🥰 Para começar essa jornada, queremos compartilhar alguns pontos importantes que fazem parte da nossa rotina e do nosso padrão de atendimento:
+
+👕 Apresentação profissional
+O uso do uniforme é obrigatório. Mantenha o cabelo preso, não utilize tênis dentro da sala e use meias durante as aulas. Sua apresentação também faz parte da experiência que oferecemos aos nossos alunos.
+
+🧹 Organização do Studio
+Mantenha o ambiente sempre limpo e organizado. Ao finalizar sua aula, organize os equipamentos e deixe o espaço preparado para o próximo atendimento. A organização é responsabilidade de todos!
+
+⏱️ Duração das aulas
+As aulas têm 55 minutos, e esse período deve ser dedicado integralmente aos alunos e à condução da aula. Evite atrasos e não encerre a aula antes do horário.
+
+👀 Atenção durante as aulas
+Esteja sempre presente e atento aos alunos. Observe a execução dos exercícios, faça as correções e ofereça as orientações necessárias durante toda a aula.
+
+🧘 Aulas personalizadas
+Cada aluno é único! Considere sempre seus objetivos, necessidades, limitações e evolução. Adapte a aula de acordo com cada pessoa e evite aplicar a mesma aula para todos.
+
+📝 Prontuário do aluno
+Na primeira aula do aluno, o instrutor deve preencher o prontuário completo no App Pure Pilates. Essas informações são fundamentais para conhecermos o aluno e oferecermos um atendimento seguro e personalizado.
+
+📈 Evolução do aluno
+Ao final de cada aula, é obrigatório registrar a evolução do aluno no App Pure Pilates. Registre o que foi trabalhado, a evolução observada e qualquer informação importante para a continuidade do atendimento.
+
+🍎 Alimentação
+Refeições e lanches devem ser realizados somente durante os intervalos, fora do horário de atendimento.
+
+🔴 Wellhub
+Nos atendimentos pelo Wellhub, lembre-se de solicitar o check-in antes do início da aula.
+
+🥰 Aulas experimentais
+Sempre que tiver uma aula experimental, avise a gestão. Assim, conseguimos acompanhar o atendimento, oferecer o suporte necessário e proporcionar ao aluno a melhor experiência possível.
+
+❤️ E o mais importante: você não precisa saber tudo de uma vez! Em caso de dúvida, dificuldade ou qualquer situação que precise de orientação, procure a gestão. Estamos aqui para apoiar seu desenvolvimento e ajudar você a fazer parte da nossa equipe.
+
+Seja muito bem-vindo(a) à família Pure Pilates! Estamos muito felizes em ter você com a gente!`;
+
+const MensagemWhatsApp = () => {
+  const [nome, setNome] = useState('');
+  const [copiado, setCopiado] = useState(false);
+
+  // Sem nome preenchido, mantém o marcador [nome] para o franqueado editar no WhatsApp.
+  const mensagem = montarMensagem(nome.trim() || '[nome]');
+
+  const copiar = async () => {
+    await navigator.clipboard.writeText(mensagem);
+    setCopiado(true);
+    toast.success('Mensagem copiada!', { description: 'Cole no WhatsApp e envie junto com o PDF.' });
+    setTimeout(() => setCopiado(false), 2500);
+  };
+
+  return (
+    <section className="mb-6 rounded-2xl border border-[#25D366]/35 bg-card p-5 shadow-sm sm:p-6">
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white">
+          <MessageCircle className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-base font-bold leading-tight text-foreground sm:text-lg">
+            Mensagem de boas-vindas para o WhatsApp
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            Para o franqueado copiar e enviar ao instrutor junto com o PDF. Não faz parte do material de onboarding
+            abaixo.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:items-center">
+        <Input
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="Nome do instrutor(a)"
+          className="sm:max-w-xs"
+          aria-label="Nome do instrutor(a)"
+        />
+        <Button onClick={copiar} className="gap-2 sm:shrink-0">
+          {copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          {copiado ? 'Copiado!' : 'Copiar mensagem'}
+        </Button>
+      </div>
+
+      <p className="mt-2 text-xs text-muted-foreground">
+        Digite o nome para preencher automaticamente. Se deixar em branco, a mensagem sai com{' '}
+        <span className="font-semibold">[nome]</span> para você editar no WhatsApp.
+      </p>
+
+      <div className="mt-4 max-h-72 overflow-y-auto rounded-xl border bg-muted/40 p-4">
+        <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-foreground/90">{mensagem}</p>
+      </div>
+    </section>
+  );
+};
+
 const OnboardingInstrutor = () => (
   <MainLayout>
     <div className="w-full">
@@ -110,6 +211,8 @@ const OnboardingInstrutor = () => (
           </Button>
         </a>
       </div>
+
+      <MensagemWhatsApp />
 
       <article
         className="overflow-hidden rounded-2xl border border-[#E4D8C0] bg-[#F2EBDD] shadow-sm"
