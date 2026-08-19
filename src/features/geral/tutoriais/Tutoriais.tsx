@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
-import { ScrollText, Package, BookOpen, ArrowRight } from 'lucide-react';
+import { ScrollText, Package, BookOpen, GraduationCap, ArrowRight } from 'lucide-react';
 
 // Os mesmos destinos do dropdown "Tutoriais" no menu lateral.
 const TUTORIAIS = [
@@ -22,6 +22,12 @@ const TUTORIAIS = [
     href: '/manual-sistema',
     icon: BookOpen,
   },
+  {
+    title: 'Onboarding do Instrutor',
+    description: 'Guia de boas-vindas do instrutor(a) da Pure Pilates.',
+    href: '/onboarding-instrutor',
+    icon: GraduationCap,
+  },
 ];
 
 const Tutoriais = () => (
@@ -34,7 +40,7 @@ const Tutoriais = () => (
             Central de ajuda
           </span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Tutoriais</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Guias e Tutoriais</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
           Guias e materiais pra você tirar o máximo do Hub.
         </p>

@@ -121,6 +121,7 @@ const TUTORIAIS_PATHS = [
   '/tutorial-marketing',
   '/materiais-implantacao',
   '/manual-sistema',
+  '/onboarding-instrutor',
 ];
 
 export const sectionFromPath = (path: string): SectionKey | null => {
@@ -209,6 +210,7 @@ const Sidebar = () => {
     { name: 'Tutorial do Marketing', href: '/tutorial-marketing', icon: ScrollText },
     { name: 'Materiais de Implantação', href: '/materiais-implantacao', icon: Package },
     { name: 'Manual do Sistema', href: '/manual-sistema', icon: BookOpen },
+    { name: 'Onboarding do Instrutor', href: '/onboarding-instrutor', icon: GraduationCap },
   ];
 
   // Colaboradores section - only for colaboradores and admins
@@ -346,7 +348,7 @@ const Sidebar = () => {
                     }
                   >
                     <PlayCircle className="h-4 w-4" />
-                    Tutoriais
+                    Guias e Tutoriais
                   </NavLink>
                   <CollapsibleTrigger asChild>
                     <button

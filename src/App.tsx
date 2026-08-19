@@ -26,6 +26,7 @@ const PureDesignEditor = lazy(() => import("./features/geral/artes/PureDesignEdi
 const Parcerias = lazy(() => import("./features/geral/parcerias/Parcerias"));
 const ManualSistema = lazy(() => import("./features/geral/manual/ManualSistema"));
 const Tutoriais = lazy(() => import("./features/geral/tutoriais/Tutoriais"));
+const OnboardingInstrutor = lazy(() => import("./features/geral/tutoriais/OnboardingInstrutor"));
 const AutorizarMidiaAdicional = lazy(() => import("./features/geral/midia-adicional/AutorizarMidiaAdicional"));
 const MinhasSolicitacoes = lazy(() => import("./features/geral/midia-adicional/MinhasSolicitacoes"));
 const Perfil = lazy(() => import("./features/geral/conta/Perfil"));
@@ -127,6 +128,7 @@ function App() {
             <Route path="/minha-area/minhas-solicitacoes" element={<ProtectedRoute><MinhasSolicitacoes /></ProtectedRoute>} />
             <Route path="/manual-sistema" element={<ProtectedRoute><ManualSistema /></ProtectedRoute>} />
             <Route path="/tutoriais" element={<ProtectedRoute><Tutoriais /></ProtectedRoute>} />
+            <Route path="/onboarding-instrutor" element={<ProtectedRoute><OnboardingInstrutor /></ProtectedRoute>} />
             <Route path="/pure-design" element={<ProtectedRoute><PureDesign /></ProtectedRoute>} />
             <Route path="/pure-design/:id" element={<ProtectedRoute><PureDesignEditor /></ProtectedRoute>} />
             <Route path="/agente-design" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
