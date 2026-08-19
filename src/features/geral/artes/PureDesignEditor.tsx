@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { domToBlob } from 'modern-screenshot';
-import { ArrowLeft, Mail, Trash2, RotateCcw, Plus, Download } from 'lucide-react';
+import { ArrowLeft, Mail, Trash2, RotateCcw, Plus, Copy, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,9 +25,11 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   buildRenderedHTML,
+  computeRepeatHeights,
   fieldIsRemovable,
   pureDesignTemplates,
   type PureDesignTemplate,
+  type RepeatItem,
   type TableRow,
 } from '@/data/pureDesignTemplates';
 import { getMontserratFontFaceCss } from '@/features/colaborador/academy/montserratEmbed';
@@ -86,6 +88,9 @@ const PureDesignEditor = () => {
       ? Array.from({ length: template.table.initialRows }, () => ({ item: '', preco: '' }))
       : [],
   );
+  const [repeatItems, setRepeatItems] = useState<RepeatItem[]>(() =>
+    template?.repeat ? template.repeat.initial.map((it) => ({ ...it })) : [],
+  );
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [zoom, setZoom] = useState(0.4);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -107,7 +112,9 @@ const PureDesignEditor = () => {
     ? template.table.baseHeight +
       rows.length * template.table.rowHeight -
       (removed.has('pix') ? template.table.pixHeight : 0)
-    : (template?.height ?? 0);
+    : template?.repeat
+      ? computeRepeatHeights(template.repeat, repeatItems.length).canvasHeight
+      : (template?.height ?? 0);
 
   useEffect(() => {
     if (!template) return;
@@ -141,7 +148,7 @@ const PureDesignEditor = () => {
     );
   }
 
-  const renderedHTML = buildRenderedHTML(template, values, removed, rows);
+  const renderedHTML = buildRenderedHTML(template, values, removed, rows, repeatItems);
 
   const handleFieldChange = (fieldId: string, value: string) => {
     setValues((prev) => ({ ...prev, [fieldId]: value }));
@@ -157,6 +164,22 @@ const PureDesignEditor = () => {
     const preco = raw.replace(/[^\d.,]/g, '');
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, preco } : r)));
   };
+
+  // Lista dinâmica de datas (Aviso de Feriado): adicionar / duplicar / excluir.
+  const addRepeat = () =>
+    setRepeatItems((prev) => [...prev, { text: '', variant: template!.repeat!.defaultVariant }]);
+  const duplicateRepeat = (index: number) =>
+    setRepeatItems((prev) => {
+      const next = [...prev];
+      next.splice(index + 1, 0, { ...prev[index] });
+      return next;
+    });
+  const removeRepeat = (index: number) =>
+    setRepeatItems((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+  const setRepeatText = (index: number, text: string) =>
+    setRepeatItems((prev) => prev.map((it, i) => (i === index ? { ...it, text } : it)));
+  const setRepeatVariant = (index: number, variant: string) =>
+    setRepeatItems((prev) => prev.map((it, i) => (i === index ? { ...it, variant } : it)));
 
   const toggleRemoved = (fieldId: string) => {
     setRemoved((prev) => {
@@ -522,6 +545,73 @@ const PureDesignEditor = () => {
                 </div>
               );
             })}
+            {template.repeat && (
+              <div className="space-y-3 border-t border-border pt-5">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-sm font-medium text-muted-foreground">Datas</label>
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {repeatItems.length} {repeatItems.length === 1 ? 'data' : 'datas'}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {repeatItems.map((item, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <Input
+                        value={item.text}
+                        maxLength={30}
+                        onChange={(e) => setRepeatText(i, e.target.value)}
+                        placeholder="09/07 - Fechado"
+                        className="flex-1 min-w-0"
+                      />
+                      <Select value={item.variant} onValueChange={(v) => setRepeatVariant(i, v)}>
+                        <SelectTrigger className="w-[104px] shrink-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {template.repeat!.variants.map((v) => (
+                            <SelectItem key={v.id} value={v.id}>
+                              {v.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <button
+                        type="button"
+                        onClick={() => duplicateRepeat(i)}
+                        title="Duplicar data"
+                        aria-label="Duplicar data"
+                        className="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeRepeat(i)}
+                        disabled={repeatItems.length <= 1}
+                        title="Excluir data"
+                        aria-label="Excluir data"
+                        className="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addRepeat}
+                  className="w-full gap-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  {template.repeat.addLabel}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Duplique ou adicione datas. <strong>Fechado</strong> fica vermelho;{' '}
+                  <strong>Aberto</strong>, branco.
+                </p>
+              </div>
+            )}
           </div>
         </aside>
 

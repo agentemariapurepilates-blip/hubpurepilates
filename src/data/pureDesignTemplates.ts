@@ -40,6 +40,45 @@ export interface TableConfig {
   pixHeight: number;
 }
 
+/** Um item da lista dinâmica de "pills" (ex.: datas do aviso de feriado). */
+export interface RepeatItem {
+  text: string;
+  /** id da variante visual escolhida (ex.: 'fechado' | 'aberto'). */
+  variant: string;
+}
+
+/**
+ * Lista de pills que o usuário pode adicionar / duplicar / excluir (ex.: as
+ * datas do "Aviso de Feriado"). Cada item vira um pill; a variante define a
+ * cor/estilo. O canvas e o card crescem `step` px por item além de `baseCount`.
+ */
+export interface RepeatConfig {
+  /** Token no HTML trocado pelos pills gerados. */
+  token: string;
+  /** Token da altura do canvas (cresce com o nº de itens). */
+  canvasHeightToken: string;
+  /** Token da altura do card (cresce com o nº de itens). */
+  cardHeightToken: string;
+  /** Rótulo da seção / de um item (ex.: "Data"). */
+  itemLabel: string;
+  /** Rótulo do botão de adicionar (ex.: "Adicionar data"). */
+  addLabel: string;
+  /** Variante default de itens novos/adicionados. */
+  defaultVariant: string;
+  /** Nº de itens que o layout-base já acomoda. */
+  baseCount: number;
+  /** Altura (px) adicionada ao canvas e ao card por item além de baseCount. */
+  step: number;
+  /** Altura do canvas com baseCount itens. */
+  baseCanvasHeight: number;
+  /** Altura do card com baseCount itens. */
+  baseCardHeight: number;
+  /** Variantes visuais — HTML de UM pill, com o token {{text}}. */
+  variants: { id: string; label: string; html: string }[];
+  /** Itens iniciais. */
+  initial: RepeatItem[];
+}
+
 export interface PureDesignTemplate {
   id: string;
   name: string;
@@ -51,6 +90,8 @@ export interface PureDesignTemplate {
   fields: TemplateField[];
   /** Presente só em templates com tabela de linhas dinâmicas (Pure Store). */
   table?: TableConfig;
+  /** Presente só em templates com lista dinâmica de pills (Aviso de Feriado). */
+  repeat?: RepeatConfig;
 }
 
 const sejaInstrutorHTML = (bgUrl: string) => `<!DOCTYPE html>
@@ -270,7 +311,7 @@ const feriadoAvisoHTML = (logoUrl: string) => `<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
-<div style="position:relative; width:1080px; height:1350px; background:linear-gradient(180deg,#ffffff 0%,#f1f1f1 100%); overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+<div style="position:relative; width:1080px; height:__CANVAS_H__px; background:linear-gradient(180deg,#ffffff 0%,#f1f1f1 100%); overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
 
 <!-- Forma pétala decorativa (marca) -->
 <svg width="440" height="440" viewBox="0 0 250 250" style="position:absolute; top:-150px; right:-140px;"><path d="M 125 0 L 125 0 A 125 125 0 0 1 250 125 L 250 250 L 125 250 A 125 125 0 0 1 0 125 L 0 125 A 125 125 0 0 1 125 0 Z" fill="none" stroke="#C12030" stroke-width="3" opacity="0.30"/></svg>
@@ -285,14 +326,13 @@ const feriadoAvisoHTML = (logoUrl: string) => `<!DOCTYPE html>
 <!--fld:aviso--><div style="position:absolute; top:220px; left:0; right:0; text-align:center; font-size:132px; font-weight:800; color:#C12030; letter-spacing:2px; line-height:1;">{{aviso}}</div><!--/fld:aviso-->
 
 <!-- Card (forma-assinatura Pure: 3 cantos arredondados + 1 reto) -->
-<div style="position:absolute; left:165px; top:445px; width:750px; height:460px; box-sizing:border-box; border:7px solid #C12030; border-radius:58px 58px 0 58px; background:rgba(255,255,255,0.55);"></div>
+<div style="position:absolute; left:165px; top:445px; width:750px; height:__CARD_H__px; box-sizing:border-box; border:7px solid #C12030; border-radius:58px 58px 0 58px; background:rgba(255,255,255,0.55);"></div>
 
 <!-- Conteúdo do card (centralizado) -->
-<div style="position:absolute; left:165px; top:445px; width:750px; height:460px; box-sizing:border-box; padding:0 56px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+<div style="position:absolute; left:165px; top:445px; width:750px; height:__CARD_H__px; box-sizing:border-box; padding:0 56px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
   <!--fld:titulo--><div style="margin-bottom:24px;"><span style="display:inline-block; background:#1a1a1a; color:#ffffff; padding:13px 32px; border-radius:30px 30px 0 30px; font-size:28px; font-weight:700; letter-spacing:1px; text-transform:uppercase; line-height:1.25;">{{titulo}}</span></div><!--/fld:titulo-->
-  <!--fld:subtitulo--><div style="font-size:25px; font-weight:700; color:#C12030; text-transform:uppercase; letter-spacing:0.5px; line-height:1.35; margin-bottom:36px;">{{subtitulo}}</div><!--/fld:subtitulo-->
-  <!--fld:data1--><div style="margin-bottom:18px;"><span style="display:inline-block; width:330px; box-sizing:border-box; text-align:center; background:#C12030; color:#ffffff; padding:13px 16px; border-radius:999px; font-size:27px; font-weight:700; letter-spacing:0.5px; white-space:nowrap;">{{data1}}</span></div><!--/fld:data1-->
-  <!--fld:data2--><div><span style="display:inline-block; width:330px; box-sizing:border-box; text-align:center; background:#ffffff; color:#C12030; border:3px solid #C12030; padding:10px 16px; border-radius:999px; font-size:27px; font-weight:700; letter-spacing:0.5px; white-space:nowrap;">{{data2}}</span></div><!--/fld:data2-->
+  <!--fld:subtitulo--><div style="font-size:25px; font-weight:700; color:#C12030; text-transform:uppercase; letter-spacing:0.5px; line-height:1.35; margin-bottom:34px;">{{subtitulo}}</div><!--/fld:subtitulo-->
+  <div style="width:100%; display:flex; flex-direction:column; align-items:center;"><!--DATES--></div>
 </div>
 
 <!-- Barra inferior -->
@@ -306,8 +346,77 @@ const feriadoAvisoFields: TemplateField[] = [
   { id: 'aviso', label: 'Chamada (AVISO!)', placeholder: '{{aviso}}', defaultValue: 'AVISO!', inputType: 'input', maxLength: 18 },
   { id: 'titulo', label: 'Título do feriado', placeholder: '{{titulo}}', defaultValue: 'FERIADO REVOLUÇÃO CONSTITUCIONALISTA', inputType: 'input', maxLength: 60 },
   { id: 'subtitulo', label: 'Subtítulo', placeholder: '{{subtitulo}}', defaultValue: 'Confira nosso horário de funcionamento!', inputType: 'input', maxLength: 80 },
-  { id: 'data1', label: 'Data 1 — status', placeholder: '{{data1}}', defaultValue: '09/07 - Fechado', maxLength: 30 },
-  { id: 'data2', label: 'Data 2 — status', placeholder: '{{data2}}', defaultValue: '10/07 - Aberto', maxLength: 30 },
+];
+
+// Um pill de data. {{text}} é o texto (ex.: "09/07 - Fechado"). Duas variantes:
+// "fechado" (vermelho preenchido) e "aberto" (branco com contorno vermelho).
+const feriadoAvisoPill = (fill: string, color: string, border: string) =>
+  `<div style="margin-bottom:18px;"><span style="display:inline-block; min-width:330px; box-sizing:border-box; text-align:center; background:${fill}; color:${color}; ${border} padding:13px 22px; border-radius:999px; font-size:27px; font-weight:700; letter-spacing:0.5px; white-space:nowrap;">{{text}}</span></div>`;
+
+const feriadoAvisoRepeat: RepeatConfig = {
+  token: '<!--DATES-->',
+  canvasHeightToken: '__CANVAS_H__',
+  cardHeightToken: '__CARD_H__',
+  itemLabel: 'Data',
+  addLabel: 'Adicionar data',
+  defaultVariant: 'fechado',
+  baseCount: 2,
+  step: 80,
+  baseCanvasHeight: 1350,
+  baseCardHeight: 460,
+  variants: [
+    { id: 'fechado', label: 'Fechado', html: feriadoAvisoPill('#C12030', '#ffffff', '') },
+    { id: 'aberto', label: 'Aberto', html: feriadoAvisoPill('#ffffff', '#C12030', 'border:3px solid #C12030;') },
+  ],
+  initial: [
+    { text: '09/07 - Fechado', variant: 'fechado' },
+    { text: '10/07 - Aberto', variant: 'aberto' },
+  ],
+};
+
+// ─── Vale Presente (voucher 1512×662) ────────────────────────────────────────
+// Recriado em HTML a partir do design do Canva (Vale Presente): painel esquerdo
+// com a unidade (editável) + área direita com a chamada fixa, o pacote (editável)
+// e o logo. Cores e proporções do original.
+const valePresenteHTML = (logoUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vale Presente</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,700;1,800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1512px; height:662px; background:#F2ECE3; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+
+  <!-- Painel esquerdo: unidade -->
+  <div style="position:absolute; left:0; top:0; width:384px; height:662px; background:#A42A40; box-sizing:border-box; padding:0 36px 0 72px; display:flex; flex-direction:column; justify-content:center;">
+    <div style="font-size:56px; font-weight:800; color:#ffffff; letter-spacing:1px; line-height:1;">Unidade</div>
+    <div style="margin-top:12px; font-size:30px; font-style:italic; font-weight:500; color:#ffffff; line-height:1.15;">{{unidade}}</div>
+  </div>
+
+  <!-- Área direita -->
+  <div style="position:absolute; left:384px; right:0; top:0; bottom:0; box-sizing:border-box; padding:48px 72px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+
+    <div style="font-size:40px; font-weight:600; letter-spacing:14px; text-indent:14px; color:#2B2B2B; line-height:1;">VOUCHER</div>
+
+    <div style="margin-top:44px; font-size:38px; font-style:italic; font-weight:500; color:#A42A40; line-height:1.28;">Um presente para colocar mais<br><span style="font-weight:800;">movimento na sua rotina.</span></div>
+
+    <div style="margin-top:42px;"><span style="display:inline-block; border:3px solid #A42A40; border-radius:999px 999px 0 999px; padding:22px 52px; font-size:30px; font-weight:800; color:#1a1a1a; letter-spacing:0.5px; white-space:nowrap;">{{pacote}}</span></div>
+
+    <div style="margin-top:42px; font-size:38px; font-weight:500; color:#A42A40; line-height:1.3;">E descubra uma nova forma de<br><span style="font-weight:800;">se sentir melhor todos os dias.</span></div>
+
+    <img src="${logoUrl}" alt="Pure Pilates" style="margin-top:46px; width:156px; height:auto; display:block;"/>
+
+  </div>
+
+</div>
+</body>
+</html>`;
+
+const valePresenteFields: TemplateField[] = [
+  { id: 'unidade', label: 'Unidade', placeholder: '{{unidade}}', defaultValue: 'Anália Franco', maxLength: 28 },
+  { id: 'pacote', label: 'Pacote / oferta', placeholder: '{{pacote}}', defaultValue: 'Pacote com 5 aulas', maxLength: 26 },
 ];
 
 // Catálogo de produtos da Pure Store (dropdown da tabela de preços). Deduplicado
@@ -804,6 +913,7 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     height: 1350,
     html: feriadoAvisoHTML('/images/pure-design/pure-pilates-logo.png'),
     fields: feriadoAvisoFields,
+    repeat: feriadoAvisoRepeat,
   },
   {
     id: 'comunicado-copa',
@@ -815,6 +925,16 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     html: comunicadoCopaHTML('/images/pure-design/comunicado-copa.png'),
     fields: comunicadoCopaFields,
   },
+  {
+    id: 'vale-presente',
+    name: 'Vale Presente',
+    category: 'Vale-presente',
+    thumbnail: '/images/pure-design/vale-presente.png',
+    width: 1512,
+    height: 662,
+    html: valePresenteHTML('/images/pure-design/pure-pilates-logo-trim.png'),
+    fields: valePresenteFields,
+  },
 ];
 
 // Fica true quando o template demarca o bloco removível do campo (forma + texto)
@@ -823,11 +943,18 @@ export function fieldIsRemovable(template: PureDesignTemplate, fieldId: string):
   return template.html.includes(`<!--fld:${fieldId}-->`);
 }
 
+/** Altura do canvas e do card de um template `repeat`, dada a contagem de itens. */
+export function computeRepeatHeights(cfg: RepeatConfig, count: number) {
+  const extra = Math.max(0, count - cfg.baseCount) * cfg.step;
+  return { canvasHeight: cfg.baseCanvasHeight + extra, cardHeight: cfg.baseCardHeight + extra };
+}
+
 export function buildRenderedHTML(
   template: PureDesignTemplate,
   values: Record<string, string>,
   removed?: ReadonlySet<string>,
   rows?: readonly TableRow[],
+  repeatItems?: readonly RepeatItem[],
 ): string {
   let html = template.html;
   // Remove o bloco inteiro (forma + texto) dos campos marcados como excluídos.
@@ -856,6 +983,22 @@ export function buildRenderedHTML(
       })
       .join('');
     html = html.split(t.rowsToken).join(generated);
+  }
+  // Lista dinâmica de pills (Aviso de Feriado): datas com variante e altura viva.
+  if (template.repeat) {
+    const cfg = template.repeat;
+    const items = repeatItems ?? cfg.initial;
+    const { canvasHeight, cardHeight } = computeRepeatHeights(cfg, items.length);
+    html = html.split(cfg.canvasHeightToken).join(String(canvasHeight));
+    html = html.split(cfg.cardHeightToken).join(String(cardHeight));
+    const generated = items
+      .map((item) => {
+        const variant = cfg.variants.find((v) => v.id === item.variant) ?? cfg.variants[0];
+        const text = (item.text ?? '').trim() || ' ';
+        return variant.html.split('{{text}}').join(text);
+      })
+      .join('');
+    html = html.split(cfg.token).join(generated);
   }
   return html;
 }
