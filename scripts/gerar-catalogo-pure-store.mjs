@@ -172,6 +172,12 @@ const antes = prods.length;
 prods = prods.filter((p) => p.categoria !== 'PURE BOX');
 console.log(`  Removidos ${antes - prods.length} itens PURE BOX. Total no catálogo: ${prods.length}.`);
 
+// Combos "Xô Pé Frio" (kits de meias/sapatilhas) — removidos por decisão do
+// franqueado (não vão para o catálogo do cliente final).
+const antesCombo = prods.length;
+prods = prods.filter((p) => !/combo\s+x[ôo]\s+p[ée]\s+frio/i.test(p.nome));
+console.log(`  Removidos ${antesCombo - prods.length} combos "Xô Pé Frio". Total: ${prods.length}.`);
+
 const cont = {};
 prods.forEach((p) => {
   cont[p.categoria] = (cont[p.categoria] || 0) + 1;

@@ -253,7 +253,7 @@ interface MedidaTabela {
 
 const TABELAS_MEDIDAS: MedidaTabela[] = [
   {
-    produto: 'Camiseta Básica',
+    produto: 'Camiseta Instrutor – Masculina',
     obs: 'As medidas têm variação de + ou – 3%.',
     foto: '/images/uniformes/medidas/camiseta-basica.jpg',
     diagram: 'camiseta',
@@ -280,7 +280,7 @@ const TABELAS_MEDIDAS: MedidaTabela[] = [
     ],
   },
   {
-    produto: 'Bata Básica',
+    produto: 'Camiseta Instrutor – Feminina',
     foto: '/images/uniformes/medidas/bata-basica.jpg',
     diagram: 'bata',
     grupos: [
@@ -296,7 +296,7 @@ const TABELAS_MEDIDAS: MedidaTabela[] = [
     ],
   },
   {
-    produto: 'Polo Básica',
+    produto: 'Polo Gestor – Masculina',
     obs: 'As medidas têm variação de + ou – 3%.',
     foto: '/images/uniformes/medidas/polo-masculino.jpg',
     diagram: 'polo',
@@ -323,7 +323,7 @@ const TABELAS_MEDIDAS: MedidaTabela[] = [
     ],
   },
   {
-    produto: 'Polo Básica Baby Look',
+    produto: 'Polo Gestor – Feminina',
     obs: 'As medidas têm variação de + ou – 3%.',
     foto: '/images/uniformes/medidas/polo-feminino.jpg',
     diagram: 'polo',
