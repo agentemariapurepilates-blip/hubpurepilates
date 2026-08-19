@@ -419,6 +419,119 @@ const valePresenteFields: TemplateField[] = [
   { id: 'pacote', label: 'Pacote / oferta', placeholder: '{{pacote}}', defaultValue: 'Pacote com 5 aulas', maxLength: 26 },
 ];
 
+// ——— Depoimentos ————————————————————————————————————————————————
+// Recriação em HTML do design "Depoimentos" do Canva (2 páginas, 1080x1350).
+// A foto é um bloco removível (<!--fld:foto-->): o editor mostra a lixeira e o
+// franqueado pode inserir a dele ou tirar o círculo da arte.
+
+const depoimentoPlaceholderFoto =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240' preserveAspectRatio='xMidYMid slice'>
+      <rect width='240' height='240' fill='#e7e1d6'/>
+      <circle cx='120' cy='96' r='43' fill='#c8bfb0'/>
+      <path d='M26 240c0-51 42-83 94-83s94 32 94 83z' fill='#c8bfb0'/>
+    </svg>`,
+  );
+
+/** Estrela cheia do rating (mesmo amarelo do Canva). */
+const depoimentoEstrela = `<svg width="45" height="43" viewBox="0 0 24 24" fill="#FED154" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:0 8px;"><path d="M12 1.8l3.09 6.26 6.91.99-5 4.87 1.18 6.88L12 17.55l-6.18 3.25L7 13.92l-5-4.87 6.91-.99z"/></svg>`;
+
+const depoimentoClaroHTML = (logoUrl: string, photoDefault: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Depoimento — Card claro</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1350px; background:#f2ede6; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+
+  <!-- Card branco. O padding-bottom de 169px reproduz a respiração do Canva; com
+       justify-content:center o conteúdo cai na posição original e continua
+       equilibrado quando a foto é removida ou o texto cresce. -->
+  <div style="position:absolute; left:143px; top:279px; width:794px; height:792px; background:#ffffff; border-radius:52px; box-sizing:border-box; padding:30px 58px 169px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+
+    <!--fld:foto-->
+    <div style="width:183px; height:183px; border-radius:50%; overflow:hidden; flex-shrink:0; background:#e7e1d6;">
+      <img src="{{foto}}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.src='${photoDefault}'"/>
+    </div>
+    <!--/fld:foto-->
+
+    <div style="margin-top:27px; font-size:28px; font-weight:600; color:#000000; text-transform:uppercase; line-height:1.4;">{{nome}}</div>
+
+    <div style="margin-top:8px; display:flex; justify-content:center; align-items:center;">${depoimentoEstrela}${depoimentoEstrela}${depoimentoEstrela}${depoimentoEstrela}${depoimentoEstrela}</div>
+
+    <div style="margin-top:22px; font-size:40px; font-weight:600; color:#1b1b1b; line-height:1.4;">{{titulo}}</div>
+
+    <div style="margin-top:12px; font-size:33px; font-weight:400; color:#525456; line-height:1.52; white-space:pre-line;">{{depoimento}}</div>
+
+  </div>
+
+  <img src="${logoUrl}" alt="Pure Pilates" style="position:absolute; left:415px; top:1125px; width:249px; height:auto; display:block;"/>
+
+</div>
+</body>
+</html>`;
+
+const depoimentoClaroFields: TemplateField[] = [
+  { id: 'foto', label: 'Foto do aluno(a)', placeholder: '{{foto}}', defaultValue: depoimentoPlaceholderFoto, inputType: 'image' },
+  { id: 'nome', label: 'Nome do aluno(a)', placeholder: '{{nome}}', defaultValue: 'Antonio Carlos', maxLength: 28 },
+  { id: 'titulo', label: 'Destaque do depoimento', placeholder: '{{titulo}}', defaultValue: 'O melhor curso que já fiz!', maxLength: 40 },
+  { id: 'depoimento', label: 'Depoimento', placeholder: '{{depoimento}}', defaultValue: 'Comecei sem saber o que esperar e hoje não abro mão. O acompanhamento é atencioso, a evolução é real e cada aula passa voando.', inputType: 'textarea', maxLength: 180 },
+];
+
+/** Uma linha da marca d'água "FEEDBACK" do fundo vermelho. */
+const depoimentoFeedbackLinha = `<div style="height:150.5px; line-height:150.5px; font-size:154px; font-weight:700; color:#ffffff; opacity:0.31; text-align:center; letter-spacing:-9.7px; text-transform:uppercase; white-space:nowrap;">feedback</div>`;
+
+const depoimentoVermelhoHTML = (logoUrl: string, photoDefault: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Depoimento — Fundo vermelho</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1350px; background:#a72537; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
+
+  <!-- Marca d'água: FEEDBACK repetido. Altura da linha = line-height (não usar
+       flex p/ centrar na vertical: quebra na exportação do PNG). -->
+  <div style="position:absolute; left:99px; top:144px; width:882px;">${depoimentoFeedbackLinha}${depoimentoFeedbackLinha}${depoimentoFeedbackLinha}${depoimentoFeedbackLinha}${depoimentoFeedbackLinha}${depoimentoFeedbackLinha}</div>
+
+  <!-- Card branco. A foto entra no fluxo como um espaçador de 94px (a parte que
+       fica dentro do card) e o círculo transborda 146px pra cima. Removendo a
+       foto, o espaçador some junto e o conteúdo se recentraliza. -->
+  <div style="position:absolute; left:196px; top:460px; width:688px; height:432px; background:#ffffff; border-radius:40px; box-sizing:border-box; padding:0 26px 57px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+
+    <!--fld:foto-->
+    <div style="position:relative; width:240px; height:94px; flex-shrink:0;">
+      <div style="position:absolute; left:0; top:-146px; width:240px; height:240px; border-radius:50%; overflow:hidden; background:#e7e1d6;">
+        <img src="{{foto}}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.src='${photoDefault}'"/>
+      </div>
+    </div>
+    <!--/fld:foto-->
+
+    <div style="margin-top:87px; font-size:47px; font-weight:700; color:#231f20; line-height:0.89;">{{nome}}</div>
+
+    <div style="margin-top:21px; font-size:33px; font-weight:400; color:#000000; line-height:1.18; white-space:pre-line;">{{depoimento}}</div>
+
+  </div>
+
+  <!-- Logo em branco: o asset é o colorido, invertido via filtro. -->
+  <img src="${logoUrl}" alt="Pure Pilates" style="position:absolute; left:425px; top:1089px; width:231px; height:auto; display:block; filter:brightness(0) invert(1);"/>
+
+</div>
+</body>
+</html>`;
+
+const depoimentoVermelhoFields: TemplateField[] = [
+  { id: 'foto', label: 'Foto do aluno(a)', placeholder: '{{foto}}', defaultValue: depoimentoPlaceholderFoto, inputType: 'image' },
+  { id: 'nome', label: 'Nome do aluno(a)', placeholder: '{{nome}}', defaultValue: 'Juliana Silva', maxLength: 28 },
+  { id: 'depoimento', label: 'Depoimento', placeholder: '{{depoimento}}', defaultValue: 'Atendimento excelente e a melhor aula que tive, com certeza irei recomendar para todos os meus amigos e familiares.', inputType: 'textarea', maxLength: 140 },
+];
+
 // Catálogo de produtos da Pure Store (dropdown da tabela de preços). Deduplicado
 // e ordenado alfabeticamente (pt-BR) em tempo de carga. Para atualizar a lista,
 // é só editar este array — a ordem é resolvida sozinha.
@@ -934,6 +1047,26 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     height: 662,
     html: valePresenteHTML('/images/pure-design/pure-pilates-logo-trim.png'),
     fields: valePresenteFields,
+  },
+  {
+    id: 'depoimento-claro',
+    name: 'Depoimento — Card claro',
+    category: 'Depoimentos',
+    thumbnail: '/images/pure-design/depoimento-claro.png',
+    width: 1080,
+    height: 1350,
+    html: depoimentoClaroHTML('/images/pure-design/pure-pilates-logo-trim.png', depoimentoPlaceholderFoto),
+    fields: depoimentoClaroFields,
+  },
+  {
+    id: 'depoimento-vermelho',
+    name: 'Depoimento — Fundo vermelho',
+    category: 'Depoimentos',
+    thumbnail: '/images/pure-design/depoimento-vermelho.png',
+    width: 1080,
+    height: 1350,
+    html: depoimentoVermelhoHTML('/images/pure-design/pure-pilates-logo-trim.png', depoimentoPlaceholderFoto),
+    fields: depoimentoVermelhoFields,
   },
 ];
 
