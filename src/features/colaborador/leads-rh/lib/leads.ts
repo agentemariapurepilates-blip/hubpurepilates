@@ -15,11 +15,11 @@
  *
  * O nome do conjunto carrega a unidade — `penha | sao-paulo | cargos |
  * instrutor-pilates` — e é dele que sai a separação pedida. A leitura do nome é
- * reaproveitada de `midia-paga/lib/nomenclatura`, para existir um só lugar no
+ * lida por `./nomeDoConjunto`, para existir um só lugar no
  * Hub que sabe o formato dos nomes da conta.
  */
 
-import { interpretarConjunto } from '@/features/colaborador/midia-paga/lib/nomenclatura';
+import { interpretarConjunto } from './nomeDoConjunto';
 
 /** Um campo respondido no formulário, como a Graph API devolve. */
 export interface CampoDoFormulario {

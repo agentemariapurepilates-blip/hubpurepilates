@@ -25,7 +25,7 @@ import {
   DivisorDaFaixa,
   FaixaDaMarca,
   NumeroDaFaixa,
-} from '@/features/colaborador/midia-paga/components/FaixaDaMarca';
+} from '@/components/FaixaDaMarca';
 
 import {
   LIDO_EM,

@@ -3,10 +3,14 @@
 > Documento de transferência. A mídia paga saiu do Hub em 2026-08-25 e passa a ser
 > responsabilidade do SmartAds. Tudo o que o módulo do Hub sabia está aqui.
 >
-> **Gerado por `scripts/exporta-especificacao.ts`** a partir de
-> `src/features/colaborador/midia-paga/dados/cerebro.ts`, que era a fonte única
-> do módulo. As seções sobre armadilhas e estado dos dados foram escritas à mão,
-> porque descrevem o que a operação real ensinou e não existem como dado.
+> **Gerado a partir de `midia-paga/dados/cerebro.ts`**, a fonte única do
+> módulo, no commit imediatamente anterior à remoção — o gerador e a fonte
+> saíram do Hub junto com o resto. Para ver o código que produziu isto,
+> `git show caf4dca:scripts/exporta-especificacao.ts`.
+>
+> As seções sobre armadilhas e estado dos dados foram escritas à mão, porque
+> descrevem o que a operação real ensinou e não existem como dado em lugar
+> nenhum. São a parte mais cara de reconstruir do zero.
 
 ## Sumário
 
@@ -411,16 +415,22 @@ no caminho.
 
 ## Scripts que acompanham
 
-Estes scripts ficaram no Hub e podem ser portados. Todos leem credenciais de
-`.env.local` (nunca versionado).
+Todos leem credenciais de `.env.local`, que nunca é versionado.
+
+**Saíram do Hub com o módulo.** Recuperáveis em `git show caf4dca:<caminho>`:
 
 | script | o que faz |
 |---|---|
-| `atualiza-desempenho.mjs` | Meta por conjunto (Graph API) + Google por campanha (SmartAds) |
-| `atualiza-realizado.mjs` | Meta e Google, dia a dia, para a avaliação contra o PDM |
-| `atualiza-criativos.mjs` | os textos de todos os anúncios, com detecção de defeitos |
-| `gera-pdm.mjs` | lê a planilha da Rise e gera os meses planejados |
-| `exporta-especificacao.ts` | gera este documento |
+| `scripts/atualiza-desempenho.mjs` | Meta por conjunto (Graph API) + Google por campanha (SmartAds). É a carga que o relatório consumia. |
+| `scripts/atualiza-criativos.mjs` | os textos de todos os anúncios da conta, com detecção de defeito no texto publicado |
+
+**Ficaram no Hub**, porque alimentam a avaliação contra o PDM, que continua no
+Dashboard:
+
+| script | o que faz |
+|---|---|
+| `scripts/atualiza-realizado.mjs` | Meta e Google, dia a dia, via SmartAds |
+| `scripts/gera-pdm.mjs` | lê a planilha da Rise e gera os meses planejados |
 
 ## O que fica pendente do outro lado
 
