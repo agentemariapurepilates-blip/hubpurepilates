@@ -50,6 +50,7 @@ const IndicadoresTop10Unidades = lazy(() => import("./features/colaborador/indic
 const IndicadoresVisaoDiaria = lazy(() => import("./features/colaborador/indicadores/VisaoDiaria"));
 const IndicadoresCronologia = lazy(() => import("./features/colaborador/indicadores/Cronologia"));
 const IndicadoresRitmo = lazy(() => import("./features/colaborador/indicadores/RitmoDoMes"));
+const IndicadoresAvaliacao = lazy(() => import("./features/colaborador/indicadores/AvaliacaoDeMidia"));
 const IndicadoresClusters = lazy(() => import("./features/colaborador/indicadores/ClustersMatriculados"));
 const IndicadoresAdministracao = lazy(() => import("./features/colaborador/indicadores/Administracao"));
 // Mídia paga — o Cérebro das campanhas e o relatório com a análise da IA.
@@ -67,8 +68,6 @@ const ConfiguracaoDeRede = lazy(() => import("./features/colaborador/purepedia/C
 const AgendamentoWellhubAluno = lazy(() => import("./features/colaborador/purepedia/AgendamentoWellhubAluno"));
 const TestePagamento = lazy(() => import("./features/colaborador/purepedia/TestePagamento"));
 const ManualEletromidia = lazy(() => import("./features/colaborador/purepedia/ManualEletromidia"));
-const MidiaPagaCerebro = lazy(() => import("./features/colaborador/midia-paga/Cerebro"));
-const MidiaPagaAnalise = lazy(() => import("./features/colaborador/midia-paga/AnaliseDeMidia"));
 
 const AgenteDesign = lazy(() => import("./features/colaborador/agentes/agente-design/AgenteDesign"));
 const GerarFoto = lazy(() => import("./features/colaborador/agentes/agente-design/GerarFoto"));
@@ -172,17 +171,18 @@ function App() {
               <Route path="/dashboard/visao-diaria" element={<ProtectedRoute requireAdmin><IndicadoresVisaoDiaria /></ProtectedRoute>} />
               <Route path="/dashboard/cronologia" element={<ProtectedRoute requireAdmin><IndicadoresCronologia /></ProtectedRoute>} />
               <Route path="/dashboard/ritmo-do-mes" element={<ProtectedRoute requireAdmin><IndicadoresRitmo /></ProtectedRoute>} />
+              <Route path="/dashboard/avaliacao-de-midia" element={<ProtectedRoute requireAdmin><IndicadoresAvaliacao /></ProtectedRoute>} />
               <Route path="/dashboard/clusters-matriculados" element={<ProtectedRoute requireAdmin><IndicadoresClusters /></ProtectedRoute>} />
               <Route path="/dashboard/administracao" element={<ProtectedRoute requireAdmin><IndicadoresAdministracao /></ProtectedRoute>} />
             </Route>
-            {/* Mídia paga: as duas telas leem tabelas dpp_* e são só de admin.
-                O boundary segue o mesmo motivo do Dashboard — erro de render
-                aqui não pode derrubar o Hub inteiro. */}
-            <Route element={<ErrorBoundary area="Mídia paga"><Outlet /></ErrorBoundary>}>
-              <Route path="/midia-paga" element={<Navigate to="/midia-paga/cerebro" replace />} />
-              <Route path="/midia-paga/cerebro" element={<ProtectedRoute requireAdmin><MidiaPagaCerebro /></ProtectedRoute>} />
-              <Route path="/midia-paga/analise" element={<ProtectedRoute requireAdmin><MidiaPagaAnalise /></ProtectedRoute>} />
-            </Route>
+            {/* Mídia paga SAIU do Hub em 25/08/2026: o Cérebro das campanhas e
+                a análise da IA passam a viver no SmartAds.
+
+                As rotas foram removidas primeiro, e de propósito: tira o acesso
+                de todo mundo na hora, sem apagar código que a Leads RH ainda
+                importa (`lib/nomenclatura`) nem trabalho que ainda não está no
+                git. A remoção dos arquivos vem depois que a especificação
+                estiver do outro lado. */}
             {/* Leads RH: dados pessoais de candidatos. Quem entra e decidido
                 na propria tela (aba Autorizados) e garantido pela RLS. */}
             <Route path="/leads-rh" element={<ProtectedRoute requireColaborador><LeadsRH /></ProtectedRoute>} />

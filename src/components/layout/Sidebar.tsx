@@ -95,8 +95,7 @@ type SectionKey =
   | 'minha-area'
   | 'admin'
   | 'dashboard'
-  | 'inauguracoes'
-  | 'midia-paga';
+  | 'inauguracoes';
 
 export const MobileMenuButton = ({ mobileOpen, setMobileOpen }: { mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) => (
   <Button
@@ -137,9 +136,6 @@ export const sectionFromPath = (path: string): SectionKey | null => {
   // seção própria. Se o teste ficasse depois, '/inauguracoes' continuaria
   // casando com a lista de colaboradores e a seção errada abriria.
   if (path.startsWith('/inauguracoes')) return 'inauguracoes';
-  // Antes de '/minha-area': existe '/minha-area/midia-adicional', que é outra
-  // coisa (vínculo de conjunto com unidade) e pertence à Minha Área.
-  if (path.startsWith('/midia-paga')) return 'midia-paga';
   if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais', '/leads-rh', '/purepedia'].some((p) => path.startsWith(p))) return 'colaboradores';
   // Antes de '/minha-area': o Hub tem /minha-area/dashboard (Mídia Adicional),
   // que NÃO pertence a esta seção. Por isso o teste é '/dashboard/' com barra.
@@ -303,18 +299,14 @@ const Sidebar = () => {
   const dashboardNavigation = [
     { name: 'Visão Geral', href: '/dashboard/visao-geral', icon: LayoutDashboard },
     { name: 'Ritmo do Mês', href: '/dashboard/ritmo-do-mes', icon: Gauge },
+    // Logo depois do Ritmo: um é o planejado, o outro o realizado, e quem olha
+    // um quase sempre quer o outro em seguida.
+    { name: 'Avaliação de Mídia', href: '/dashboard/avaliacao-de-midia', icon: ClipboardList },
     { name: 'Top 10 Unidades', href: '/dashboard/top-10-unidades', icon: Trophy },
     { name: 'Visão Diária', href: '/dashboard/visao-diaria', icon: Calendar },
     { name: 'Cronologia', href: '/dashboard/cronologia', icon: LineChart },
     { name: 'Clusters de Matriculados', href: '/dashboard/clusters-matriculados', icon: Layers },
     { name: 'Administração', href: '/dashboard/administracao', icon: SlidersHorizontal },
-  ];
-
-  // Mídia paga — Cérebro das campanhas e a análise da IA. Só admin: a tela
-  // mostra investimento e resultado da rede inteira.
-  const midiaPagaNavigation = [
-    { name: 'Cérebro das campanhas', href: '/midia-paga/cerebro', icon: BrainCircuit },
-    { name: 'Análise da IA', href: '/midia-paga/analise', icon: Sparkles },
   ];
 
   // Admin section
@@ -739,39 +731,8 @@ const Sidebar = () => {
           </Collapsible>
         )}
 
-        {/* Mídia paga — só admin, pelo mesmo motivo do Dashboard: são números
-            de investimento e resultado da rede inteira. */}
-        {isAdmin && (
-          <Collapsible open={openSection === 'midia-paga'} onOpenChange={(o) => setOpenSection(o ? 'midia-paga' : null)}>
-            <CollapsibleTrigger asChild>
-              <button type="button" className="w-full">
-                <SectionHeader icon={Megaphone} label="Mídia paga" open={openSection === 'midia-paga'} onMouseDown={(e) => e.preventDefault()} />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
-              <div className="space-y-0.5 pb-1">
-                {midiaPagaNavigation.map((item) => (
-                  <NavLink
-                    key={item.name}
-                    to={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
-                        isActive
-                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
-                      )
-                    }
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.name}
-                  </NavLink>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
+        {/* Mídia paga saiu do Hub em 25/08/2026 — Cérebro das campanhas e
+            análise da IA passam a viver no SmartAds. */}
 
         {/* Admin Section */}
         {isAdmin && (
