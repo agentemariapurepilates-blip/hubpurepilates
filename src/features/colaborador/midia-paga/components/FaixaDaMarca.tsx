@@ -1,7 +1,7 @@
 import simbolo from '@/assets/logo-symbol.png';
 
 /**
- * A faixa vermelha que abre as telas de relatório do Hub.
+ * A faixa vermelha que abre as telas de mídia paga.
  *
  * É o único lugar ousado destas páginas, e de propósito: tudo abaixo dela é
  * branco, hairline e disciplinado. A faixa carrega a marca, diz onde a pessoa
