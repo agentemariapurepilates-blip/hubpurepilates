@@ -27,6 +27,7 @@ import { classificarFrente, interpretarCampanha, interpretarConjunto } from './l
 import { montarManual } from './lib/prompt-da-ia';
 import { useCatalogoDeMidia } from './hooks/useLinhasDeMidia';
 import { DivisorDaFaixa, FaixaDaMarca } from './components/FaixaDaMarca';
+import { AnunciosNoAr } from './components/AnunciosNoAr';
 
 const CORES_DA_GRAVIDADE: Record<Gravidade, string> = {
   alta: 'bg-destructive/10 text-destructive border-destructive/20',
@@ -198,6 +199,7 @@ export default function Cerebro() {
           <TabsList>
             <TabsTrigger value="manual">Manual</TabsTrigger>
             <TabsTrigger value="conta">Manual × conta</TabsTrigger>
+            <TabsTrigger value="anuncios">Anúncios no ar</TabsTrigger>
             <TabsTrigger value="nomes">Como nomear</TabsTrigger>
             <TabsTrigger value="fontes">Fontes de dados</TabsTrigger>
             <TabsTrigger value="regras">O que é conferido</TabsTrigger>
@@ -425,6 +427,11 @@ export default function Cerebro() {
                 ) : null}
               </>
             ) : null}
+          </TabsContent>
+
+          {/* ---------------------------------------------------------------- */}
+          <TabsContent value="anuncios">
+            <AnunciosNoAr />
           </TabsContent>
 
           {/* ---------------------------------------------------------------- */}

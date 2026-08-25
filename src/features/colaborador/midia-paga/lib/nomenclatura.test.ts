@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   classificarFrente,
   interpretarCampanha,
+  interpretarCampanhaDoGoogle,
   interpretarConjunto,
+  plataformaDoNome,
 } from './nomenclatura';
 import { FORMATOS, FRENTES } from '../dados/cerebro';
 
@@ -149,6 +151,11 @@ describe('coerência do manual', () => {
     for (const formato of FORMATOS) {
       if (formato.onde === 'campanha') {
         expect(interpretarCampanha(formato.exemplo).noPadrao, formato.id).toBe(true);
+      } else if (formato.onde === 'campanha-google') {
+        expect(interpretarCampanhaDoGoogle(formato.exemplo).noPadrao, formato.id).toBe(true);
+        // O detector tem que concordar com o manual, senão o exemplo cairia no
+        // parser errado em produção mesmo passando aqui.
+        expect(plataformaDoNome(formato.exemplo), formato.id).toBe('google');
       } else {
         expect(interpretarConjunto(formato.exemplo).formato, formato.id).toBe(formato.id);
       }
@@ -159,5 +166,73 @@ describe('coerência do manual', () => {
     for (const frente of FRENTES) {
       expect(frente.marcadores.length, frente.id).toBeGreaterThan(0);
     }
+  });
+});
+
+// Os nomes desta seção foram lidos da conta em 24/08/2026 e cobrem os dois
+// jeitos de a verba sumir do manual sem nada ter mudado na operação.
+describe('a campanha renomeada de três partes para duas', () => {
+  // Em agosto/26 a agência trocou "[Rise] dco | always-on | apartadas" por
+  // "[Rise] always-on | apartadas". Lendo o público por posição fixa, ele
+  // virava null e as apartadas inteiras caíam como "fora do manual".
+  it('ainda acha o público na última parte', () => {
+    expect(interpretarCampanha('[Rise] always-on | apartadas').publico).toBe('apartadas');
+  });
+
+  it('classifica as apartadas mesmo sem o tipo no nome', () => {
+    const { frenteId, origem } = classificarFrente(
+      '[Rise] always-on | apartadas',
+      'interesses | leads | recife/casa-forte-estrada-do-encanamento',
+    );
+
+    expect(frenteId).toBe('apartadas');
+    expect(origem).toBe('publico-da-campanha');
+  });
+
+  // O nome de duas partes ESTÁ fora da convenção, e a regra que avisa isso tem
+  // que seguir disparando — o que não pode é a verba sumir do eixo por causa
+  // disso.
+  it('continua marcando o nome como fora do padrão', () => {
+    expect(interpretarCampanha('[Rise] always-on | apartadas').noPadrao).toBe(false);
+    expect(interpretarCampanha('[Rise] dco | always-on | apartadas').noPadrao).toBe(true);
+  });
+});
+
+describe('as campanhas do Google Ads', () => {
+  it('reconhece a plataforma pelo formato do nome', () => {
+    expect(plataformaDoNome('rise_ao_search_cpa_institucional')).toBe('google');
+    expect(plataformaDoNome('[Rise] dco | always-on | todas')).toBe('meta');
+    expect(plataformaDoNome('[Rise] always-on | apartadas')).toBe('meta');
+  });
+
+  it('lê o público na última parte, como no Meta', () => {
+    expect(interpretarCampanhaDoGoogle('rise_ao_search_cpa_institucional').publico).toBe(
+      'institucional',
+    );
+    expect(interpretarCampanhaDoGoogle('rise_ao_search_cpa_pilates').publico).toBe('pilates');
+  });
+
+  // Sem este leitor, R$ 42.665 de agosto/26 — 39% do investimento do mês —
+  // caíam como "fora do manual" só porque o nome não usa barra vertical.
+  it('leva a busca por marca e a genérica para agendamento de aula', () => {
+    for (const nome of ['rise_ao_search_cpa_institucional', 'rise_ao_search_cpa_pilates']) {
+      const { frenteId, origem } = classificarFrente(nome, nome);
+      expect(frenteId, nome).toBe('agendamento-de-aula');
+      expect(origem, nome).toBe('publico-da-campanha');
+    }
+  });
+
+  // O vídeo de consideração é awareness de marca, que não é nenhuma das sete
+  // frentes do manual. Ficar "fora do manual" aqui é a resposta certa: é assim
+  // que a tela avisa que existe verba rodando sem frente declarada.
+  it('deixa o vídeo de consideração fora do manual, de propósito', () => {
+    const nome = 'rise_flight_video_cpm_consideração';
+
+    expect(classificarFrente(nome, nome).frenteId).toBeNull();
+  });
+
+  it('não confunde nome do Google com nome do Meta', () => {
+    expect(interpretarCampanhaDoGoogle('rise_ao_search_cpa_institucional').noPadrao).toBe(true);
+    expect(interpretarCampanhaDoGoogle('rise_flight_video_cpm_consideração').noPadrao).toBe(true);
   });
 });

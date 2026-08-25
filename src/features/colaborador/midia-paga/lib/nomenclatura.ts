@@ -68,7 +68,23 @@ export function interpretarCampanha(nome: string): NomeDeCampanha {
   const resto = comMarca ? comMarca[2] : bruto;
 
   const partes = partesDe(normalizar(resto));
-  const [tipo = null, contexto = null, publico = null] = partes;
+
+  // O PÚBLICO É SEMPRE A ÚLTIMA PARTE, tenha o nome três partes ou duas.
+  //
+  // O padrão é `tipo | contexto | público`, mas em agosto/26 a agência
+  // renomeou "[Rise] dco | always-on | apartadas" para "[Rise] always-on |
+  // apartadas" — o tipo saiu, sobraram duas partes. Lendo por posição fixa, o
+  // público virava null, a campanha caía no marcador do conjunto (que só diz
+  // "interesses | leads | recife/casa-forte") e as apartadas inteiras
+  // desapareciam do manual: R$ 4.400 classificados como "fora do manual" sem
+  // nada ter mudado na operação, só no nome.
+  //
+  // `noPadrao` continua exigindo as três partes — o nome de duas ESTÁ fora da
+  // convenção, e a regra que avisa isso deve seguir disparando. O que não pode
+  // é a verba sumir do eixo por causa disso.
+  const publico = partes.length >= 2 ? partes[partes.length - 1] : null;
+  const [tipo, contexto] =
+    partes.length >= 3 ? [partes[0], partes[1]] : [null, partes[0] ?? null];
 
   // Espaçamento: o padrão é " | ". "venda| always-on" tem o mesmo conteúdo e
   // ainda assim está fora do padrão — vale a pena avisar sem tratar como erro
@@ -196,6 +212,13 @@ const PUBLICO_PARA_FRENTE: Record<string, string> = {
   'academy-workshop': 'academy',
   'pilates play': 'pilates-play',
   'pilates-play': 'pilates-play',
+
+  // Públicos do Google Ads. As duas campanhas de busca levam ao mesmo lugar
+  // que o DCO do Meta — o agendamento da aula experimental —, e é assim que o
+  // PDM as trata: as duas têm "Lead" como KPI e agendamento como resultado.
+  // "institucional" é a busca por marca; "pilates", o termo genérico.
+  institucional: 'agendamento-de-aula',
+  pilates: 'agendamento-de-aula',
 };
 
 /** Só entra em ação quando o público é genérico ("todas"). */
@@ -209,8 +232,63 @@ export interface Classificacao {
   origem: 'publico-da-campanha' | 'tipo-da-campanha' | 'marcador-no-conjunto' | 'nenhuma';
 }
 
+/**
+ * O Google Ads usa outra convenção, e ela precisa ser lida também.
+ *
+ * O manual é de Meta E Google, mas o leitor só sabia ler o padrão do Meta
+ * (`[Rise] tipo | contexto | público`). Os nomes do Google não têm marca entre
+ * colchetes nem barras — são `rise_ao_search_cpa_institucional`, separados por
+ * underscore. Sem este leitor, TODA a verba de Google caía como "fora do
+ * manual": R$ 42.665 em agosto/26, 39% do investimento do mês.
+ *
+ * O que os segmentos dizem, do começo para o fim:
+ *   `rise`         — a agência
+ *   `ao` / `flight`— always-on ou campanha com data para acabar
+ *   `search`/`video`— o formato
+ *   `cpa` / `cpm`  — o modelo de compra
+ *   `institucional`— o PÚBLICO, e é ele que decide a frente
+ *
+ * Como no Meta, o público é o ÚLTIMO segmento. É a única parte que precisa ser
+ * lida para achar a frente; o resto fica aqui documentado porque quem for
+ * conferir um nome torto vai precisar saber o que cada posição significa.
+ */
+export function interpretarCampanhaDoGoogle(nome: string): NomeDeCampanha {
+  const partes = nome
+    .trim()
+    .toLowerCase()
+    .split('_')
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  return {
+    marca: partes[0] ?? null,
+    tipo: partes[2] ?? null,
+    contexto: partes[1] ?? null,
+    publico: partes.length >= 2 ? normalizar(partes[partes.length - 1]) : null,
+    // Cinco segmentos é o padrão observado na conta.
+    noPadrao: partes.length === 5,
+    espacamentoTorto: false,
+  };
+}
+
+/**
+ * De qual plataforma é este nome de campanha.
+ *
+ * Decidido pelo formato do próprio nome, e não por um parâmetro que os
+ * chamadores teriam de passar: barra vertical é Meta, underscore é Google. Um
+ * parâmetro seria mais uma coisa para alguém esquecer de atualizar, e o
+ * esquecimento voltaria a jogar a verba do Google para fora do manual em
+ * silêncio.
+ */
+export function plataformaDoNome(nomeCampanha: string): 'meta' | 'google' {
+  return nomeCampanha.includes('|') || /^\s*\[/.test(nomeCampanha) ? 'meta' : 'google';
+}
+
 export function classificarFrente(nomeCampanha: string, nomeConjunto: string): Classificacao {
-  const campanha = interpretarCampanha(nomeCampanha);
+  const campanha =
+    plataformaDoNome(nomeCampanha) === 'google'
+      ? interpretarCampanhaDoGoogle(nomeCampanha)
+      : interpretarCampanha(nomeCampanha);
 
   if (campanha.publico && PUBLICO_PARA_FRENTE[campanha.publico]) {
     return { frenteId: PUBLICO_PARA_FRENTE[campanha.publico], origem: 'publico-da-campanha' };

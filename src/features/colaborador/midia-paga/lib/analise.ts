@@ -24,6 +24,16 @@ import { classificarFrente, interpretarCampanha, interpretarConjunto, normalizar
 /** Uma linha por conjunto, já somada no período. Formato comum às três fontes. */
 export interface LinhaDeMidia {
   plataforma: Plataforma;
+  /**
+   * Em que grão esta linha existe.
+   *
+   * O Meta chega por conjunto; o Google, só por campanha — não há acesso à API
+   * do Google Ads, e a fonte disponível não guarda grupo de anúncios. Sem esta
+   * marca, uma campanha do Google apareceria na lista como se fosse um
+   * conjunto, e as regras que falam de conjunto (vínculo com unidade, nome
+   * fora do padrão) a acusariam por não ser o que ela nunca foi.
+   */
+  granularidade: 'conjunto' | 'campanha';
   conjuntoId: string;
   conjunto: string;
   campanha: string;

@@ -289,7 +289,14 @@ export const EIXOS: Eixo[] = [
 
 export interface FormatoDeNome {
   id: string;
-  onde: 'campanha' | 'conjunto';
+  /**
+   * Onde o formato se aplica.
+   *
+   * Campanha do Meta e campanha do Google são casos separados porque as
+   * convenções não têm nada em comum — barra vertical de um lado, underscore
+   * do outro — e cada uma é lida por uma função diferente.
+   */
+  onde: 'campanha' | 'campanha-google' | 'conjunto';
   modelo: string;
   exemplo: string;
   explicacao: string;
@@ -312,6 +319,18 @@ export const FORMATOS: FormatoDeNome[] = [
     explicacao:
       'Tipo é o formato de compra (dco, lead-ad, lead-site, venda, pure-pass, black-friday). ' +
       'Contexto diz se é always-on, de vendas ou de unidades. Público é a frente atendida.',
+  },
+  {
+    id: 'campanha-google',
+    onde: 'campanha-google',
+    modelo: 'marca_período_formato_modelo_público',
+    exemplo: 'rise_ao_search_cpa_institucional',
+    explicacao:
+      'O Google não usa colchetes nem barras: os segmentos vêm com underscore. Período é ao ' +
+      '(always-on) ou flight (tem data para acabar). Formato é search ou video. Modelo é cpa ou ' +
+      'cpm. Como no Meta, o PÚBLICO é o último segmento, e é ele que decide a frente — ' +
+      '"institucional" é a busca por marca e "pilates", o termo genérico; as duas levam ao ' +
+      'agendamento da aula.',
   },
   {
     id: 'conjunto-dco',
@@ -360,14 +379,18 @@ export const FONTES: Fonte[] = [
     responde: 'Quanto custou cada lead, por conjunto e por unidade, e quanto foi gasto por dia.',
     naoResponde:
       'Se o lead virou matrícula. O Meta só sabe o que aconteceu dentro do anúncio e do pixel.',
-    ondeMora: 'Tabelas dpp_campaigns, dpp_ad_sets e dpp_ad_set_daily_metrics, no banco do Hub.',
+    ondeMora:
+      'Conjunto a conjunto, direto da Graph API, em dados/desempenho.json. O catálogo de ' +
+      'campanhas e o vínculo com a unidade continuam vindo das tabelas dpp_ do Hub.',
   },
   {
     id: 'google-ads',
     nome: 'Google Ads',
-    responde: 'Quanto custou a busca por marca e por termo genérico, e a fatia de impressões.',
-    naoResponde: 'Comportamento depois do clique — isso é o GA4.',
-    ondeMora: 'Ainda não integrado ao Hub.',
+    responde: 'Quanto custou a busca por marca e por termo genérico, e quantas conversões trouxe.',
+    naoResponde:
+      'A quebra por grupo de anúncios, e o que é agendamento dentro do total de conversões — ' +
+      'o Google devolve um número só. Comportamento depois do clique também não: isso é o GA4.',
+    ondeMora: 'Campanha a campanha, via SmartAds, em dados/desempenho.json.',
   },
   {
     id: 'ga4',
@@ -376,7 +399,13 @@ export const FONTES: Fonte[] = [
       'O que a pessoa fez depois do clique: página, tempo, caminho até o agendamento, e por ' +
       'qual canal ela chegou.',
     naoResponde: 'Custo. GA4 não sabe quanto foi pago pelo clique.',
-    ondeMora: 'Ainda não integrado ao Hub.',
+    // Não é "ainda não integrado": o dado existe no SmartAds e está quebrado.
+    // A diferença importa — a primeira frase faz esperar uma integração, a
+    // segunda manda consertar a medição.
+    ondeMora:
+      'Existe no SmartAds, mas FORA da análise: a coleta caiu depois de abril/26 — de 3.116 ' +
+      'sessões em doze dias para menos de cem por mês, com as conversões zeradas. Entrar assim ' +
+      'colocaria "93 sessões" ao lado de "5 milhões de impressões" e chamaria as duas de dado.',
   },
 ];
 

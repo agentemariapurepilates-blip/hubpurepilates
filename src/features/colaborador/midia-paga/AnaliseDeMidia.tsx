@@ -30,7 +30,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { diagnosticar, type Achado } from './lib/analise';
 import { montarRelatorio, porExtenso, type SecaoDoRelatorio } from './lib/resumo';
 import { montarPrompt } from './lib/prompt-da-ia';
-import { useLinhasDeMidia } from './hooks/useLinhasDeMidia';
+import { useDesempenhoDeMidia } from './hooks/useDesempenhoDeMidia';
 import { useAcessoAMidia } from './hooks/useAcessoAMidia';
 import { DivisorDaFaixa, FaixaDaMarca, NumeroDaFaixa } from './components/FaixaDaMarca';
 import { FontesConsideradas } from './components/FontesConsideradas';
@@ -66,7 +66,7 @@ const ROTULO_DA_GRAVIDADE = {
  */
 export default function AnaliseDeMidia() {
   const [periodo, setPeriodo] = useState<Periodo>(() => atalhos()[3].periodo);
-  const { data: linhas, isLoading, error } = useLinhasDeMidia(periodo.de, periodo.ate);
+  const { data: linhas, isLoading, error } = useDesempenhoDeMidia(periodo.de, periodo.ate);
   const { data: acesso } = useAcessoAMidia();
 
   const [analise, setAnalise] = useState<string | null>(null);
@@ -74,9 +74,20 @@ export default function AnaliseDeMidia() {
   const [falhaDaIa, setFalhaDaIa] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
 
-  // Hoje só o Meta chega ao Hub. Quando Google Ads e GA4 entrarem, é esta lista
-  // que muda — e os avisos da tela somem sozinhos.
-  const fontesConectadas = useMemo(() => ['meta' as const], []);
+  // Sai do dado que de fato chegou, e não de uma lista escrita à mão: uma
+  // fonte que parar de carregar cai sozinha daqui, em vez de continuar
+  // anunciada como conectada enquanto entrega zero.
+  //
+  // O GA4 nunca entra: ele não produz linha de mídia. Está no manual como
+  // fonte prevista, e o relatório diz o que fica sem resposta sem ele.
+  const fontesConectadas = useMemo(
+    () =>
+      (linhas ?? [])
+        .filter((l) => l.gasto > 0)
+        .map((l) => l.plataforma)
+        .filter((p, i, todas) => todas.indexOf(p) === i),
+    [linhas],
+  );
 
   const diagnostico = useMemo(() => {
     if (!linhas) return null;
