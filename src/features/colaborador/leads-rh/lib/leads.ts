@@ -15,8 +15,8 @@
  *
  * O nome do conjunto carrega a unidade — `penha | sao-paulo | cargos |
  * instrutor-pilates` — e é dele que sai a separação pedida. A leitura do nome é
- * lida por `./nomeDoConjunto`, para existir um só lugar no
- * Hub que sabe o formato dos nomes da conta.
+ * feita em `./nomeDoConjunto`, o único lugar do Hub que sabe o formato dos
+ * nomes da conta de anúncios.
  */
 
 import { interpretarConjunto } from './nomeDoConjunto';

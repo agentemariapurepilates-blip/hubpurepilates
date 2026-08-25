@@ -47,7 +47,6 @@ import {
   LineChart,
   SlidersHorizontal,
   PartyPopper,
-  BrainCircuit,
   Gauge,
   UserSearch,
 } from 'lucide-react';

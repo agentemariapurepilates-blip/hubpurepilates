@@ -53,7 +53,6 @@ const IndicadoresRitmo = lazy(() => import("./features/colaborador/indicadores/R
 const IndicadoresAvaliacao = lazy(() => import("./features/colaborador/indicadores/AvaliacaoDeMidia"));
 const IndicadoresClusters = lazy(() => import("./features/colaborador/indicadores/ClustersMatriculados"));
 const IndicadoresAdministracao = lazy(() => import("./features/colaborador/indicadores/Administracao"));
-// Mídia paga — o Cérebro das campanhas e o relatório com a análise da IA.
 // Leads RH — candidatos vindos dos formularios de recrutamento do Meta.
 const LeadsRH = lazy(() => import("./features/colaborador/leads-rh/LeadsRH"));
 // PurePedia — base de conhecimento exclusiva dos colaboradores.
@@ -175,14 +174,12 @@ function App() {
               <Route path="/dashboard/clusters-matriculados" element={<ProtectedRoute requireAdmin><IndicadoresClusters /></ProtectedRoute>} />
               <Route path="/dashboard/administracao" element={<ProtectedRoute requireAdmin><IndicadoresAdministracao /></ProtectedRoute>} />
             </Route>
-            {/* Mídia paga SAIU do Hub em 25/08/2026: o Cérebro das campanhas e
-                a análise da IA passam a viver no SmartAds.
+            {/* Mídia paga saiu do Hub em 25/08/2026: o Cérebro das campanhas e
+                a análise da IA passam a viver no SmartAds. O que o módulo sabia
+                está em ESPECIFICACAO-MIDIA-PAGA.md, na raiz.
 
-                As rotas foram removidas primeiro, e de propósito: tira o acesso
-                de todo mundo na hora, sem apagar código que a Leads RH ainda
-                importa (`lib/nomenclatura`) nem trabalho que ainda não está no
-                git. A remoção dos arquivos vem depois que a especificação
-                estiver do outro lado. */}
+                A leitura de nome de conjunto foi para leads-rh, que é quem
+                ainda precisa dela. */}
             {/* Leads RH: dados pessoais de candidatos. Quem entra e decidido
                 na propria tela (aba Autorizados) e garantido pela RLS. */}
             <Route path="/leads-rh" element={<ProtectedRoute requireColaborador><LeadsRH /></ProtectedRoute>} />
