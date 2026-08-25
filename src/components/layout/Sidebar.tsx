@@ -38,6 +38,7 @@ import {
   Radar,
   GraduationCap,
   PlayCircle,
+  Library,
   FileSignature,
   LayoutDashboard,
   Layers,
@@ -50,6 +51,7 @@ import {
   Gauge,
   UserSearch,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 const SectionHeader = ({
   icon: Icon,
@@ -83,6 +85,7 @@ const SectionHeader = ({
 import logo from '@/assets/logo-pure-pilates.png';
 import { useState, useEffect, useRef } from 'react';
 import { useHasUnitAccess } from '@/features/colaborador/dashboard/hooks/useHasUnitAccess';
+import { ARTIGOS_PUREPEDIA } from '@/features/colaborador/purepedia/artigos';
 
 // Accordion: apenas uma seção aberta por vez. Abrir uma fecha a anterior.
 // Persistido em sessionStorage — sobrevive à navegação e ao reload; reseta ao fechar a aba.
@@ -124,6 +127,10 @@ const TUTORIAIS_PATHS = [
   '/onboarding-instrutor',
 ];
 
+// Página-índice do PurePedia + os artigos (usadas pra abrir o dropdown sozinho).
+// Sai do registro em artigos.ts — publicar um artigo novo não exige tocar aqui.
+const PUREPEDIA_PATHS = ['/purepedia', ...ARTIGOS_PUREPEDIA.map((a) => a.href)];
+
 export const sectionFromPath = (path: string): SectionKey | null => {
   if (AGENTES_DE_IA_ROUTE_PREFIXES.some((p) => path.startsWith(p))) return 'agentes';
   // Antes de 'colaboradores': Inaugurações saiu de dentro daquela seção e virou
@@ -133,7 +140,7 @@ export const sectionFromPath = (path: string): SectionKey | null => {
   // Antes de '/minha-area': existe '/minha-area/midia-adicional', que é outra
   // coisa (vínculo de conjunto com unidade) e pertence à Minha Área.
   if (path.startsWith('/midia-paga')) return 'midia-paga';
-  if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais', '/leads-rh'].some((p) => path.startsWith(p))) return 'colaboradores';
+  if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais', '/leads-rh', '/purepedia'].some((p) => path.startsWith(p))) return 'colaboradores';
   // Antes de '/minha-area': o Hub tem /minha-area/dashboard (Mídia Adicional),
   // que NÃO pertence a esta seção. Por isso o teste é '/dashboard/' com barra.
   if (path.startsWith('/dashboard/')) return 'dashboard';
@@ -158,6 +165,11 @@ const Sidebar = () => {
     TUTORIAIS_PATHS.includes(location.pathname),
   );
 
+  // Mesmo comportamento pro dropdown do PurePedia (dentro de Colaboradores).
+  const [purepediaOpen, setPurepediaOpen] = useState(() =>
+    PUREPEDIA_PATHS.includes(location.pathname),
+  );
+
   // A cada carga/reload: abre a seção da rota atual (accordion). Os itens do topo
   // (Timeline, Página Inicial, etc.) são soltos e ficam sempre visíveis — não há
   // mais seção "Geral" pra abrir por padrão.
@@ -176,6 +188,7 @@ const Sidebar = () => {
     const auto = sectionFromPath(location.pathname);
     if (auto) setOpenSection(auto);
     if (TUTORIAIS_PATHS.includes(location.pathname)) setTutoriaisOpen(true);
+    if (PUREPEDIA_PATHS.includes(location.pathname)) setPurepediaOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
@@ -220,6 +233,11 @@ const Sidebar = () => {
     { name: 'Visão Geral das Unidades', href: '/midia-adicional/unidades', icon: Building2 },
     { name: 'Leads RH', href: '/leads-rh', icon: UserSearch },
   ];
+
+  // Artigos do PurePedia (filhos do dropdown), vindos do mesmo registro que
+  // alimenta a página-índice — uma lista só, sem risco de divergir.
+  const purepediaNavigation: { name: string; href: string; icon: LucideIcon }[] =
+    ARTIGOS_PUREPEDIA.map((a) => ({ name: a.title, href: a.href, icon: a.icon }));
 
   // Inaugurações — seção própria. Os três itens eram abas dentro da página; o
   // "Destinatários" continua exclusivo de admin (some da lista, não fica
@@ -415,6 +433,63 @@ const Sidebar = () => {
                     {item.name}
                   </NavLink>
                 ))}
+
+                {/* PurePedia — mesmo molde do dropdown de Tutoriais: o header
+                    leva pra página-índice e os artigos ficam embaixo. */}
+                <Collapsible open={purepediaOpen} onOpenChange={setPurepediaOpen}>
+                  <div className="flex items-center gap-1">
+                    <NavLink
+                      to="/purepedia"
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                          isActive
+                            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                            : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                        )
+                      }
+                    >
+                      <Library className="h-4 w-4" />
+                      PurePedia
+                    </NavLink>
+                    {purepediaNavigation.length > 0 && (
+                      <CollapsibleTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={purepediaOpen ? 'Recolher PurePedia' : 'Expandir PurePedia'}
+                          className="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+                        >
+                          <ChevronDown
+                            className={cn('h-4 w-4 transition-transform duration-200', purepediaOpen && 'rotate-180')}
+                          />
+                        </button>
+                      </CollapsibleTrigger>
+                    )}
+                  </div>
+                  <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+                    <div className="mt-0.5 ml-4 pl-2 border-l border-sidebar-border/60 space-y-0.5">
+                      {purepediaNavigation.map((item) => (
+                        <NavLink
+                          key={item.name}
+                          to={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={({ isActive }) =>
+                            cn(
+                              'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                              isActive
+                                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                            )
+                          }
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.name}
+                        </NavLink>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
                 {/* Sub-grupo: Mídias Sociais */}
                 <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">

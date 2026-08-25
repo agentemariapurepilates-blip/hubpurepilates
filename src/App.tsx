@@ -55,6 +55,18 @@ const IndicadoresAdministracao = lazy(() => import("./features/colaborador/indic
 // Mídia paga — o Cérebro das campanhas e o relatório com a análise da IA.
 // Leads RH — candidatos vindos dos formularios de recrutamento do Meta.
 const LeadsRH = lazy(() => import("./features/colaborador/leads-rh/LeadsRH"));
+// PurePedia — base de conhecimento exclusiva dos colaboradores.
+const PurePedia = lazy(() => import("./features/colaborador/purepedia/PurePedia"));
+const PlaybookWellhub = lazy(() => import("./features/colaborador/purepedia/PlaybookWellhub"));
+const MensagensPadraoSuporte = lazy(() => import("./features/colaborador/purepedia/MensagensPadraoSuporte"));
+const RespostasRapidasWhatsApp = lazy(() => import("./features/colaborador/purepedia/RespostasRapidasWhatsApp"));
+const PermissoesFuncionalidade = lazy(() => import("./features/colaborador/purepedia/PermissoesFuncionalidade"));
+const CertificadoA3 = lazy(() => import("./features/colaborador/purepedia/CertificadoA3"));
+const WhatsAppGoogleMeuNegocio = lazy(() => import("./features/colaborador/purepedia/WhatsAppGoogleMeuNegocio"));
+const ConfiguracaoDeRede = lazy(() => import("./features/colaborador/purepedia/ConfiguracaoDeRede"));
+const AgendamentoWellhubAluno = lazy(() => import("./features/colaborador/purepedia/AgendamentoWellhubAluno"));
+const TestePagamento = lazy(() => import("./features/colaborador/purepedia/TestePagamento"));
+const ManualEletromidia = lazy(() => import("./features/colaborador/purepedia/ManualEletromidia"));
 const MidiaPagaCerebro = lazy(() => import("./features/colaborador/midia-paga/Cerebro"));
 const MidiaPagaAnalise = lazy(() => import("./features/colaborador/midia-paga/AnaliseDeMidia"));
 
@@ -174,6 +186,18 @@ function App() {
             {/* Leads RH: dados pessoais de candidatos. Quem entra e decidido
                 na propria tela (aba Autorizados) e garantido pela RLS. */}
             <Route path="/leads-rh" element={<ProtectedRoute requireColaborador><LeadsRH /></ProtectedRoute>} />
+            {/* PurePedia: exclusiva de colaborador — o gate e na rota, nao so no menu. */}
+            <Route path="/purepedia" element={<ProtectedRoute requireColaborador><PurePedia /></ProtectedRoute>} />
+            <Route path="/purepedia/playbook-wellhub" element={<ProtectedRoute requireColaborador><PlaybookWellhub /></ProtectedRoute>} />
+            <Route path="/purepedia/mensagens-padrao-suporte" element={<ProtectedRoute requireColaborador><MensagensPadraoSuporte /></ProtectedRoute>} />
+            <Route path="/purepedia/respostas-rapidas-whatsapp" element={<ProtectedRoute requireColaborador><RespostasRapidasWhatsApp /></ProtectedRoute>} />
+            <Route path="/purepedia/permissoes-funcionalidade" element={<ProtectedRoute requireColaborador><PermissoesFuncionalidade /></ProtectedRoute>} />
+            <Route path="/purepedia/certificado-a3" element={<ProtectedRoute requireColaborador><CertificadoA3 /></ProtectedRoute>} />
+            <Route path="/purepedia/whatsapp-google-meu-negocio" element={<ProtectedRoute requireColaborador><WhatsAppGoogleMeuNegocio /></ProtectedRoute>} />
+            <Route path="/purepedia/configuracao-de-rede" element={<ProtectedRoute requireColaborador><ConfiguracaoDeRede /></ProtectedRoute>} />
+            <Route path="/purepedia/agendamento-wellhub-aluno" element={<ProtectedRoute requireColaborador><AgendamentoWellhubAluno /></ProtectedRoute>} />
+            <Route path="/purepedia/teste-pagamento" element={<ProtectedRoute requireColaborador><TestePagamento /></ProtectedRoute>} />
+            <Route path="/purepedia/manual-eletromidia" element={<ProtectedRoute requireColaborador><ManualEletromidia /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional" element={<ProtectedRoute requireAdmin><MidiaAdicional /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional/sync-logs" element={<ProtectedRoute requireAdmin><MidiaAdicionalSyncLogs /></ProtectedRoute>} />
             <Route path="/minha-area/midia-adicional/:slug" element={<ProtectedRoute requireAdmin><MidiaAdicionalUnidade /></ProtectedRoute>} />
