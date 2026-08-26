@@ -1791,12 +1791,16 @@ const Store = () => (
         <div className="h-full rounded-2xl p-7 sm:p-9 relative overflow-hidden" style={{ background: BLUSH }}>
           <Ramo className="absolute -right-4 -top-4 opacity-40" largura={130} espelhado />
           <Tag className="h-5 w-5 text-primary mb-4" />
+          <p className="font-heading font-black text-lg text-foreground/60 leading-none">Até</p>
           <p className="font-heading font-black text-[3.4rem] sm:text-[5rem] leading-[0.82] text-primary tabular-nums">
             <Contador ate={35} sufixo="%" />
           </p>
-          <p className="font-heading font-black text-2xl text-foreground mt-2">OFF em todo o site</p>
-          <p className="text-sm text-foreground/70 mt-3">Até 35% de desconto com o cupom:</p>
-          <p className="mt-3 inline-block rounded-lg bg-foreground text-background px-4 py-2.5 font-heading font-black tracking-[0.14em] text-base">
+          <p className="font-heading font-black text-2xl text-foreground mt-2">OFF em produtos selecionados</p>
+          <p className="text-sm text-foreground/70 mt-3">
+            No Mês do Franqueado você encontra produtos com até 35% OFF. <strong className="text-foreground">Aproveite!</strong>
+          </p>
+          <p className="text-[10px] uppercase tracking-[0.22em] font-bold text-foreground/45 mt-4">Cupom</p>
+          <p className="mt-1.5 inline-block rounded-lg bg-foreground text-background px-4 py-2.5 font-heading font-black tracking-[0.14em] text-base">
             MESDOFRANQUEADO
           </p>
         </div>
