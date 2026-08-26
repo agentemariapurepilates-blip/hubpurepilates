@@ -14,12 +14,12 @@
  * trabalha com os formulários nativos, e a tela diz que o lead-site fica fora.
  *
  * O nome do conjunto carrega a unidade — `penha | sao-paulo | cargos |
- * instrutor-pilates` — e é dele que sai a separação pedida. A leitura do nome é
- * reaproveitada de `midia-paga/lib/nomenclatura`, para existir um só lugar no
- * Hub que sabe o formato dos nomes da conta.
+ * instrutor-pilates` — e é dele que sai a separação pedida. A leitura do nome
+ * mora em `./nomeDoConjunto`, para existir um só lugar no Hub que sabe o
+ * formato dos nomes da conta.
  */
 
-import { interpretarConjunto } from '@/features/colaborador/midia-paga/lib/nomenclatura';
+import { interpretarConjunto } from './nomeDoConjunto';
 
 /** Um campo respondido no formulário, como a Graph API devolve. */
 export interface CampoDoFormulario {

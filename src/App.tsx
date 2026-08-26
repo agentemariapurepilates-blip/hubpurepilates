@@ -67,8 +67,6 @@ const ConfiguracaoDeRede = lazy(() => import("./features/colaborador/purepedia/C
 const AgendamentoWellhubAluno = lazy(() => import("./features/colaborador/purepedia/AgendamentoWellhubAluno"));
 const TestePagamento = lazy(() => import("./features/colaborador/purepedia/TestePagamento"));
 const ManualEletromidia = lazy(() => import("./features/colaborador/purepedia/ManualEletromidia"));
-const MidiaPagaCerebro = lazy(() => import("./features/colaborador/midia-paga/Cerebro"));
-const MidiaPagaAnalise = lazy(() => import("./features/colaborador/midia-paga/AnaliseDeMidia"));
 
 const AgenteDesign = lazy(() => import("./features/colaborador/agentes/agente-design/AgenteDesign"));
 const GerarFoto = lazy(() => import("./features/colaborador/agentes/agente-design/GerarFoto"));
@@ -179,9 +177,6 @@ function App() {
                 O boundary segue o mesmo motivo do Dashboard — erro de render
                 aqui não pode derrubar o Hub inteiro. */}
             <Route element={<ErrorBoundary area="Mídia paga"><Outlet /></ErrorBoundary>}>
-              <Route path="/midia-paga" element={<Navigate to="/midia-paga/cerebro" replace />} />
-              <Route path="/midia-paga/cerebro" element={<ProtectedRoute requireAdmin><MidiaPagaCerebro /></ProtectedRoute>} />
-              <Route path="/midia-paga/analise" element={<ProtectedRoute requireAdmin><MidiaPagaAnalise /></ProtectedRoute>} />
             </Route>
             {/* Leads RH: dados pessoais de candidatos. Quem entra e decidido
                 na propria tela (aba Autorizados) e garantido pela RLS. */}
