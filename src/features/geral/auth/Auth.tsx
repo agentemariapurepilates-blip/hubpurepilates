@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, AlertCircle, UserCheck, Building2, HelpCircle, CheckCircle } from 'lucide-react';
+import { Loader2, AlertCircle, UserCheck, Building2, HelpCircle, CheckCircle, MailCheck } from 'lucide-react';
 import logo from '@/assets/logo-pure-pilates.png';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -412,17 +412,21 @@ const Auth = () => {
           <Card className="card-pure">
             <CardHeader className="text-center">
               <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                <UserCheck className="h-8 w-8 text-green-600" />
+                <MailCheck className="h-8 w-8 text-green-600" />
               </div>
               <CardTitle className="text-xl">Cadastro Realizado!</CardTitle>
               <CardDescription>
-                Seu cadastro foi enviado para aprovação
+                Enviamos um e-mail de confirmação
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
-                O administrador irá analisar sua solicitação. 
-                Você receberá acesso assim que seu cadastro for aprovado.
+                Confira a caixa de entrada
+                {signupEmail ? <> de <strong className="text-foreground">{signupEmail}</strong></> : null} e
+                clique no link para confirmar seu acesso. Se não encontrar, verifique o lixo eletrônico.
+              </p>
+              <p className="text-xs text-muted-foreground text-center">
+                O e-mail pode levar alguns minutos. Se não chegar, fale com o administrador do Hub.
               </p>
               <Button
                 className="w-full btn-pure"
