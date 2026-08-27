@@ -89,11 +89,73 @@ function indicadoresDevProxy(env: Record<string, string>): Plugin {
   };
 }
 
+/**
+ * As variáveis sem as quais o BUILD não pode ser publicado.
+ *
+ * O Dashboard lê um projeto Supabase diferente do resto do Hub, e as
+ * credenciais dele moram no `.env.local` — que não é versionado, porque tem
+ * chave. As do Hub estão no `.env`, que é.
+ *
+ * Em 27/08/2026 alguém compilou numa máquina sem o `.env.local`. O Vite trocou
+ * as duas por `undefined`, `integrations/supabase/indicadores.ts` passou a
+ * lançar erro ao ser carregado, e TODA tela de Dashboard morria — enquanto
+ * Feed, Leads RH e PurePedia seguiam de pé, porque dependem do `.env`. Um
+ * sistema meio funcionando é mais difícil de diagnosticar do que um fora do ar.
+ *
+ * Nada avisou: o build passou, os testes passaram e o deploy disse "sucesso".
+ * O erro só aparecia no console do navegador de quem abrisse o Dashboard.
+ */
+const OBRIGATORIAS_NO_BUILD = [
+  'VITE_INDICADORES_SUPABASE_URL',
+  'VITE_INDICADORES_SUPABASE_ANON_KEY',
+];
+
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   // Prefixo '' carrega TODAS as variáveis, inclusive as sem VITE_. Isso vale só
   // aqui, no processo Node — nada disso é injetado no código do navegador.
   const env = loadEnv(mode, process.cwd(), '');
+
+  // A checagem vale SÓ para `build`, e é de propósito.
+  //
+  // `dev` e os testes continuam rodando sem o `.env.local`: quem está mexendo
+  // no Feed ou na Pure Store não precisa da credencial do Dashboard, e exigir
+  // isso travaria o trabalho de quem nunca chega perto daquelas telas. Ali o
+  // erro em tempo de execução já explica o que falta, e só para quem abrir a
+  // tela.
+  //
+  // No build é diferente: o artefato quebrado vai para produção e afeta todo
+  // mundo. Falhar aqui é a última hora em que o erro ainda é barato.
+  if (command === 'build' && !process.env.VITEST) {
+    const faltando = OBRIGATORIAS_NO_BUILD.filter((nome) => !env[nome]);
+
+    if (faltando.length > 0) {
+      throw new Error(
+        [
+          '',
+          '─'.repeat(70),
+          '  BUILD INTERROMPIDO — faltam credenciais do Dashboard',
+          '─'.repeat(70),
+          '',
+          `  Não encontrei no .env.local: ${faltando.join(', ')}`,
+          '',
+          '  Sem elas o build até termina, mas TODA tela de Dashboard quebra em',
+          '  produção, e o resto do Hub continua funcionando — o que torna o',
+          '  problema difícil de perceber e de diagnosticar.',
+          '',
+          '  Como resolver:',
+          '    1. Copie o .env.local.example para .env.local',
+          '    2. Preencha as duas variáveis com os dados do projeto Supabase',
+          '       de indicadores (Project Settings → API)',
+          '',
+          '  O .env.local não é versionado de propósito: contém credencial.',
+          '  Cada máquina que compila para produção precisa ter o seu.',
+          '',
+          '─'.repeat(70),
+        ].join('\n'),
+      );
+    }
+  }
 
   return {
     server: {
