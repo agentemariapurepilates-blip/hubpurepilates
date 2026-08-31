@@ -1,16 +1,26 @@
 /**
- * Lê o nome de um conjunto de anúncios e devolve o que ele significa.
+ * Lê o nome de um conjunto de anúncios do Meta e devolve o que ele significa.
  *
- * O nome carrega a unidade — `penha | sao-paulo | cargos | instrutor-pilates` —
- * e é dele que sai a separação usada na tela de leads de RH.
+ * ────────────────────────────────────────────────────────────────────────────
+ * POR QUE ISTO MORA DENTRO DO LEADS RH
+ * ────────────────────────────────────────────────────────────────────────────
+ * Este código veio de `midia-paga/lib/nomenclatura.ts`, que saiu do Hub em
+ * 25/08/2026 junto com o resto da mídia paga. O Leads RH ficou como único
+ * consumidor: cada candidato chega com o `adset_name` do Meta, e é daqui que
+ * sai a unidade a que ele pertence.
  *
- * Esta leitura morava em `midia-paga/lib/nomenclatura`. Com a saída do módulo de
- * mídia paga do Hub, ela veio para cá junto com quem a usa; a parte que
- * interpretava nomes de *campanha* e classificava frentes ficou para trás, por
- * ser assunto do painel de mídia e não dos leads.
+ * Só a leitura de CONJUNTO foi trazida. A de campanha e a classificação por
+ * frente ficaram para o SmartAds, com o resto do manual — nada aqui precisa
+ * delas, e trazer junto criaria um pedaço morto que ninguém saberia manter.
  *
- * Toda a leitura é feita sem acento e em minúsculas, porque a conta tem nomes
- * como "são-bernardo-do-campo" e "sao-bernardo-do-campo" convivendo.
+ * Se um dia outro módulo do Hub precisar disto, o lugar dele é uma pasta
+ * neutra. Enquanto for um consumidor só, fica ao lado de quem usa.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * TUDO SEM ACENTO E EM MINÚSCULAS
+ * ────────────────────────────────────────────────────────────────────────────
+ * A conta tem "são-bernardo-do-campo" e "sao-bernardo-do-campo" convivendo. Sem
+ * normalizar, a mesma unidade viraria duas.
  */
 
 const SEPARADOR = '|';

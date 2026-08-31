@@ -298,6 +298,7 @@ const Sidebar = () => {
   const dashboardNavigation = [
     { name: 'Visão Geral', href: '/dashboard/visao-geral', icon: LayoutDashboard },
     { name: 'Ritmo do Mês', href: '/dashboard/ritmo-do-mes', icon: Gauge },
+    { name: 'Avaliação de Mídia', href: '/dashboard/avaliacao-de-midia', icon: ClipboardList },
     { name: 'Top 10 Unidades', href: '/dashboard/top-10-unidades', icon: Trophy },
     { name: 'Visão Diária', href: '/dashboard/visao-diaria', icon: Calendar },
     { name: 'Cronologia', href: '/dashboard/cronologia', icon: LineChart },

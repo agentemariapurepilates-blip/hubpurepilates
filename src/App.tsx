@@ -50,6 +50,7 @@ const IndicadoresTop10Unidades = lazy(() => import("./features/colaborador/indic
 const IndicadoresVisaoDiaria = lazy(() => import("./features/colaborador/indicadores/VisaoDiaria"));
 const IndicadoresCronologia = lazy(() => import("./features/colaborador/indicadores/Cronologia"));
 const IndicadoresRitmo = lazy(() => import("./features/colaborador/indicadores/RitmoDoMes"));
+const IndicadoresAvaliacao = lazy(() => import("./features/colaborador/indicadores/AvaliacaoDeMidia"));
 const IndicadoresClusters = lazy(() => import("./features/colaborador/indicadores/ClustersMatriculados"));
 const IndicadoresAdministracao = lazy(() => import("./features/colaborador/indicadores/Administracao"));
 // Mídia paga — o Cérebro das campanhas e o relatório com a análise da IA.
@@ -170,6 +171,7 @@ function App() {
               <Route path="/dashboard/visao-diaria" element={<ProtectedRoute requireAdmin><IndicadoresVisaoDiaria /></ProtectedRoute>} />
               <Route path="/dashboard/cronologia" element={<ProtectedRoute requireAdmin><IndicadoresCronologia /></ProtectedRoute>} />
               <Route path="/dashboard/ritmo-do-mes" element={<ProtectedRoute requireAdmin><IndicadoresRitmo /></ProtectedRoute>} />
+              <Route path="/dashboard/avaliacao-de-midia" element={<ProtectedRoute requireAdmin><IndicadoresAvaliacao /></ProtectedRoute>} />
               <Route path="/dashboard/clusters-matriculados" element={<ProtectedRoute requireAdmin><IndicadoresClusters /></ProtectedRoute>} />
               <Route path="/dashboard/administracao" element={<ProtectedRoute requireAdmin><IndicadoresAdministracao /></ProtectedRoute>} />
             </Route>
