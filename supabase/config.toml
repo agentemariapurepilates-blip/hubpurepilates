@@ -37,11 +37,26 @@ verify_jwt = false
 # Relatorio mensal de clusters: chamado por pg_cron todo dia 1 as 03:00 de
 # Sao Paulo (06:00 UTC). Mesmo motivo das entradas acima -- o Bearer e o
 # segredo do Vault, nao um JWT.
+#
+# ATENCAO: esta function tem DOIS chamadores desde que a subaba Clusters da
+# Administracao ganhou previa e envio de teste. O admin chama do navegador com
+# um JWT de verdade, e mesmo assim a linha abaixo continua sendo `false` --
+# ligar verify_jwt aqui derrubaria o cron, que nao manda JWT nenhum.
+#
+# A consequencia e que a PLATAFORMA nao filtra nada: toda requisicao chega ao
+# codigo. Quem separa os dois chamadores e a propria function (ver
+# _shared/modo-relatorio.ts) -- segredo do Vault para o modo cron, JWT de admin
+# conferido em _shared/admin-do-hub.ts para previa e teste. Apagar qualquer uma
+# dessas checagens abre a function para a internet inteira, sem erro nenhum
+# aparecer.
 [functions.cluster-relatorio-mensal]
 verify_jwt = false
 
 # Relatorio de clusters de aulas experimentais: chamado por pg_cron todo dia
 # as 03:00 de Sao Paulo; a propria function decide se hoje e o penultimo dia
 # do mes. Bearer do Vault, nao JWT.
+#
+# Vale o mesmo aviso da entrada acima: dois chamadores, e a autorizacao mora
+# toda dentro da function.
 [functions.experimentais-relatorio-mensal]
 verify_jwt = false
