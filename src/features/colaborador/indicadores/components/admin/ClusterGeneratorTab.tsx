@@ -12,6 +12,7 @@ import { useClusterData, useAvailableMonths, ClusterRange, ClusterConfig } from 
 import { exportToCSV, exportToExcel, ExportRow } from '../../lib/exportUtils';
 import { format, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { RelatoriosDeCluster } from '@/features/colaborador/relatorio-clusters/RelatoriosDeCluster';
 
 // Esta aba não grava nada: as faixas ficam só na memória da tela e servem para
 // agrupar, em tempo de leitura, os dados que vêm do banco.
@@ -404,6 +405,17 @@ export function ClusterGeneratorTab() {
           </CardContent>
         </Card>
       )}
+
+      {/* Segunda subdivisão desta mesma subaba. O gerador acima é o recorte
+          exploratório — escolhe indicador, período e faixas na hora, e o
+          resultado morre na tela. Abaixo fica o recorte FIXO: o que sai por
+          e-mail todo mês, para uma lista. É a mesma pergunta em dois
+          regimes, então ficam juntos.
+
+          O componente mora fora de features/colaborador/indicadores porque
+          cadastrar destinatário é escrita e pedir prévia é functions.invoke,
+          e sem-escrita.test.ts proíbe as duas coisas nesta pasta. */}
+      <RelatoriosDeCluster />
     </div>
   );
 }

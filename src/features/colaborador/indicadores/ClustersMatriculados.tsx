@@ -16,8 +16,6 @@ import {
   YAxis,
 } from 'recharts';
 import { AlertTriangle, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { RelatoriosDeCluster } from '@/features/colaborador/relatorio-clusters/RelatoriosDeCluster';
 import MainLayout from '@/components/layout/MainLayout';
 import { TimelineFilters } from './components/TimelineFilters';
 import {
@@ -74,10 +72,8 @@ export default function ClustersMatriculados() {
   const [formatoRede, setFormatoRede] = useState<FormatoDaRede>('empilhado');
   const [formatoUnidade, setFormatoUnidade] = useState<FormatoDaUnidade>('linha');
   const [comparando, setComparando] = useState(false);
-  const [noRelatorio, setNoRelatorio] = useState(false);
   const [parDeMeses, setParDeMeses] = useState<[string, string] | null>(null);
 
-  const { isAdmin } = useAuth();
   const { data: unidades } = useUnits();
   const { pontos, trajetoria, meses, isLoading, mesesComFalha } = useClustersMatriculados(
     deMes,
@@ -115,16 +111,13 @@ export default function ClustersMatriculados() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Clusters de Matriculados</h1>
             <p className="text-muted-foreground">
-              {noRelatorio
-                ? 'Quem recebe os relatórios de cluster por e-mail'
-                : 'Quantas unidades há em cada faixa de alunos matriculados, mês a mês'}
+              Quantas unidades há em cada faixa de alunos matriculados, mês a mês
             </p>
           </div>
           {/* A granularidade fica fixa em mês — a regra pede "valor de cada
               mês", e oferecer "por dia" prometeria algo que a tela não faz.
-              Some no modo relatório: período e unidade não filtram uma lista de
-              destinatários. */}
-          {!noRelatorio && (
+              A configuração de quem recebe o relatório por e-mail fica na
+              Administração, na subaba Clusters. */}
           <TimelineFilters
             granularity="month"
             onGranularityChange={() => {}}
@@ -137,7 +130,6 @@ export default function ClustersMatriculados() {
             units={unidades}
             unitName={nomeDaUnidade}
           />
-          )}
         </div>
 
         {/* As duas visões têm seletor de formato, mas com opções diferentes:
@@ -150,7 +142,6 @@ export default function ClustersMatriculados() {
             opcoes={FORMATOS_DA_UNIDADE}
             formato={formatoUnidade}
             onFormatoChange={setFormatoUnidade}
-            relatorio={isAdmin ? { ativa: noRelatorio, onAtivaChange: setNoRelatorio } : undefined}
           />
         ) : (
           <ControlesDeCluster<FormatoDaRede>
@@ -165,11 +156,9 @@ export default function ClustersMatriculados() {
               mesB: parDeMeses?.[1] ?? '',
               onMesesChange: (a, b) => setParDeMeses([a, b]),
             }}
-            relatorio={isAdmin ? { ativa: noRelatorio, onAtivaChange: setNoRelatorio } : undefined}
           />
         )}
 
-        {!noRelatorio && (
         <div className="flex flex-wrap gap-2">
           {FAIXAS.map((faixa) => (
             <div
@@ -184,9 +173,8 @@ export default function ClustersMatriculados() {
             </div>
           ))}
         </div>
-        )}
 
-        {!noRelatorio && mesesComFalha.length > 0 && (
+        {mesesComFalha.length > 0 && (
           <div className="metric-card flex items-start gap-3 border-destructive/40 bg-destructive/5">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
             <p className="text-sm text-muted-foreground">
@@ -196,9 +184,7 @@ export default function ClustersMatriculados() {
           </div>
         )}
 
-        {noRelatorio && isAdmin ? (
-          <RelatoriosDeCluster />
-        ) : isLoading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>

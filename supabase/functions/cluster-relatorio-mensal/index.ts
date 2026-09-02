@@ -1,7 +1,15 @@
-// Cron: relatorio mensal de clusters de matriculados. Disparada por pg_cron
-// todo dia 1 as 03:00 de Sao Paulo (06:00 UTC).
+// Relatorio mensal de clusters de matriculados.
 //
-// NAO PUBLICADA AINDA, a pedido do usuario.
+// TRES CHAMADORES, com poderes diferentes (ver _shared/modo-relatorio.ts):
+//   cron   -- pg_cron, todo dia 1 as 03:00 de Sao Paulo (06:00 UTC). Autoriza
+//             pelo segredo. Monta e envia para a lista inteira.
+//   previa -- o admin, na subaba Clusters da Administracao. Autoriza pelo JWT.
+//             Monta e DEVOLVE o e-mail; nao envia nada.
+//   teste  -- o mesmo admin. Envia so para o e-mail dele.
+//
+// NAO PUBLICADA AINDA, a pedido do usuario. Enquanto nao for, a lista de
+// destinatarios no Hub continua funcionando (ela le o banco direto), mas a
+// previa e o teste mostram erro: os dois dependem desta function no ar.
 //
 // ESTA FUNCTION FALA COM DOIS BANCOS, e e o unico lugar do sistema que faz
 // isso:
@@ -17,6 +25,14 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { contar, montarEmailDeClusters, mesAnterior } from './email.ts';
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { adminDoHub, type AdminIdentificado } from '../_shared/admin-do-hub.ts';
+import {
+  destinatariosDoModo,
+  ehSegredoDoCron,
+  exigeAdmin,
+  modoDaRequisicao,
+} from '../_shared/modo-relatorio.ts';
 
 const N8N_WEBHOOK_URL = Deno.env.get('CLUSTERS_WEBHOOK_URL')
   || 'https://backend.purepilates.com.br/webhook/relatorio-clusters';
@@ -37,10 +53,6 @@ const INDICADORES_URL = Deno.env.get('INDICADORES_SUPABASE_URL')
 // prioridade, para o dia em que o projeto rotacionar a chave.
 const INDICADORES_ANON = Deno.env.get('INDICADORES_SUPABASE_ANON_KEY')
   || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3ZXl5aWhlZHFuY2tidHpia2llIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzNzI3NjIsImV4cCI6MjA4MDk0ODc2Mn0.y87s13__DraHC-1ANCMknr1Uo4-TZzdr1tov2phr9rI';
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-}
 
 function segredoEsperado(): string {
   return Deno.env.get('INAUGURACAO_CRON_SECRET') || Deno.env.get('INSTAGRAM_CRON_SECRET') || '';
@@ -89,8 +101,32 @@ async function valoresDoMes(mes: string): Promise<number[]> {
 }
 
 Deno.serve(async (req) => {
-  const segredo = segredoEsperado();
-  if (!segredo || req.headers.get('authorization') !== `Bearer ${segredo}`) {
+  const corsHeaders = getCorsHeaders(req);
+  // A prévia e o teste partem do navegador, então a function passa a atender
+  // preflight. O cron não manda OPTIONS e não nota diferença.
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  // O pg_cron manda {} ; o Hub manda {"modo":"previa"} ou {"modo":"teste"}.
+  const pedido = await req.json().catch(() => ({}));
+  const modo = modoDaRequisicao(pedido);
+  if (!modo) return json({ error: 'modo_desconhecido' }, 400);
+
+  const authorization = req.headers.get('authorization');
+  let admin: AdminIdentificado | null = null;
+
+  if (exigeAdmin(modo)) {
+    // Prévia e teste são autorizados pelo JWT de admin, NUNCA pelo segredo do
+    // cron: esse segredo não existe no navegador, e aceitar os dois caminhos
+    // aqui seria a única forma de ele um dia precisar existir lá.
+    admin = await adminDoHub(authorization);
+    if (!admin) return json({ error: 'unauthorized' }, 401);
+  } else if (!ehSegredoDoCron(authorization, segredoEsperado())) {
     return json({ error: 'unauthorized' }, 401);
   }
 
@@ -116,18 +152,30 @@ Deno.serve(async (req) => {
       .eq('ativo', true).order('email', { ascending: true });
     if (erroRecipients) throw erroRecipients;
 
-    const destinatarios = (recipientsData ?? []).map((r) => r.email as string);
+    const lista = (recipientsData ?? []).map((r) => r.email as string);
+    const destinatarios = destinatariosDoModo(modo, {
+      lista,
+      emailDoAdmin: admin?.email ?? null,
+    });
 
     // Lista vazia nao e erro: pode estar sendo montada. Diferente do aviso
     // diario de inauguracao, aqui nao ha oportunidade perdida -- o relatorio do
     // mes que vem tera os mesmos dados historicos.
-    if (destinatarios.length === 0) {
+    if (modo === 'cron' && destinatarios.length === 0) {
       console.log(`[relatorio-clusters] ${mesFechado}: nenhum destinatario ativo. Nada enviado.`);
       return json({ ok: true, mes: mesFechado, destinatarios: 0, enviado: false });
     }
 
-    const webhookToken = Deno.env.get('INAUGURACAO_WEBHOOK_TOKEN') || '';
-    if (!webhookToken) {
+    // Um admin sem e-mail no cadastro nao tem para onde receber o teste. Cair
+    // na lista aqui transformaria um dado faltando num envio para a rede.
+    if (modo === 'teste' && destinatarios.length === 0) {
+      return json({ error: 'admin_sem_email' }, 400);
+    }
+
+    // A previa nao envia, entao nao precisa do token -- e nao faz sentido
+    // recusar uma previa por causa de um segredo que ela nao usaria.
+    const webhookToken = modo === 'previa' ? '' : (Deno.env.get('INAUGURACAO_WEBHOOK_TOKEN') || '');
+    if (modo !== 'previa' && !webhookToken) {
       console.error(`[relatorio-clusters] ${mesFechado}: INAUGURACAO_WEBHOOK_TOKEN nao configurado.`);
       return json({ error: 'webhook_token_ausente', mes: mesFechado }, 500);
     }
@@ -141,6 +189,18 @@ Deno.serve(async (req) => {
     }
 
     const { assunto, corpo } = montarEmailDeClusters(mesFechado, atual, anterior);
+
+    // A previa para exatamente aqui: o trabalho todo ja foi feito, e o par que
+    // ela devolve e o MESMO que o envio mandaria -- e por isso que ela vale
+    // como conferencia.
+    if (modo === 'previa') {
+      return json({
+        assunto, corpo,
+        mes: mesFechado,
+        unidades: atual.total,
+        destinatariosAtivos: lista.length,
+      });
+    }
 
     const resp = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
@@ -157,7 +217,7 @@ Deno.serve(async (req) => {
 
     console.log(`[relatorio-clusters] ${mesFechado}: enviado para ${destinatarios.length} destinatario(s). ${atual.total} unidades.`);
     return json({
-      ok: true, mes: mesFechado,
+      ok: true, mes: mesFechado, modo,
       destinatarios: destinatarios.length,
       unidades: atual.total,
       enviado: true,

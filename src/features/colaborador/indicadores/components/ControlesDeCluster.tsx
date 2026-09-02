@@ -1,4 +1,4 @@
-import { BarChart3, GitCompareArrows, Layers, LineChart, Mail, Percent } from 'lucide-react';
+import { BarChart3, GitCompareArrows, Layers, LineChart, Percent } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -50,17 +50,6 @@ interface ControlesProps<T extends string> {
     mesB: string;
     onMesesChange: (a: string, b: string) => void;
   };
-  /**
-   * Aba do relatório por e-mail. Omitir esconde o botão — só admin tem.
-   *
-   * Quando ativa, os controles de gráfico somem: nenhum deles se aplica à
-   * lista de destinatários, e deixá-los visíveis criaria botões que não fazem
-   * nada — foi por isso que o seletor "Por dia / Por mês" saiu desta tela.
-   */
-  relatorio?: {
-    ativa: boolean;
-    onAtivaChange: (v: boolean) => void;
-  };
 }
 
 /**
@@ -77,27 +66,23 @@ export function ControlesDeCluster<T extends string>({
   formato,
   onFormatoChange,
   comparacao,
-  relatorio,
 }: ControlesProps<T>) {
   const poucosMeses = (comparacao?.meses.length ?? 0) < 2;
-  const noRelatorio = relatorio?.ativa ?? false;
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-      {!noRelatorio && (
-        <Tabs value={formato} onValueChange={(v) => onFormatoChange(v as T)}>
-          <TabsList>
-            {opcoes.map((o) => (
-              <TabsTrigger key={o.valor} value={o.valor} className="gap-2" title={o.dica}>
-                <o.icone className="h-4 w-4" />
-                {o.rotulo}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      )}
+      <Tabs value={formato} onValueChange={(v) => onFormatoChange(v as T)}>
+        <TabsList>
+          {opcoes.map((o) => (
+            <TabsTrigger key={o.valor} value={o.valor} className="gap-2" title={o.dica}>
+              <o.icone className="h-4 w-4" />
+              {o.rotulo}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
-      {comparacao && !noRelatorio && (
+      {comparacao && (
         <>
           <Button
             type="button"
@@ -131,18 +116,6 @@ export function ControlesDeCluster<T extends string>({
             </div>
           )}
         </>
-      )}
-
-      {relatorio && (
-        <Button
-          type="button"
-          variant={noRelatorio ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => relatorio.onAtivaChange(!noRelatorio)}
-        >
-          <Mail className="mr-2 h-4 w-4" />
-          {noRelatorio ? 'Voltar aos gráficos' : 'Relatório por e-mail'}
-        </Button>
       )}
     </div>
   );

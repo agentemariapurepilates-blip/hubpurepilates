@@ -1,9 +1,19 @@
-// Cron: relatorio de AULAS EXPERIMENTAIS. Lista as unidades com a media dos 3
-// ultimos meses (o vigente e os dois anteriores), divididas em BOM, MEDIO e
-// RUIM -- os cortes saem dos tercis do proprio periodo, e nao de faixas fixas
-// (ver email.ts).
+// Relatorio de AULAS EXPERIMENTAIS. Lista as unidades com a media dos 3
+// ultimos meses (o vigente e os dois anteriores), divididas em BOM (30 ou
+// mais), REGULAR (20 a 29) e RUIM (ate 19) -- faixas FIXAS, que nao dependem
+// de como as outras unidades foram no periodo (ver BLOCOS em email.ts). Se a
+// rede inteira melhorar, todas podem chegar a "Bom".
 //
-// NAO PUBLICADA AINDA, a pedido do usuario.
+// TRES CHAMADORES, com poderes diferentes (ver _shared/modo-relatorio.ts):
+//   cron   -- pg_cron, no penultimo dia do mes as 03:00 de Sao Paulo. Autoriza
+//             pelo segredo. Monta e envia para a lista inteira.
+//   previa -- o admin, na subaba Clusters da Administracao. Autoriza pelo JWT.
+//             Monta e DEVOLVE o e-mail; nao envia nada, e nao espera o dia.
+//   teste  -- o mesmo admin. Envia so para o e-mail dele.
+//
+// NAO PUBLICADA AINDA, a pedido do usuario. Enquanto nao for, a lista de
+// destinatarios no Hub continua funcionando (ela le o banco direto), mas a
+// previa e o teste mostram erro: os dois dependem desta function no ar.
 //
 // POR QUE O AGENDAMENTO E DIARIO e a decisao fica aqui:
 // o pedido e "penultimo dia do mes", que varia entre 27 e 30 conforme o mes e o
@@ -15,6 +25,14 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { montarEmailExperimentais, type LinhaDoRelatorio } from './email.ts';
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { adminDoHub, type AdminIdentificado } from '../_shared/admin-do-hub.ts';
+import {
+  destinatariosDoModo,
+  ehSegredoDoCron,
+  exigeAdmin,
+  modoDaRequisicao,
+} from '../_shared/modo-relatorio.ts';
 
 const N8N_WEBHOOK_URL = Deno.env.get('EXPERIMENTAIS_WEBHOOK_URL')
   || 'https://backend.purepilates.com.br/webhook/relatorio-experimentais';
@@ -34,10 +52,6 @@ const INDICADORES_URL = Deno.env.get('INDICADORES_SUPABASE_URL')
 // prioridade, para o dia em que o projeto rotacionar a chave.
 const INDICADORES_ANON = Deno.env.get('INDICADORES_SUPABASE_ANON_KEY')
   || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3ZXl5aWhlZHFuY2tidHpia2llIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzNzI3NjIsImV4cCI6MjA4MDk0ODc2Mn0.y87s13__DraHC-1ANCMknr1Uo4-TZzdr1tov2phr9rI';
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-}
 
 function segredoEsperado(): string {
   return Deno.env.get('INAUGURACAO_CRON_SECRET') || Deno.env.get('INSTAGRAM_CRON_SECRET') || '';
@@ -119,8 +133,32 @@ async function nomesDasUnidades(): Promise<Map<number, string>> {
 }
 
 Deno.serve(async (req) => {
-  const segredo = segredoEsperado();
-  if (!segredo || req.headers.get('authorization') !== `Bearer ${segredo}`) {
+  const corsHeaders = getCorsHeaders(req);
+  // A prévia e o teste partem do navegador, então a function passa a atender
+  // preflight. O cron não manda OPTIONS e não nota diferença.
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  // O pg_cron manda {} ; o Hub manda {"modo":"previa"} ou {"modo":"teste"}.
+  const pedido = await req.json().catch(() => ({}));
+  const modo = modoDaRequisicao(pedido);
+  if (!modo) return json({ error: 'modo_desconhecido' }, 400);
+
+  const authorization = req.headers.get('authorization');
+  let admin: AdminIdentificado | null = null;
+
+  if (exigeAdmin(modo)) {
+    // Prévia e teste são autorizados pelo JWT de admin, NUNCA pelo segredo do
+    // cron: esse segredo não existe no navegador, e aceitar os dois caminhos
+    // aqui seria a única forma de ele um dia precisar existir lá.
+    admin = await adminDoHub(authorization);
+    if (!admin) return json({ error: 'unauthorized' }, 401);
+  } else if (!ehSegredoDoCron(authorization, segredoEsperado())) {
     return json({ error: 'unauthorized' }, 401);
   }
 
@@ -136,15 +174,15 @@ Deno.serve(async (req) => {
   // NAO E UMA PORTA ABERTA: a requisicao ja passou pela checagem do Bearer
   // acima, entao so quem tem o segredo do cron chega aqui. O pg_cron manda
   // `{}`, e nunca aciona isto sozinho.
-  let forcar = false;
-  try {
-    const corpo = await req.json().catch(() => ({}));
-    forcar = corpo?.forcar === true;
-  } catch { /* corpo vazio ou invalido: segue como disparo normal */ }
+  const forcar = (pedido as { forcar?: unknown })?.forcar === true;
 
   // A guarda do dia vem ANTES de qualquer consulta: nos outros ~29 dias do mes
   // a invocacao termina aqui, sem tocar em banco nenhum.
-  if (!forcar && !ehPenultimoDia(hoje)) {
+  //
+  // Ela vale so para o cron. Previa e teste sao pedidos de alguem olhando a
+  // tela, e recusa-los porque hoje nao e o penultimo dia do mes tornaria a
+  // previa inutil em 29 dos 30 dias -- justamente o problema que ela resolve.
+  if (modo === 'cron' && !forcar && !ehPenultimoDia(hoje)) {
     return json({ ok: true, data: hoje, enviado: false, motivo: 'nao_e_o_penultimo_dia' });
   }
 
@@ -165,14 +203,26 @@ Deno.serve(async (req) => {
       .eq('ativo', true).order('email', { ascending: true });
     if (erroRecipients) throw erroRecipients;
 
-    const destinatarios = (recipientsData ?? []).map((r) => r.email as string);
-    if (destinatarios.length === 0) {
+    const lista = (recipientsData ?? []).map((r) => r.email as string);
+    const destinatarios = destinatariosDoModo(modo, {
+      lista,
+      emailDoAdmin: admin?.email ?? null,
+    });
+
+    if (modo === 'cron' && destinatarios.length === 0) {
       console.log(`[relatorio-experimentais] ${hoje}: nenhum destinatario ativo. Nada enviado.`);
       return json({ ok: true, data: hoje, destinatarios: 0, enviado: false });
     }
 
-    const webhookToken = Deno.env.get('INAUGURACAO_WEBHOOK_TOKEN') || '';
-    if (!webhookToken) {
+    // Um admin sem e-mail no cadastro nao tem para onde receber o teste. Cair
+    // na lista aqui transformaria um dado faltando num envio para a rede.
+    if (modo === 'teste' && destinatarios.length === 0) {
+      return json({ error: 'admin_sem_email' }, 400);
+    }
+
+    // A previa nao envia, entao nao precisa do token.
+    const webhookToken = modo === 'previa' ? '' : (Deno.env.get('INAUGURACAO_WEBHOOK_TOKEN') || '');
+    if (modo !== 'previa' && !webhookToken) {
       console.error(`[relatorio-experimentais] ${hoje}: INAUGURACAO_WEBHOOK_TOKEN nao configurado.`);
       return json({ error: 'webhook_token_ausente', data: hoje }, 500);
     }
@@ -212,6 +262,17 @@ Deno.serve(async (req) => {
 
     const { assunto, corpo } = montarEmailExperimentais(meses, linhas);
 
+    // A previa para exatamente aqui: o par que ela devolve e o MESMO que o
+    // envio mandaria -- e por isso que ela vale como conferencia.
+    if (modo === 'previa') {
+      return json({
+        assunto, corpo,
+        meses,
+        unidades: linhas.length,
+        destinatariosAtivos: lista.length,
+      });
+    }
+
     const resp = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', [WEBHOOK_HEADER]: webhookToken },
@@ -227,7 +288,7 @@ Deno.serve(async (req) => {
 
     console.log(`[relatorio-experimentais] ${hoje}: enviado para ${destinatarios.length} destinatario(s). ${linhas.length} unidades, meses ${meses.join(', ')}.`);
     return json({
-      ok: true, data: hoje, meses,
+      ok: true, data: hoje, meses, modo,
       destinatarios: destinatarios.length,
       unidades: linhas.length,
       enviado: true,
