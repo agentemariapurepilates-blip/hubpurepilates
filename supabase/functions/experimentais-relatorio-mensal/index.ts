@@ -11,9 +11,11 @@
 //             Monta e DEVOLVE o e-mail; nao envia nada, e nao espera o dia.
 //   teste  -- o mesmo admin. Envia so para o e-mail dele.
 //
-// NAO PUBLICADA AINDA, a pedido do usuario. Enquanto nao for, a lista de
-// destinatarios no Hub continua funcionando (ela le o banco direto), mas a
-// previa e o teste mostram erro: os dois dependem desta function no ar.
+// PUBLICADA -- mesma historia do cabecalho de cluster-relatorio-mensal, onde
+// a verificacao esta escrita. Em resumo: 401 no POST = publicada, 404 = nao.
+//
+// Estar publicada NAO significa que o relatorio sai: depende de o pg_cron
+// estar agendado e de o workflow estar importado no n8n.
 //
 // POR QUE O AGENDAMENTO E DIARIO e a decisao fica aqui:
 // o pedido e "penultimo dia do mes", que varia entre 27 e 30 conforme o mes e o

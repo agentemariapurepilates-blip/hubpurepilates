@@ -7,9 +7,20 @@
 //             Monta e DEVOLVE o e-mail; nao envia nada.
 //   teste  -- o mesmo admin. Envia so para o e-mail dele.
 //
-// NAO PUBLICADA AINDA, a pedido do usuario. Enquanto nao for, a lista de
-// destinatarios no Hub continua funcionando (ela le o banco direto), mas a
-// previa e o teste mostram erro: os dois dependem desta function no ar.
+// PUBLICADA. Ate 03/09/2026 este cabecalho dizia "NAO PUBLICADA AINDA", e
+// estava errado -- ficou para tras de um deploy e induziu a erro. Por isso a
+// VERIFICACAO fica escrita aqui, e nao so a conclusao:
+//
+//   curl -s -o /dev/null -w '%{http_code}' -X POST \
+//     https://evprrtvbvjnjixogjsmn.supabase.co/functions/v1/cluster-relatorio-mensal
+//
+//   401 = publicada (e o 401 DESTE codigo, recusando quem nao se identificou)
+//   404 = nao publicada (NOT_FOUND da plataforma, sem chegar no codigo)
+//
+// Estar publicada NAO significa que o relatorio sai: o envio depende de o
+// pg_cron estar agendado (ver a migration *_cluster_relatorio_cron.sql) e de o
+// workflow estar importado no n8n. Sem os dois, a function so responde a quem
+// a chama.
 //
 // ESTA FUNCTION FALA COM DOIS BANCOS, e e o unico lugar do sistema que faz
 // isso:
