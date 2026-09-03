@@ -35,3 +35,20 @@ export const RELATORIOS: Record<Relatorio, DefinicaoDeRelatorio> = {
     nomeNoTexto: 'o relatório de aulas experimentais',
   },
 };
+
+/**
+ * A ordem das abas, e qual delas abre.
+ *
+ * Aulas experimentais vem primeiro, e não é preferência estética. A seção abria
+ * em Matriculados, que divide a rede em Cluster 1 a 5; quem entrava na tela
+ * procurando a divisão Bom / Regular / Ruim encontrava a numerada e concluía
+ * que o relatório estava errado. Aconteceu três vezes seguidas com o mesmo
+ * usuário antes de ficar claro que o problema era a aba, e não o relatório —
+ * ele nunca chegou a ver o que procurava, escondido um clique ao lado.
+ *
+ * A lição, para quem acrescentar um terceiro relatório aqui: o que abre é o que
+ * existe, na prática. O resto é opcional.
+ */
+export const ORDEM_DAS_ABAS: Relatorio[] = ['experimentais', 'matriculados'];
+
+export const RELATORIO_INICIAL: Relatorio = ORDEM_DAS_ABAS[0];

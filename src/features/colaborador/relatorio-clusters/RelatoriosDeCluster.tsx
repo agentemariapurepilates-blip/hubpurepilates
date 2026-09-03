@@ -8,7 +8,12 @@ import {
   usePreviaDeClusters,
   usePreviaDeExperimentais,
 } from '@/features/colaborador/indicadores/hooks/usePreviaDosRelatorios';
-import { RELATORIOS, type Relatorio } from './lib/relatorios';
+import {
+  ORDEM_DAS_ABAS,
+  RELATORIO_INICIAL,
+  RELATORIOS,
+  type Relatorio,
+} from './lib/relatorios';
 
 /**
  * Os hooks de prévia nascem no escopo do módulo porque a fábrica DEVOLVE
@@ -31,13 +36,13 @@ const HOOKS_DE_PREVIA: Record<Relatorio, HooksDaPrevia> = {
  * hoje tem um propósito só.
  */
 export function RelatoriosDeCluster() {
-  const [aba, setAba] = useState<Relatorio>('matriculados');
+  const [aba, setAba] = useState<Relatorio>(RELATORIO_INICIAL);
 
   return (
     <div className="space-y-4">
       <Tabs value={aba} onValueChange={(v) => setAba(v as Relatorio)}>
         <TabsList>
-          {(Object.keys(RELATORIOS) as Relatorio[]).map((chave) => (
+          {ORDEM_DAS_ABAS.map((chave) => (
             <TabsTrigger key={chave} value={chave}>
               {RELATORIOS[chave].rotulo}
             </TabsTrigger>
