@@ -19,11 +19,80 @@
 // da rede fica em Ruim, porque a mediana da media e ~11,7. Isso e informacao,
 // nao defeito da faixa.
 
+/**
+ * Coluna de `raw_consolidated_daily` com as aulas experimentais.
+ *
+ * Contador que REINICIA a cada mes: o valor do mes e o do ultimo dia com dado,
+ * e NAO a soma dos dias. Conferido nos dados -- a unidade 1 fecha julho em 12 e
+ * aparece em 1 no dia 01/08. Somar daria ~213, e toda a rede cairia em "Bom".
+ *
+ * Mora aqui, e nao no index.ts, porque a previa da tela monta o mesmo e-mail
+ * NO NAVEGADOR e precisa ler a mesma coluna -- e o index.ts nao e importavel
+ * de fora do Deno (chama Deno.serve ao carregar). Ver fonte-dos-dados.test.ts.
+ */
+export const COLUNA_EXPERIMENTAIS = 'cli_experimentais';
+
+/**
+ * Data de hoje em Sao Paulo, 'YYYY-MM-DD'. Ver a nota de fuso em
+ * mesEmSaoPaulo, no email.ts do relatorio de clusters -- vale igual aqui.
+ */
+export function hojeEmSaoPaulo(agora: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(agora);
+}
+
+/** Os 3 meses do relatorio: o vigente e os dois anteriores. */
+export function janelaDeTresMeses(mesVigente: string): string[] {
+  const meses: string[] = [];
+  let [ano, m] = mesVigente.split('-').map(Number);
+  for (let i = 0; i < 3; i++) {
+    meses.unshift(`${ano}-${String(m).padStart(2, '0')}`);
+    m -= 1;
+    if (m < 1) { m = 12; ano -= 1; }
+  }
+  return meses;
+}
+
 export interface LinhaDoRelatorio {
   unitId: number;
   nome: string;
   media: number;
   mesesComDado: number;
+}
+
+/**
+ * A media de cada unidade na janela de meses, ja ordenada para o e-mail.
+ *
+ * `porMes` traz um mapa unitId -> valor por mes da janela. A media e sobre os
+ * meses COM dado, e nao sempre sobre 3: uma unidade que abriu no meio do
+ * periodo seria rebaixada por dividir por 3 -- 40 aulas num mes so virariam
+ * 13,3 e ela cairia de "Bom" para "Ruim".
+ */
+export function mediaPorUnidade(
+  porMes: Array<Map<number, number>>,
+  nomes: Map<number, string>,
+): LinhaDoRelatorio[] {
+  const acumulado = new Map<number, { soma: number; meses: number }>();
+  for (const mes of porMes) {
+    for (const [unitId, valor] of mes) {
+      const atual = acumulado.get(unitId) ?? { soma: 0, meses: 0 };
+      atual.soma += valor;
+      atual.meses += 1;
+      acumulado.set(unitId, atual);
+    }
+  }
+
+  const linhas: LinhaDoRelatorio[] = [];
+  for (const [unitId, { soma, meses }] of acumulado) {
+    linhas.push({
+      unitId,
+      nome: nomes.get(unitId) ?? `Unidade ${unitId}`,
+      media: Math.round((soma / meses) * 10) / 10,
+      mesesComDado: meses,
+    });
+  }
+
+  linhas.sort((a, b) => b.media - a.media || a.nome.localeCompare(b.nome, 'pt-BR'));
+  return linhas;
 }
 
 export type Bloco = 'bom' | 'regular' | 'ruim';

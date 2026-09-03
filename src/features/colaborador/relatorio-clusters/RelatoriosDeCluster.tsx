@@ -4,6 +4,10 @@ import { DestinatariosClustersTab } from './DestinatariosClustersTab';
 import { DestinatariosExperimentaisTab } from './DestinatariosExperimentaisTab';
 import { PreviaDoRelatorio, type HooksDaPrevia } from './PreviaDoRelatorio';
 import { criarHooksDePrevia } from './hooks/usePreviaRelatorio';
+import {
+  usePreviaDeClusters,
+  usePreviaDeExperimentais,
+} from '@/features/colaborador/indicadores/hooks/usePreviaDosRelatorios';
 import { RELATORIOS, type Relatorio } from './lib/relatorios';
 
 /**
@@ -12,8 +16,8 @@ import { RELATORIOS, type Relatorio } from './lib/relatorios';
  * pintura da tela, e o React não tem como saber que são as mesmas.
  */
 const HOOKS_DE_PREVIA: Record<Relatorio, HooksDaPrevia> = {
-  matriculados: criarHooksDePrevia(RELATORIOS.matriculados.funcao),
-  experimentais: criarHooksDePrevia(RELATORIOS.experimentais.funcao),
+  matriculados: criarHooksDePrevia(RELATORIOS.matriculados.funcao, usePreviaDeClusters),
+  experimentais: criarHooksDePrevia(RELATORIOS.experimentais.funcao, usePreviaDeExperimentais),
 };
 
 /**

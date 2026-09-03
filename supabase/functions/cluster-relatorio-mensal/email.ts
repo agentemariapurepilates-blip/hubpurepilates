@@ -8,6 +8,33 @@
 // lugares. O que impede a divergencia e um teste em src/ que importa OS DOIS
 // modulos e exige que concordem faixa a faixa -- ver relatorio-clusters.test.ts.
 
+/**
+ * Coluna de `raw_consolidated_daily` com o ESTOQUE de alunos matriculados.
+ *
+ * Existe uma `cli_matriculas_total` (fluxo) com nome quase identico: trocar as
+ * duas poe todas as unidades no Cluster 5, com aparencia de certo.
+ *
+ * Mora aqui, e nao no index.ts, porque a previa da tela monta o mesmo e-mail
+ * NO NAVEGADOR e precisa ler a mesma coluna -- e o index.ts nao e importavel
+ * de fora do Deno (chama Deno.serve ao carregar). Ver fonte-dos-dados.test.ts.
+ */
+export const COLUNA_MATRICULADOS = 'cli_matriculados_total';
+
+/**
+ * Mes corrente em Sao Paulo, 'YYYY-MM'.
+ *
+ * O fuso e explicito porque a previa roda no navegador de quem abre a tela, e
+ * nao no servidor: numa maquina em UTC, 01/01 as 01:00 ainda e 31/12 em Sao
+ * Paulo, e a previa mostraria um mes a frente do que o cron vai mandar.
+ *
+ * `agora` entra por parametro so para o teste poder fixar a data.
+ */
+export function mesEmSaoPaulo(agora: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit',
+  }).format(agora).slice(0, 7);
+}
+
 export interface FaixaDoEmail {
   numero: 1 | 2 | 3 | 4 | 5;
   rotulo: string;

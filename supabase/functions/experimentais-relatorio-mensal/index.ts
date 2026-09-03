@@ -24,7 +24,13 @@
 // que e barato perto de mandar o relatorio no dia errado.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { montarEmailExperimentais, type LinhaDoRelatorio } from './email.ts';
+import {
+  COLUNA_EXPERIMENTAIS,
+  hojeEmSaoPaulo,
+  janelaDeTresMeses,
+  mediaPorUnidade,
+  montarEmailExperimentais,
+} from './email.ts';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { adminDoHub, type AdminIdentificado } from '../_shared/admin-do-hub.ts';
 import {
@@ -40,11 +46,6 @@ const N8N_WEBHOOK_URL = Deno.env.get('EXPERIMENTAIS_WEBHOOK_URL')
 const WEBHOOK_TIMEOUT_MS = 60_000;
 const WEBHOOK_HEADER = 'x-inauguracao-token';
 
-// Contador que REINICIA a cada mes: o valor do mes e o do ultimo dia com dado,
-// e nao a soma dos dias. Conferido nos dados -- a unidade 1 fecha julho em 12 e
-// aparece em 1 no dia 01/08. Somar daria ~213.
-const COLUNA = 'cli_experimentais';
-
 const INDICADORES_URL = Deno.env.get('INDICADORES_SUPABASE_URL')
   || 'https://bweyyihedqnckbtzbkie.supabase.co';
 // Sem segredo: esta chave ja e distribuida no bundle do frontend, entao
@@ -57,11 +58,6 @@ function segredoEsperado(): string {
   return Deno.env.get('INAUGURACAO_CRON_SECRET') || Deno.env.get('INSTAGRAM_CRON_SECRET') || '';
 }
 
-/** Data de hoje em Sao Paulo, 'YYYY-MM-DD'. */
-function hojeEmSaoPaulo(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
-}
-
 function penultimoDiaDoMes(ano: number, mes: number): string {
   const ultimo = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
   return `${ano}-${String(mes).padStart(2, '0')}-${String(ultimo - 1).padStart(2, '0')}`;
@@ -70,18 +66,6 @@ function penultimoDiaDoMes(ano: number, mes: number): string {
 function ehPenultimoDia(data: string): boolean {
   const [ano, mes] = data.split('-').map(Number);
   return data === penultimoDiaDoMes(ano, mes);
-}
-
-/** Os 3 meses: o vigente e os dois anteriores. */
-function janelaDeTresMeses(mesVigente: string): string[] {
-  const meses: string[] = [];
-  let [ano, m] = mesVigente.split('-').map(Number);
-  for (let i = 0; i < 3; i++) {
-    meses.unshift(`${ano}-${String(m).padStart(2, '0')}`);
-    m -= 1;
-    if (m < 1) { m = 12; ano -= 1; }
-  }
-  return meses;
 }
 
 function ultimoDiaDoMes(mes: string): string {
@@ -107,7 +91,7 @@ async function valoresDoMes(mes: string): Promise<Map<number, number>> {
   if (dias.length === 0) return new Map();
 
   const resp = await fetch(
-    `${base}?select=unit_id,${COLUNA}&date=eq.${dias[0].date}`,
+    `${base}?select=unit_id,${COLUNA_EXPERIMENTAIS}&date=eq.${dias[0].date}`,
     { headers: { ...cabecalhoIndicadores(), Range: '0-4999' } },
   );
   if (!resp.ok) throw new Error(`indicadores (valores) respondeu ${resp.status}`);
@@ -115,7 +99,7 @@ async function valoresDoMes(mes: string): Promise<Map<number, number>> {
   const linhas = await resp.json() as Array<Record<string, unknown>>;
   const mapa = new Map<number, number>();
   for (const l of linhas) {
-    const valor = Number(l[COLUNA]);
+    const valor = Number(l[COLUNA_EXPERIMENTAIS]);
     // Zero entra na media (a unidade operou e nao teve experimental), mas nulo
     // nao: e ausencia de medicao, e trata-la como zero rebaixaria a unidade.
     if (Number.isFinite(valor)) mapa.set(Number(l.unit_id), valor);
@@ -231,29 +215,9 @@ Deno.serve(async (req) => {
     const porMes = await Promise.all(meses.map(valoresDoMes));
     const nomes = await nomesDasUnidades();
 
-    // Media sobre os meses COM dado, e nao sempre sobre 3: uma unidade que
-    // abriu no meio do periodo seria rebaixada por dividir por 3.
-    const acumulado = new Map<number, { soma: number; meses: number }>();
-    for (const mes of porMes) {
-      for (const [unitId, valor] of mes) {
-        const atual = acumulado.get(unitId) ?? { soma: 0, meses: 0 };
-        atual.soma += valor;
-        atual.meses += 1;
-        acumulado.set(unitId, atual);
-      }
-    }
-
-    const linhas: LinhaDoRelatorio[] = [];
-    for (const [unitId, { soma, meses: qtd }] of acumulado) {
-      const media = Math.round((soma / qtd) * 10) / 10;
-      linhas.push({
-        unitId,
-        nome: nomes.get(unitId) ?? `Unidade ${unitId}`,
-        media,
-        mesesComDado: qtd,
-      });
-    }
-    linhas.sort((a, b) => b.media - a.media || a.nome.localeCompare(b.nome, 'pt-BR'));
+    // O calculo vive em email.ts porque a previa da tela o refaz NO NAVEGADOR,
+    // e uma media diferente ali produziria uma previa mentirosa.
+    const linhas = mediaPorUnidade(porMes, nomes);
 
     if (linhas.length === 0) {
       console.error(`[relatorio-experimentais] ${hoje}: nenhuma unidade com dado. Nada enviado.`);

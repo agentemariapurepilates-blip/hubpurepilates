@@ -24,7 +24,13 @@
 // Hub, junto com as outras duas listas de e-mail.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { contar, montarEmailDeClusters, mesAnterior } from './email.ts';
+import {
+  COLUNA_MATRICULADOS,
+  contar,
+  mesAnterior,
+  mesEmSaoPaulo,
+  montarEmailDeClusters,
+} from './email.ts';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { adminDoHub, type AdminIdentificado } from '../_shared/admin-do-hub.ts';
 import {
@@ -40,10 +46,6 @@ const N8N_WEBHOOK_URL = Deno.env.get('CLUSTERS_WEBHOOK_URL')
 const WEBHOOK_TIMEOUT_MS = 60_000;
 const WEBHOOK_HEADER = 'x-inauguracao-token';
 
-// Coluna do ESTOQUE de alunos. Existe uma `cli_matriculas_total` (fluxo) com
-// nome quase identico: trocar as duas poe todas as unidades no Cluster 5.
-const COLUNA = 'cli_matriculados_total';
-
 // Valores publicos — a anon key deste projeto ja e distribuida no bundle do
 // frontend. Ficam como default para a function nao depender de segredo novo.
 const INDICADORES_URL = Deno.env.get('INDICADORES_SUPABASE_URL')
@@ -56,13 +58,6 @@ const INDICADORES_ANON = Deno.env.get('INDICADORES_SUPABASE_ANON_KEY')
 
 function segredoEsperado(): string {
   return Deno.env.get('INAUGURACAO_CRON_SECRET') || Deno.env.get('INSTAGRAM_CRON_SECRET') || '';
-}
-
-/** Mes corrente em Sao Paulo, 'YYYY-MM'. */
-function mesEmSaoPaulo(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit',
-  }).format(new Date()).slice(0, 7);
 }
 
 function ultimoDiaDoMes(mes: string): string {
@@ -91,13 +86,13 @@ async function valoresDoMes(mes: string): Promise<number[]> {
   if (dias.length === 0) return [];
 
   const resp = await fetch(
-    `${base}?select=unit_id,${COLUNA}&date=eq.${dias[0].date}`,
+    `${base}?select=unit_id,${COLUNA_MATRICULADOS}&date=eq.${dias[0].date}`,
     { headers: { ...cabecalho, Range: '0-4999' } },
   );
   if (!resp.ok) throw new Error(`indicadores (valores) respondeu ${resp.status}`);
 
   const linhas = await resp.json() as Array<Record<string, unknown>>;
-  return linhas.map((l) => Number(l[COLUNA]) || 0);
+  return linhas.map((l) => Number(l[COLUNA_MATRICULADOS]) || 0);
 }
 
 Deno.serve(async (req) => {

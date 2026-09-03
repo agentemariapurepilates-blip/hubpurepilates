@@ -1,37 +1,29 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { pedirPrevia, pedirTeste, type Invocar } from '../lib/pedidos';
+import { pedirTeste, type Invocar } from '../lib/pedidos';
 import type { HooksDaPrevia } from '../PreviaDoRelatorio';
 
 /**
- * Liga a PreviaDoRelatorio à Edge Function de um relatório.
+ * Liga a PreviaDoRelatorio às duas metades do relatório, que têm exigências
+ * bem diferentes:
  *
- * Uma fábrica, e não dois hooks escritos à mão: os dois relatórios têm
- * comportamento idêntico e só mudam o nome da função. A regra de conversa com
- * a function mora em lib/pedidos.ts, que é onde ela é testada.
+ *   A PRÉVIA é montada no navegador (ver usePreviaDosRelatorios, na pasta de
+ *   indicadores). Não depende de nada publicado — os números vêm do banco de
+ *   indicadores, que o Hub já lê, e o HTML sai do mesmo email.ts da function.
+ *
+ *   O TESTE precisa da Edge Function no ar: só ela alcança a lista de
+ *   destinatários no banco do Hub (atrás de RLS) e o token do webhook do n8n.
+ *
+ * Foi essa separação que tirou a tela da fila do deploy: dá para conferir o
+ * e-mail hoje, e publicar quando for a hora.
  */
-export function criarHooksDePrevia(funcao: string): HooksDaPrevia {
+export function criarHooksDePrevia(funcao: string, usePrevia: HooksDaPrevia['usarPrevia']): HooksDaPrevia {
   const invocar: Invocar = (nome, opcoes) => supabase.functions.invoke(nome, opcoes);
 
-  // Definidos como `useX`, e só depois entregues com os nomes de prop `usarX`.
-  // Não é enfeite: a regra rules-of-hooks do eslint só consegue verificar uma
-  // função se o nome dela começa com `use`, e uma propriedade `usarPrevia:` na
-  // saída faria a checagem desistir em silêncio. Mesmo arranjo de
-  // criarHooksDeDestinatarios.
-  const usePrevia = () =>
-    useQuery({
-      queryKey: ['previa-relatorio', funcao],
-      queryFn: () => pedirPrevia(invocar, funcao),
-      // A function ausente devolve o mesmo erro em toda tentativa, e as três
-      // repetições padrão só atrasariam o aviso na tela em alguns segundos.
-      retry: false,
-      // Montar a prévia lê os dois bancos e ~475 unidades. Refazer isso a cada
-      // foco de janela seria caro para um dado que muda uma vez por mês.
-      staleTime: 5 * 60 * 1000,
-      refetchOnWindowFocus: false,
-    });
-
+  // Definido como `useX` e só depois entregue como `usarTeste`: a regra
+  // rules-of-hooks do eslint só verifica funções cujo nome começa com `use`, e
+  // uma propriedade `usarTeste:` faria a checagem desistir em silêncio.
   const useTeste = () =>
     useMutation({
       mutationFn: () => pedirTeste(invocar, funcao),

@@ -36,7 +36,11 @@ function mensagemDoErro(erro: unknown): string {
 }
 
 /**
- * O e-mail exatamente como vai sair, montado pela própria Edge Function.
+ * O e-mail exatamente como vai sair.
+ *
+ * Montado no navegador, com o MESMO email.ts que a Edge Function usa no envio
+ * — mesma coluna do banco, mesma janela de meses, mesmo HTML. Não é uma
+ * imitação, e não depende de nada publicado. Ver usePreviaDosRelatorios.
  *
  * O corpo vai num iframe de propósito. É HTML de e-mail — traz `<style>` e uma
  * árvore de `<table>` com estilo inline pensada para o Gmail. Solto na página,
@@ -57,7 +61,7 @@ export function PreviaDoRelatorio({ hooks, nomeDoRelatorio }: Props) {
               Prévia do e-mail
             </CardTitle>
             <CardDescription>
-              Montada pela mesma função que faz o envio — é isto que sai para a lista.
+              Montada com o mesmo código do envio — é isto que sai para a lista.
             </CardDescription>
           </div>
 
@@ -91,12 +95,11 @@ export function PreviaDoRelatorio({ hooks, nomeDoRelatorio }: Props) {
           <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
             <div className="space-y-1 text-sm">
-              <p className="font-medium">Não deu para montar a prévia.</p>
+              <p className="font-medium">Não deu para montar {nomeDoRelatorio}.</p>
               <p className="text-muted-foreground">{mensagemDoErro(error)}</p>
               <p className="text-muted-foreground">
-                A função que monta {nomeDoRelatorio} pode ainda não estar publicada no Supabase.
-                Enquanto ela não estiver, a lista de destinatários acima continua funcionando —
-                só a prévia e o teste dependem dela.
+                A prévia é montada aqui no navegador, com os números do Painel de Indicadores.
+                Uma falha nesta altura é de leitura desses números — não do envio.
               </p>
             </div>
           </div>
