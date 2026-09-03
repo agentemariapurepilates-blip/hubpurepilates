@@ -6,7 +6,7 @@ import {
 } from '../../../../../supabase/functions/cluster-relatorio-mensal/email';
 import {
   COLUNA_EXPERIMENTAIS,
-  janelaDeTresMeses,
+  janelaDeTresMesesFechados,
   mediaPorUnidade,
 } from '../../../../../supabase/functions/experimentais-relatorio-mensal/email';
 
@@ -98,12 +98,31 @@ describe('o periodo que cada relatorio cobre', () => {
     expect(mesEmSaoPaulo(new Date('2026-07-15T12:00:00Z'))).toBe('2026-07');
   });
 
-  it('experimentais: a janela e o mes vigente e os dois anteriores', () => {
-    expect(janelaDeTresMeses('2026-08')).toEqual(['2026-06', '2026-07', '2026-08']);
+  it('experimentais: os 3 meses FECHADOS, sem o mes corrente', () => {
+    // O mes corrente entrava na media pela metade. Em 03/09/2026 setembro
+    // tinha 2 dias de dado contra dois meses inteiros, e a media afundava:
+    // 31 unidades em "Bom" contra as 59 que a rede tinha de fato. Nao era erro
+    // de conta -- era um mes incompleto competindo com meses completos.
+    expect(janelaDeTresMesesFechados('2026-09')).toEqual(['2026-06', '2026-07', '2026-08']);
   });
 
   it('experimentais: a janela atravessa a virada de ano', () => {
-    expect(janelaDeTresMeses('2026-01')).toEqual(['2025-11', '2025-12', '2026-01']);
+    expect(janelaDeTresMesesFechados('2026-01')).toEqual(['2025-10', '2025-11', '2025-12']);
+  });
+
+  it('experimentais: a janela nunca inclui o mes que recebeu', () => {
+    // Varredura: qualquer deslocamento de um mes aparece aqui, inclusive nas
+    // viradas de ano, sem depender de eu ter escolhido o caso certo.
+    for (let ano = 2025; ano <= 2027; ano++) {
+      for (let m = 1; m <= 12; m++) {
+        const corrente = `${ano}-${String(m).padStart(2, '0')}`;
+        const janela = janelaDeTresMesesFechados(corrente);
+
+        expect(janela, `janela de ${corrente}`).toHaveLength(3);
+        expect(janela, `${corrente} entrou na propria janela`).not.toContain(corrente);
+        expect(janela[2] < corrente, `${corrente}: janela termina em ${janela[2]}`).toBe(true);
+      }
+    }
   });
 
   it('nenhum index.ts guarda a propria copia dessas contas', () => {

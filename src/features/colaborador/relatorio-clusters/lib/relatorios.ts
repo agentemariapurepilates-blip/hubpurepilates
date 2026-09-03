@@ -31,7 +31,7 @@ export const RELATORIOS: Record<Relatorio, DefinicaoDeRelatorio> = {
     funcao: 'experimentais-relatorio-mensal',
     rotulo: 'Aulas experimentais',
     descricao:
-      'No penúltimo dia de cada mês, às 3h. Unidades divididas em Bom (30+), Regular (20 a 29) e Ruim (0 a 19) pela média de aulas experimentais dos 3 últimos meses.',
+      'No penúltimo dia de cada mês, às 3h. Unidades divididas em Bom (30+), Regular (20 a 29) e Ruim (0 a 19) pela média de aulas experimentais dos 3 últimos meses fechados — o mês corrente fica de fora, para não comparar um mês pela metade com meses inteiros.',
     nomeNoTexto: 'o relatório de aulas experimentais',
   },
 };

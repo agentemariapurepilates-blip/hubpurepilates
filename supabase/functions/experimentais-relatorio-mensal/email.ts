@@ -1,5 +1,5 @@
 // Relatorio de aulas experimentais: as unidades divididas em BOM, REGULAR e
-// RUIM pela media dos 3 ultimos meses.
+// RUIM pela media dos 3 ultimos meses FECHADOS.
 //
 // Funcoes puras, sem API do Deno: testavel pelo vitest do projeto e permite
 // gerar previa sem publicar nada.
@@ -40,10 +40,29 @@ export function hojeEmSaoPaulo(agora: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(agora);
 }
 
-/** Os 3 meses do relatorio: o vigente e os dois anteriores. */
-export function janelaDeTresMeses(mesVigente: string): string[] {
+/**
+ * Os 3 meses do relatorio: os tres FECHADOS antes do mes recebido.
+ *
+ * O mes corrente fica de fora de proposito. Ele entrava na media pela metade,
+ * porque `cli_experimentais` e um contador que reinicia todo mes: em
+ * 03/09/2026 setembro valia 2 dias e competia com julho e agosto inteiros. A
+ * media de quase toda unidade afundava, e o relatorio mostrava 31 unidades em
+ * "Bom" onde a rede tinha 59.
+ *
+ * O efeito era menor no dia do envio (o penultimo do mes, com ~29 dias
+ * acumulados) e enorme na previa, que se abre em qualquer dia -- mas era o
+ * mesmo defeito nos dois: um mes incompleto comparado com meses completos.
+ * Com tres meses fechados, a media compara igual com igual e o numero nao
+ * depende mais do dia em que a tela foi aberta.
+ */
+export function janelaDeTresMesesFechados(mesCorrente: string): string[] {
   const meses: string[] = [];
-  let [ano, m] = mesVigente.split('-').map(Number);
+  let [ano, m] = mesCorrente.split('-').map(Number);
+
+  // Comeca no mes ANTERIOR ao corrente: e o ultimo que ja fechou.
+  m -= 1;
+  if (m < 1) { m = 12; ano -= 1; }
+
   for (let i = 0; i < 3; i++) {
     meses.unshift(`${ano}-${String(m).padStart(2, '0')}`);
     m -= 1;
@@ -227,7 +246,7 @@ export function montarEmailExperimentais(
 
       <tr><td style="padding:32px 32px 0;">
         <p style="margin:0 0 12px;font-family:'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:#c5203c;">Aulas experimentais</p>
-        <h1 style="margin:0 0 8px;font-family:'Montserrat','Segoe UI','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:26px;line-height:1.25;font-weight:700;letter-spacing:-0.4px;color:#1a1a1a;">Média dos 3 últimos meses</h1>
+        <h1 style="margin:0 0 8px;font-family:'Montserrat','Segoe UI','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:26px;line-height:1.25;font-weight:700;letter-spacing:-0.4px;color:#1a1a1a;">Média dos 3 últimos meses fechados</h1>
         <p style="margin:0;font-family:'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#6b7076;">${esc(mesPorExtenso(meses[0]))} a ${esc(mesPorExtenso(meses[meses.length - 1]))} &nbsp;·&nbsp; ${linhas.length} unidades</p>
       </td></tr>
 

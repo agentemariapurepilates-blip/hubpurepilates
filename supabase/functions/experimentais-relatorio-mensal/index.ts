@@ -1,5 +1,6 @@
 // Relatorio de AULAS EXPERIMENTAIS. Lista as unidades com a media dos 3
-// ultimos meses (o vigente e os dois anteriores), divididas em BOM (30 ou
+// ultimos meses FECHADOS -- o corrente fica de fora, ver o porque em
+// janelaDeTresMesesFechados --, divididas em BOM (30 ou
 // mais), REGULAR (20 a 29) e RUIM (ate 19) -- faixas FIXAS, que nao dependem
 // de como as outras unidades foram no periodo (ver BLOCOS em email.ts). Se a
 // rede inteira melhorar, todas podem chegar a "Bom".
@@ -29,7 +30,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import {
   COLUNA_EXPERIMENTAIS,
   hojeEmSaoPaulo,
-  janelaDeTresMeses,
+  janelaDeTresMesesFechados,
   mediaPorUnidade,
   montarEmailExperimentais,
 } from './email.ts';
@@ -213,7 +214,7 @@ Deno.serve(async (req) => {
       return json({ error: 'webhook_token_ausente', data: hoje }, 500);
     }
 
-    const meses = janelaDeTresMeses(hoje.slice(0, 7));
+    const meses = janelaDeTresMesesFechados(hoje.slice(0, 7));
     const porMes = await Promise.all(meses.map(valoresDoMes));
     const nomes = await nomesDasUnidades();
 

@@ -10,7 +10,7 @@ import {
 import {
   COLUNA_EXPERIMENTAIS,
   hojeEmSaoPaulo,
-  janelaDeTresMeses,
+  janelaDeTresMesesFechados,
   mediaPorUnidade,
   montarEmailExperimentais,
 } from '../../../../../supabase/functions/experimentais-relatorio-mensal/email';
@@ -150,7 +150,7 @@ export function usePreviaDeExperimentais() {
     queryKey: ['previa-relatorio', 'experimentais'],
     ...CACHE,
     queryFn: async () => {
-      const meses = janelaDeTresMeses(hojeEmSaoPaulo().slice(0, 7));
+      const meses = janelaDeTresMesesFechados(hojeEmSaoPaulo().slice(0, 7));
 
       const [porMes, nomes] = await Promise.all([
         Promise.all(meses.map((mes) => valoresDoMes(mes, COLUNA_EXPERIMENTAIS))),

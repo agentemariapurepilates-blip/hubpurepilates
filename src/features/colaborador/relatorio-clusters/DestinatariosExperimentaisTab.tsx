@@ -12,7 +12,7 @@ import {
  * de cada mês, às 3h.
  *
  * O relatório lista as unidades com nome, ID e a MÉDIA de aulas experimentais
- * dos 3 últimos meses (o vigente e os dois anteriores), divididas em Bom
+ * dos 3 últimos meses FECHADOS (o corrente fica de fora), divididas em Bom
  * (30 ou mais), Regular (20 a 29) e Ruim (0 a 19). As faixas são fixas, e não
  * relativas à rede: uma unidade só muda de bloco se o número dela mudar.
  */
@@ -28,7 +28,7 @@ export function DestinatariosExperimentaisTab() {
       textos={{
         tituloCadastro: 'Novo destinatário do relatório de aulas experimentais',
         descricaoCadastro:
-          'Quem estiver aqui e ativo recebe, no penúltimo dia de cada mês às 3h, a lista de unidades com a média de aulas experimentais dos 3 últimos meses, divididas em Bom (30+), Regular (20 a 29) e Ruim (0 a 19).',
+          'Quem estiver aqui e ativo recebe, no penúltimo dia de cada mês às 3h, a lista de unidades com a média de aulas experimentais dos 3 últimos meses fechados, divididas em Bom (30+), Regular (20 a 29) e Ruim (0 a 19).',
         exemploEmail: 'comercial@purepilates.com.br',
         nomeDoEnvio: 'o relatório de aulas experimentais',
         idPrefixo: 'experimentais',
