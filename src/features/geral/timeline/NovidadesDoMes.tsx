@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkles, MessageCircle, Eye, Send, Clock } from 'lucide-react';
 import NewsCard, { NewsPost } from '@/components/novidades/NewsCard';
@@ -15,6 +15,8 @@ import {
   PaginationLink, PaginationNext, PaginationPrevious,
 } from '@/components/ui/pagination';
 import TimelineLandingPage, { hasLandingPage } from '@/components/timeline/TimelineLandingPage';
+import QuemViu, { type Visualizador } from './QuemViu';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const POSTS_PER_PAGE = 4;
@@ -29,21 +31,39 @@ const NovidadesDoMes = () => {
   const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
   const [visibilityLoading, setVisibilityLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
-  const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
+  // Quem viu cada mês: alimenta o contador e a lista que abre no olhinho.
+  const [viewsByMonth, setViewsByMonth] = useState<Record<string, Visualizador[]>>({});
 
-  // Fetch view counts for all months
-  const fetchViewCounts = useCallback(async () => {
+  // Quem viu cada mês, com nome e foto
+  const fetchViews = useCallback(async () => {
     try {
       const { data } = await supabase
         .from('timeline_views')
-        .select('month_key');
-      if (data) {
-        const counts: Record<string, number> = {};
-        data.forEach(row => {
-          counts[row.month_key] = (counts[row.month_key] || 0) + 1;
+        .select('month_key, user_id, created_at');
+      if (!data) return;
+
+      const ids = [...new Set(data.map(v => v.user_id))];
+      const { data: perfis } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', ids);
+      const perfilDe = new Map((perfis || []).map(p => [p.user_id, p]));
+
+      const porMes: Record<string, Visualizador[]> = {};
+      // Quem viu por último aparece no topo da lista.
+      [...data]
+        .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+        .forEach(v => {
+          const perfil = perfilDe.get(v.user_id);
+          porMes[v.month_key] = porMes[v.month_key] || [];
+          porMes[v.month_key].push({
+            user_id: v.user_id,
+            full_name: perfil?.full_name ?? null,
+            avatar_url: perfil?.avatar_url ?? null,
+            created_at: v.created_at,
+          });
         });
-        setViewCounts(counts);
-      }
+      setViewsByMonth(porMes);
     } catch {
       // Table may not exist yet, ignore
     }
@@ -53,21 +73,20 @@ const NovidadesDoMes = () => {
   const registerView = useCallback(async (monthKey: string) => {
     if (!user) return;
     try {
-      await supabase
+      const { error } = await supabase
         .from('timeline_views')
         .upsert(
           { month_key: monthKey, user_id: user.id },
           { onConflict: 'month_key,user_id' }
         );
-      // Update local count
-      setViewCounts(prev => {
-        const current = prev[monthKey] || 0;
-        return { ...prev, [monthKey]: current + 1 };
-      });
+      if (error) throw error;
+      // A tabela guarda uma visualização por pessoa: abrir de novo não soma outra.
+      // Recarregar é o que mantém o número e a lista certos.
+      await fetchViews();
     } catch {
       // Ignore errors (table may not exist yet)
     }
-  }, [user]);
+  }, [user, fetchViews]);
 
   // Fetch visibility status for all months
   const fetchVisibility = useCallback(async () => {
@@ -185,8 +204,8 @@ const NovidadesDoMes = () => {
   // ProtectedRoute já cuida dos redirects de auth
 
   useEffect(() => {
-    if (user && isApproved) { fetchPosts(); fetchVisibility(); fetchViewCounts(); }
-  }, [user, isApproved, fetchPosts, fetchVisibility, fetchViewCounts]);
+    if (user && isApproved) { fetchPosts(); fetchVisibility(); fetchViews(); }
+  }, [user, isApproved, fetchPosts, fetchVisibility, fetchViews]);
 
   useEffect(() => {
     if (!user) return;
@@ -257,23 +276,32 @@ const NovidadesDoMes = () => {
         {availableMonths.length > 0 && (
           <ScrollArea className="w-full mb-6">
             <div className="flex gap-2 pb-2">
-              {availableMonths.map(month => (
-                <Button
-                  key={month.value}
-                  variant={selectedMonth === month.value ? 'default' : 'outline'}
-                  size="sm"
-                  className="whitespace-nowrap capitalize gap-2"
-                  onClick={() => setSelectedMonth(month.value)}
-                >
-                  {month.label}
-                  {hasLandingPage(month.value) && (viewCounts[month.value] || 0) > 0 && (
-                    <span className="inline-flex items-center gap-1 text-xs opacity-70">
-                      <Eye className="h-3 w-3" />
-                      {viewCounts[month.value]}
-                    </span>
-                  )}
-                </Button>
-              ))}
+              {availableMonths.map(month => {
+                const vistas = viewsByMonth[month.value] || [];
+                const mostrarOlho = hasLandingPage(month.value) && vistas.length > 0;
+                return (
+                  // Div, e não Button: o olhinho dentro do chip é clicável por conta própria.
+                  <div
+                    key={month.value}
+                    className={cn(
+                      buttonVariants({ variant: selectedMonth === month.value ? 'default' : 'outline', size: 'sm' }),
+                      'gap-1 whitespace-nowrap p-0 pl-3',
+                      mostrarOlho ? 'pr-1' : 'pr-3',
+                    )}
+                  >
+                    <button
+                      type="button"
+                      className="flex h-full items-center capitalize"
+                      onClick={() => setSelectedMonth(month.value)}
+                    >
+                      {month.label}
+                    </button>
+                    {mostrarOlho && (
+                      <QuemViu mes={month.label} pessoas={vistas} podeVerLista={isColaborador || isAdmin} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
