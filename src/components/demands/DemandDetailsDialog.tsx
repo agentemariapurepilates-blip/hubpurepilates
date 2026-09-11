@@ -38,6 +38,7 @@ import {
   Building2,
   Trash2,
   Edit,
+  Link2,
   Tag as TagIcon,
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -304,12 +305,33 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
   const grupoDaDemanda = gruposDaArea.find((g) => g.id === demand.group_id) ?? null;
   const colunasDoSetor = flagsFor(etiquetas.settings, demand.to_department);
 
+  /** Link direto desta demanda, para mandar a um colega. Abre a tela já com ela aberta. */
+  const copiarLink = async () => {
+    const link = `${window.location.origin}/pedidos-demanda?demanda=${demand.id}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({ title: "Link copiado", description: "Mande para quem precisa ver esta demanda." });
+    } catch {
+      // Navegador sem permissão para a área de transferência: mostra o link para copiar na mão.
+      window.prompt('Copie o link da demanda:', link);
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="p-4 pb-0 shrink-0">
             <DialogTitle className="text-left line-clamp-2 pr-8">{demand.title}</DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-fit gap-1.5 px-2 text-xs text-muted-foreground"
+              onClick={copiarLink}
+            >
+              <Link2 className="h-3.5 w-3.5" />
+              Copiar link
+            </Button>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-4">

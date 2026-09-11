@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ type UserType = 'colaborador' | 'franqueado';
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signIn, signUp, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,9 +124,11 @@ const Auth = () => {
   // Redirect if already logged in (but not in recovery mode)
   useEffect(() => {
     if (!authLoading && user && !isRecoveryMode) {
-      navigate('/');
+      // Volta para a página que a pessoa tentou abrir, se houver (ex.: link de uma demanda).
+      const destino = (location.state as { from?: string } | null)?.from;
+      navigate(destino ?? '/', { replace: true });
     }
-  }, [user, authLoading, navigate, isRecoveryMode]);
+  }, [user, authLoading, navigate, isRecoveryMode, location.state]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();

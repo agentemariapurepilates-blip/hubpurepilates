@@ -143,7 +143,8 @@ const Notificacoes = () => {
 
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
-    navigate('/pedidos-demanda');
+    // Abre a demanda da notificação, não a lista inteira.
+    navigate(`/pedidos-demanda?demanda=${notification.demand_id}`);
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;

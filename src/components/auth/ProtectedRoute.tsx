@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
@@ -9,13 +9,15 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requireAdmin, requireColaborador }: ProtectedRouteProps) {
   const { user, loading, profileLoading, isAdmin, isColaborador } = useAuth();
+  const location = useLocation();
 
   if (loading || profileLoading) {
     return null;
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    // Guarda o destino (ex.: o link de uma demanda) para voltar para lá depois do login.
+    return <Navigate to="/auth" state={{ from: location.pathname + location.search }} replace />;
   }
 
   if (requireAdmin && !isAdmin) {

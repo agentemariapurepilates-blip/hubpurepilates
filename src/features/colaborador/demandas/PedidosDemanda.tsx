@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -116,6 +116,7 @@ const ehDaPessoa = (d: Demand, userId: string) =>
 const PedidosDemanda = () => {
   const { user, isColaborador, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [demands, setDemands] = useState<Demand[]>([]);
   const [groups, setGroups] = useState<DemandGroup[]>([]);
@@ -332,6 +333,25 @@ const PedidosDemanda = () => {
     }).sort(compararPorPrazo);
   }, [demands, selectedDepartment, searchTerm, showOnlyMine, user]);
 
+  // Link de demanda (/pedidos-demanda?demanda=<id>): abre essa demanda assim que a lista carrega.
+  const demandaDaUrl = searchParams.get('demanda');
+  useEffect(() => {
+    if (!demandaDaUrl || loading) return;
+    if (detailsOpen && selectedDemand?.id === demandaDaUrl) return;
+    const alvo = demands.find((d) => d.id === demandaDaUrl);
+    if (alvo) {
+      setSelectedDemand(alvo);
+      setDetailsOpen(true);
+    } else {
+      toast({
+        title: "Demanda não encontrada",
+        description: "O link aponta para uma demanda que não existe mais.",
+        variant: "destructive",
+      });
+      setSearchParams({}, { replace: true });
+    }
+  }, [demandaDaUrl, demands, loading]);
+
   // Keep selectedDemand in sync with latest data
   useEffect(() => {
     if (selectedDemand) {
@@ -342,9 +362,16 @@ const PedidosDemanda = () => {
     }
   }, [demands]);
 
+  /** Abrir uma demanda põe o id na URL: é esse endereço que a pessoa copia e manda para o colega. */
   const handleDemandClick = (demand: Demand) => {
     setSelectedDemand(demand);
     setDetailsOpen(true);
+    setSearchParams({ demanda: demand.id });
+  };
+
+  const fecharDetalhes = (open: boolean) => {
+    setDetailsOpen(open);
+    if (!open && searchParams.has('demanda')) setSearchParams({}, { replace: true });
   };
 
   const abrirNovaDemanda = (department?: string, groupId?: string | null) => {
@@ -674,7 +701,7 @@ const PedidosDemanda = () => {
         <DemandDetailsDialog
           demand={selectedDemand}
           open={detailsOpen}
-          onOpenChange={setDetailsOpen}
+          onOpenChange={fecharDetalhes}
           onUpdate={fetchDemands}
           groups={groups}
           onGroupChange={handleGroupChange}
