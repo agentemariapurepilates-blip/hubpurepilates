@@ -3,11 +3,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Users, UserPlus, Check, X } from 'lucide-react';
+import { Users, UserPlus, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { Colaborador } from '@/hooks/useColaboradores';
 import type { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
+import { ColaboradorPicker } from '../ColaboradorPicker';
 
 interface AssigneeSectionProps {
   demand: Demand;
@@ -84,27 +85,13 @@ export function AssigneeSection({ demand, colaboradores, canManage, onUpdate }: 
                 Adicionar responsável
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 p-2" align="start">
-              <div className="max-h-48 overflow-y-auto space-y-0.5">
-                {colaboradores.map((colab) => {
-                  const isAssigned = demand.assignees?.some(a => a.user_id === colab.user_id);
-                  return (
-                    <button
-                      key={colab.user_id}
-                      onClick={() => handleToggleAssignee(colab)}
-                      disabled={loading}
-                      className={`flex items-center gap-2 w-full p-2 rounded text-sm hover:bg-muted transition-colors ${isAssigned ? 'bg-primary/10' : ''}`}
-                    >
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={colab.avatar_url || undefined} />
-                        <AvatarFallback className="text-[8px]">{colab.full_name?.[0] || 'U'}</AvatarFallback>
-                      </Avatar>
-                      <span className="flex-1 text-left truncate">{colab.full_name || 'Usuário'}</span>
-                      {isAssigned && <Check className="h-4 w-4 text-primary" />}
-                    </button>
-                  );
-                })}
-              </div>
+            <PopoverContent className="w-72 p-0" align="start">
+              <ColaboradorPicker
+                colaboradores={colaboradores}
+                isSelected={(userId) => demand.assignees?.some(a => a.user_id === userId) ?? false}
+                onToggle={handleToggleAssignee}
+                disabled={loading}
+              />
             </PopoverContent>
           </Popover>
         )}

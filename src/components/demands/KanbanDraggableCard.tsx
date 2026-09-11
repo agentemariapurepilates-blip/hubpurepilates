@@ -3,52 +3,20 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, CalendarPlus, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
-import { format, addDays } from 'date-fns';
+import { Calendar, CalendarPlus } from 'lucide-react';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
-
-const priorityConfig = {
-  low: { label: 'Baixa', color: 'bg-gray-100 text-gray-700' },
-  medium: { label: 'Média', color: 'bg-orange-100 text-orange-700' },
-  high: { label: 'Alta', color: 'bg-red-100 text-red-700' },
-};
-
-const parseDateOnly = (dateStr: string) => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
-};
-
-const getBrazilDateKey = (date = new Date()) => {
-  return new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
-};
-
-const getDeadlineStatus = (deadline: string | null, status: string) => {
-  if (!deadline || status === 'completed' || status === 'cancelled' || status === 'in_approval' || status === 'missing_info') return null;
-
-  const todayKey = getBrazilDateKey();
-  const attentionLimitKey = getBrazilDateKey(addDays(new Date(), 2));
-
-  if (deadline < todayKey) {
-    return { label: 'Atrasada', color: 'bg-red-500 text-white', icon: AlertTriangle };
-  }
-  if (deadline <= attentionLimitKey) {
-    return { label: 'Atenção', color: 'bg-yellow-500 text-white', icon: Clock };
-  }
-  return { label: 'No prazo', color: 'bg-green-500 text-white', icon: CheckCircle2 };
-};
+import { getDeadlineStatus, parseDateOnly, priorityConfig } from './demandHelpers';
 
 interface KanbanDraggableCardProps {
   demand: Demand;
+  /** Vem do grupo da coluna: grupos como Concluído não acusam atraso. */
+  pausesDeadline: boolean;
   onDemandClick: (demand: Demand) => void;
 }
 
-const KanbanDraggableCard = ({ demand, onDemandClick }: KanbanDraggableCardProps) => {
+const KanbanDraggableCard = ({ demand, pausesDeadline, onDemandClick }: KanbanDraggableCardProps) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: demand.id,
     data: { demand },
@@ -58,14 +26,14 @@ const KanbanDraggableCard = ({ demand, onDemandClick }: KanbanDraggableCardProps
     transform: CSS.Translate.toString(transform),
   };
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = () => {
     // Only open details if not dragging
     if (!isDragging) {
       onDemandClick(demand);
     }
   };
 
-  const deadlineStatus = getDeadlineStatus(demand.deadline, demand.status);
+  const deadlineStatus = getDeadlineStatus(demand.deadline, pausesDeadline);
   const DeadlineStatusIcon = deadlineStatus?.icon;
 
   return (
@@ -107,8 +75,8 @@ const KanbanDraggableCard = ({ demand, onDemandClick }: KanbanDraggableCardProps
             {demand.creator_profile?.full_name || 'Usuário'}
           </span>
         </div>
-        <Badge 
-          variant="secondary" 
+        <Badge
+          variant="secondary"
           className={`text-xs shrink-0 ${priorityConfig[demand.priority].color}`}
         >
           {priorityConfig[demand.priority].label}

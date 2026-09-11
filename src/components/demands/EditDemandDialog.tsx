@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ColaboradorPicker } from './ColaboradorPicker';
 import { Badge } from '@/components/ui/badge';
 import { CalendarIcon, X, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -33,12 +33,17 @@ interface EditDemandDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** Todos os grupos: se a área mudar, a demanda vai para um grupo da área nova. */
+  groups: DemandGroup[];
 }
 
 import { Colaborador } from '@/hooks/useColaboradores';
 import { demandSectors as sectors } from '@/data/sectors';
+import { groupsOf, type DemandGroup } from './demandGroups';
+import { flagsFor, useDemandLabels } from './demandLabels';
+import { LabelSelect } from './LabelSelect';
 
-const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandDialogProps) => {
+const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess, groups }: EditDemandDialogProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
@@ -51,6 +56,10 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandD
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [deadline, setDeadline] = useState<Date | undefined>();
   const [selectedAssignees, setSelectedAssignees] = useState<Colaborador[]>([]);
+  const etiquetas = useDemandLabels();
+  const [statusLabelId, setStatusLabelId] = useState<string | null>(null);
+  const [frenteLabelId, setFrenteLabelId] = useState<string | null>(null);
+  const colunasDoDestino = flagsFor(etiquetas.settings, toDepartment || null);
 
   // Load demand data
   useEffect(() => {
@@ -61,6 +70,8 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandD
       setToDepartment(demand.to_department);
       setPriority(demand.priority);
       setDeadline(demand.deadline ? new Date(demand.deadline) : undefined);
+      setStatusLabelId(demand.status_label_id);
+      setFrenteLabelId(demand.frente_label_id);
       
       // Load assignees
       const assignees = demand.assignees?.map(a => ({
@@ -114,6 +125,11 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandD
 
     setLoading(true);
     try {
+      // Mudou de área: o grupo antigo é de outra área e sumiria da tela, então a
+      // demanda vai para o primeiro grupo da área nova (ou "Sem grupo" se não houver).
+      const mudouDeArea = toDepartment !== demand.to_department;
+      const grupoNovo = mudouDeArea ? groupsOf(groups, toDepartment)[0] ?? null : null;
+
       // Update demand
       const { error: demandError } = await supabase
         .from('demands')
@@ -124,6 +140,22 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandD
           to_department: toDepartment,
           priority,
           deadline: deadline ? format(deadline, 'yyyy-MM-dd') : null,
+          ...(mudouDeArea
+            ? {
+                group_id: grupoNovo?.id ?? null,
+                ...(grupoNovo?.legacy_status ? { status: grupoNovo.legacy_status } : {}),
+              }
+            : {}),
+          // Coluna desligada no setor: não mexe na etiqueta, para não apagar o que já existe.
+          // Status só vale se for do setor atual (o setor pode ter mudado agora).
+          ...(colunasDoDestino.show_status_labels
+            ? {
+                status_label_id: etiquetas.labels.some((l) => l.id === statusLabelId && l.department === toDepartment)
+                  ? statusLabelId
+                  : null,
+              }
+            : {}),
+          ...(colunasDoDestino.show_frente ? { frente_label_id: frenteLabelId } : {}),
         })
         .eq('id', demand.id);
 
@@ -269,6 +301,35 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandD
             </div>
           </div>
 
+          {(colunasDoDestino.show_status_labels || colunasDoDestino.show_frente) && (
+            <div className="grid grid-cols-2 gap-3">
+              {colunasDoDestino.show_status_labels && (
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <LabelSelect
+                    variant="field"
+                    kind="status"
+                    department={toDepartment}
+                    selectedId={statusLabelId}
+                    onSelect={setStatusLabelId}
+                  />
+                </div>
+              )}
+              {colunasDoDestino.show_frente && (
+                <div className="space-y-2">
+                  <Label>Frente de negócio</Label>
+                  <LabelSelect
+                    variant="field"
+                    kind="frente"
+                    department={toDepartment}
+                    selectedId={frenteLabelId}
+                    onSelect={setFrenteLabelId}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Assignees */}
           <div className="space-y-2">
             <Label>Responsáveis</Label>
@@ -286,25 +347,13 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess }: EditDemandD
                 </Badge>
               ))}
             </div>
-            <div className="border rounded-lg max-h-32 overflow-y-auto">
-              {colaboradores.map((colaborador) => (
-                <div
-                  key={colaborador.user_id}
-                  className={`flex items-center gap-2 p-2 cursor-pointer hover:bg-muted transition-colors ${
-                    selectedAssignees.find(a => a.user_id === colaborador.user_id) ? 'bg-primary/10' : ''
-                  }`}
-                  onClick={() => toggleAssignee(colaborador)}
-                >
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={colaborador.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {colaborador.full_name?.[0] || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm">{colaborador.full_name || 'Usuário'}</span>
-                </div>
-              ))}
-            </div>
+            <ColaboradorPicker
+              colaboradores={colaboradores}
+              isSelected={(userId) => selectedAssignees.some((a) => a.user_id === userId)}
+              onToggle={toggleAssignee}
+              className="border rounded-lg"
+              listClassName="max-h-40"
+            />
           </div>
 
           {/* Actions */}

@@ -38,6 +38,7 @@ import {
   Building2,
   Trash2,
   Edit,
+  Tag as TagIcon,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
@@ -48,8 +49,20 @@ import { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
 import { useColaboradores } from '@/hooks/useColaboradores';
 import { CommentItem, Comment } from './detail/CommentItem';
 import { AssigneeSection } from './detail/AssigneeSection';
-import { statusConfig } from './detail/statusConfig';
 import { linkifyHtml } from './detail/linkifyHtml';
+import { groupsOf, type DemandGroup } from './demandGroups';
+import { flagsFor, useDemandLabels } from './demandLabels';
+import { LabelSelect } from './LabelSelect';
+
+/** Valor do Select para "Sem grupo" — o Radix não aceita string vazia como valor. */
+const SEM_GRUPO = '__sem_grupo__';
+
+const SeloGrupo = ({ grupo }: { grupo: DemandGroup | null }) => (
+  <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium">
+    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: grupo?.color ?? '#C4C4C4' }} />
+    {grupo?.name ?? 'Sem grupo'}
+  </span>
+);
 
 interface DemandDetailsDialogProps {
   demand: Demand | null;
@@ -57,11 +70,15 @@ interface DemandDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   onUpdate: () => void;
   onEditClick: () => void;
+  /** Todos os grupos; o seletor mostra os da área da demanda. */
+  groups: DemandGroup[];
+  onGroupChange: (demandId: string, groupId: string | null) => void;
 }
 
-const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick }: DemandDetailsDialogProps) => {
+const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick, groups, onGroupChange }: DemandDetailsDialogProps) => {
   const { user, isAdmin, isColaborador } = useAuth();
   const { colaboradores } = useColaboradores();
+  const etiquetas = useDemandLabels();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
@@ -212,23 +229,16 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
 
       setNewComment('');
       setCommentAttachments([]);
+      // Recarrega na hora: a lista dependia só do evento realtime, que não chega,
+      // e o comentário novo só aparecia ao fechar e reabrir a demanda.
+      await fetchComments();
+      // Atualiza a contagem de comentários mostrada na lista.
+      onUpdate();
     } catch (error) {
       console.error('Error sending comment:', error);
       toast({ title: "Erro", description: "Erro ao enviar comentário", variant: "destructive" });
     } finally {
       setSendingComment(false);
-    }
-  };
-
-  const handleStatusChange = async (newStatus: Demand['status']) => {
-    if (!demand) return;
-    try {
-      const { error } = await supabase.from('demands').update({ status: newStatus }).eq('id', demand.id);
-      if (error) throw error;
-      toast({ title: "Status atualizado", description: "O status foi atualizado com sucesso." });
-      onUpdate();
-    } catch (error) {
-      console.error('Error updating status:', error);
     }
   };
 
@@ -290,6 +300,9 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
 
   const canEdit = demand.created_by === user?.id || isAdmin;
   const canChangeStatus = isColaborador || isAdmin;
+  const gruposDaArea = groupsOf(groups, demand.to_department);
+  const grupoDaDemanda = gruposDaArea.find((g) => g.id === demand.group_id) ?? null;
+  const colunasDoSetor = flagsFor(etiquetas.settings, demand.to_department);
 
   return (
     <>
@@ -304,27 +317,26 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
               {/* Status */}
               <div className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Status:</span>
+                <span className="text-sm text-muted-foreground">Grupo:</span>
                 {canChangeStatus ? (
-                  <Select value={demand.status} onValueChange={(v) => handleStatusChange(v as Demand['status'])}>
+                  <Select
+                    value={grupoDaDemanda?.id ?? SEM_GRUPO}
+                    onValueChange={(v) => onGroupChange(demand.id, v === SEM_GRUPO ? null : v)}
+                  >
                     <SelectTrigger className="h-8 w-auto">
-                      <Badge className={statusConfig[demand.status].color}>
-                        {statusConfig[demand.status].label}
-                      </Badge>
+                      <SeloGrupo grupo={grupoDaDemanda} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="in_progress">Em Andamento</SelectItem>
-                      <SelectItem value="missing_info">Faltam Informações</SelectItem>
-                      <SelectItem value="in_approval">Em Aprovação</SelectItem>
-                      <SelectItem value="completed">Concluído</SelectItem>
-                      <SelectItem value="cancelled">Cancelado</SelectItem>
+                      {gruposDaArea.map((g) => (
+                        <SelectItem key={g.id} value={g.id}>
+                          {g.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={SEM_GRUPO}>Sem grupo</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Badge className={statusConfig[demand.status].color}>
-                    {statusConfig[demand.status].label}
-                  </Badge>
+                  <SeloGrupo grupo={grupoDaDemanda} />
                 )}
               </div>
 
@@ -377,6 +389,39 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                   {demand.from_department} → {demand.to_department}
                 </span>
               </div>
+
+              {colunasDoSetor.show_status_labels && (
+                <div className="flex items-center gap-3">
+                  <TagIcon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <div className="w-44">
+                    <LabelSelect
+                      variant="field"
+                      kind="status"
+                      department={demand.to_department}
+                      className="h-8"
+                      selectedId={demand.status_label_id}
+                      onSelect={(id) => etiquetas.definir(demand.id, 'status', id)}
+                    />
+                  </div>
+                </div>
+              )}
+              {colunasDoSetor.show_frente && (
+                <div className="flex items-center gap-3">
+                  <TagIcon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Frente:</span>
+                  <div className="w-44">
+                    <LabelSelect
+                      variant="field"
+                      kind="frente"
+                      department={demand.to_department}
+                      className="h-8"
+                      selectedId={demand.frente_label_id}
+                      onSelect={(id) => etiquetas.definir(demand.id, 'frente', id)}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Assignees */}
               <AssigneeSection

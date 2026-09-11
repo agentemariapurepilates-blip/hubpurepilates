@@ -9,29 +9,21 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
 import KanbanDroppableColumn from './KanbanDroppableColumn';
+import type { DemandGroup } from './demandGroups';
+import { parseDateOnly, priorityConfig } from './demandHelpers';
+
+/** Id da coluna das demandas sem grupo (ou com grupo de outra área). */
+const SEM_GRUPO = '__sem_grupo__';
 
 interface DemandKanbanViewProps {
   demands: Demand[];
+  /** Grupos da área selecionada, já na ordem de exibição. */
+  groups: DemandGroup[];
   onDemandClick: (demand: Demand) => void;
-  onStatusChange: (demandId: string, status: Demand['status']) => void;
+  onGroupChange: (demandId: string, groupId: string | null) => void;
 }
 
-const columns = [
-  { id: 'pending', label: 'Pendente', color: 'bg-yellow-500' },
-  { id: 'in_progress', label: 'Em Andamento', color: 'bg-blue-500' },
-  { id: 'missing_info', label: 'Faltam Informações', color: 'bg-amber-500' },
-  { id: 'in_approval', label: 'Em Aprovação', color: 'bg-purple-500' },
-  { id: 'completed', label: 'Concluído', color: 'bg-green-500' },
-  { id: 'cancelled', label: 'Cancelado', color: 'bg-red-500' },
-] as const;
-
-const priorityConfig = {
-  low: { label: 'Baixa', color: 'bg-gray-100 text-gray-700' },
-  medium: { label: 'Média', color: 'bg-orange-100 text-orange-700' },
-  high: { label: 'Alta', color: 'bg-red-100 text-red-700' },
-};
-
-const DemandKanbanView = ({ demands, onDemandClick, onStatusChange }: DemandKanbanViewProps) => {
+const DemandKanbanView = ({ demands, groups, onDemandClick, onGroupChange }: DemandKanbanViewProps) => {
   const [activeDemand, setActiveDemand] = useState<Demand | null>(null);
 
   const sensors = useSensors(
@@ -43,9 +35,9 @@ const DemandKanbanView = ({ demands, onDemandClick, onStatusChange }: DemandKanb
     })
   );
 
-  const getDemandsForStatus = (status: Demand['status']) => {
-    return demands.filter(d => d.status === status);
-  };
+  const idsDosGrupos = new Set(groups.map((g) => g.id));
+  const grupoAtual = (d: Demand) => (d.group_id && idsDosGrupos.has(d.group_id) ? d.group_id : null);
+  const semGrupo = demands.filter((d) => grupoAtual(d) === null);
 
   const handleDragStart = (event: DragEndEvent) => {
     const demand = event.active.data.current?.demand as Demand | undefined;
@@ -59,17 +51,25 @@ const DemandKanbanView = ({ demands, onDemandClick, onStatusChange }: DemandKanb
     if (!over) return;
 
     const demandId = active.id as string;
-    const newStatus = over.id as Demand['status'];
-    const demand = demands.find(d => d.id === demandId);
+    const destino = over.id === SEM_GRUPO ? null : String(over.id);
+    const demand = demands.find((d) => d.id === demandId);
 
-    if (demand && demand.status !== newStatus) {
-      onStatusChange(demandId, newStatus);
+    if (demand && grupoAtual(demand) !== destino) {
+      onGroupChange(demandId, destino);
     }
   };
 
   const handleDragCancel = () => {
     setActiveDemand(null);
   };
+
+  if (groups.length === 0 && semGrupo.length === 0) {
+    return (
+      <Card className="p-8 text-center text-sm text-muted-foreground">
+        Este setor ainda não tem grupos. Crie um grupo pela lista ou pelo menu “Criar tarefa”.
+      </Card>
+    );
+  }
 
   return (
     <DndContext
@@ -80,16 +80,27 @@ const DemandKanbanView = ({ demands, onDemandClick, onStatusChange }: DemandKanb
     >
       <ScrollArea className="w-full">
         <div className="flex gap-3 pb-4 min-w-max">
-          {columns.map((column) => (
+          {groups.map((grupo) => (
             <KanbanDroppableColumn
-              key={column.id}
-              id={column.id}
-              label={column.label}
-              color={column.color}
-              demands={getDemandsForStatus(column.id)}
+              key={grupo.id}
+              id={grupo.id}
+              label={grupo.name}
+              color={grupo.color}
+              demands={demands.filter((d) => d.group_id === grupo.id)}
+              pausesDeadline={grupo.pauses_deadline}
               onDemandClick={onDemandClick}
             />
           ))}
+          {semGrupo.length > 0 && (
+            <KanbanDroppableColumn
+              id={SEM_GRUPO}
+              label="Sem grupo"
+              color="#C4C4C4"
+              demands={semGrupo}
+              pausesDeadline={false}
+              onDemandClick={onDemandClick}
+            />
+          )}
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
@@ -113,8 +124,8 @@ const DemandKanbanView = ({ demands, onDemandClick, onStatusChange }: DemandKanb
                   {activeDemand.creator_profile?.full_name || 'Usuário'}
                 </span>
               </div>
-              <Badge 
-                variant="secondary" 
+              <Badge
+                variant="secondary"
                 className={`text-xs shrink-0 ${priorityConfig[activeDemand.priority].color}`}
               >
                 {priorityConfig[activeDemand.priority].label}
@@ -131,7 +142,7 @@ const DemandKanbanView = ({ demands, onDemandClick, onStatusChange }: DemandKanb
               {activeDemand.deadline && (
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {format(new Date(activeDemand.deadline), 'dd/MM', { locale: ptBR })}
+                  {format(parseDateOnly(activeDemand.deadline), 'dd/MM', { locale: ptBR })}
                 </span>
               )}
             </div>

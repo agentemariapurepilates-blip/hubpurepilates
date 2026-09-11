@@ -36,6 +36,7 @@ export const demandSectors = [
   'Comercial',
   'Parceiros externos',
   'RH',
+  'Gravações',
 ] as const;
 
 export type DemandSector = typeof demandSectors[number];

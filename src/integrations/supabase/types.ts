@@ -227,6 +227,27 @@ export type Database = {
           },
         ]
       }
+      demand_board_settings: {
+        Row: {
+          department: string
+          show_frente: boolean
+          show_status_labels: boolean
+          updated_at: string
+        }
+        Insert: {
+          department: string
+          show_frente?: boolean
+          show_status_labels?: boolean
+          updated_at?: string
+        }
+        Update: {
+          department?: string
+          show_frente?: boolean
+          show_status_labels?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       demand_comments: {
         Row: {
           content: string
@@ -258,6 +279,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      demand_groups: {
+        Row: {
+          color: string
+          created_at: string
+          created_by: string | null
+          department: string
+          id: string
+          legacy_status: Database["public"]["Enums"]["demand_status"] | null
+          name: string
+          pauses_deadline: boolean
+          position: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          department: string
+          id?: string
+          legacy_status?: Database["public"]["Enums"]["demand_status"] | null
+          name: string
+          pauses_deadline?: boolean
+          position?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          department?: string
+          id?: string
+          legacy_status?: Database["public"]["Enums"]["demand_status"] | null
+          name?: string
+          pauses_deadline?: boolean
+          position?: number
+        }
+        Relationships: []
+      }
+      demand_labels: {
+        Row: {
+          color: string
+          created_at: string
+          created_by: string | null
+          department: string | null
+          id: string
+          kind: string
+          name: string
+          position: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          id?: string
+          kind: string
+          name: string
+          position?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          position?: number
+        }
+        Relationships: []
       }
       demand_notifications: {
         Row: {
@@ -306,10 +396,13 @@ export type Database = {
           created_by: string
           deadline: string | null
           description: string | null
+          frente_label_id: string | null
           from_department: string
+          group_id: string | null
           id: string
           priority: Database["public"]["Enums"]["demand_priority"]
           status: Database["public"]["Enums"]["demand_status"]
+          status_label_id: string | null
           title: string
           to_department: string
           updated_at: string
@@ -319,10 +412,13 @@ export type Database = {
           created_by: string
           deadline?: string | null
           description?: string | null
+          frente_label_id?: string | null
           from_department: string
+          group_id?: string | null
           id?: string
           priority?: Database["public"]["Enums"]["demand_priority"]
           status?: Database["public"]["Enums"]["demand_status"]
+          status_label_id?: string | null
           title: string
           to_department: string
           updated_at?: string
@@ -332,15 +428,40 @@ export type Database = {
           created_by?: string
           deadline?: string | null
           description?: string | null
+          frente_label_id?: string | null
           from_department?: string
+          group_id?: string | null
           id?: string
           priority?: Database["public"]["Enums"]["demand_priority"]
           status?: Database["public"]["Enums"]["demand_status"]
+          status_label_id?: string | null
           title?: string
           to_department?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "demands_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "demand_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demands_frente_label_id_fkey"
+            columns: ["frente_label_id"]
+            isOneToOne: false
+            referencedRelation: "demand_labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demands_status_label_id_fkey"
+            columns: ["status_label_id"]
+            isOneToOne: false
+            referencedRelation: "demand_labels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marketing_events: {
         Row: {

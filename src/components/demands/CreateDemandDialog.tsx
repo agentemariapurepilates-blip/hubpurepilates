@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ColaboradorPicker } from './ColaboradorPicker';
 import { Badge } from '@/components/ui/badge';
 import { CalendarIcon, X, Image, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -32,12 +32,20 @@ interface CreateDemandDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** Todos os grupos; a demanda nova cai num grupo da área de destino. */
+  groups: DemandGroup[];
+  /** Aberto a partir de uma área ou de um grupo: já vem com o destino escolhido. */
+  defaultToDepartment?: string;
+  defaultGroupId?: string | null;
 }
 
 import { Colaborador } from '@/hooks/useColaboradores';
 import { demandSectors as sectors } from '@/data/sectors';
+import { groupsOf, type DemandGroup } from './demandGroups';
+import { flagsFor, useDemandLabels } from './demandLabels';
+import { LabelSelect } from './LabelSelect';
 
-const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialogProps) => {
+const CreateDemandDialog = ({ open, onOpenChange, onSuccess, groups, defaultToDepartment, defaultGroupId }: CreateDemandDialogProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
@@ -53,6 +61,19 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [deadline, setDeadline] = useState<Date | undefined>();
   const [selectedAssignees, setSelectedAssignees] = useState<Colaborador[]>([]);
+
+  const etiquetas = useDemandLabels();
+  const [statusLabelId, setStatusLabelId] = useState<string | null>(null);
+  const [frenteLabelId, setFrenteLabelId] = useState<string | null>(null);
+  const colunasDoDestino = flagsFor(etiquetas.settings, toDepartment || null);
+
+  // Aberto por "Adicionar tarefa" ou dentro de um setor: o destino já vem preenchido.
+  useEffect(() => {
+    if (!open) return;
+    if (defaultToDepartment) setToDepartment(defaultToDepartment);
+    setStatusLabelId(null);
+    setFrenteLabelId(null);
+  }, [open, defaultToDepartment]);
 
   // Fetch colaboradores
   useEffect(() => {
@@ -122,7 +143,11 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
     setAttachments(prev => prev.filter(a => a.url !== url));
   };
 
+  // Quem abre a demanda é sempre responsável: fica marcado e não sai pelo formulário.
+  const eu = colaboradores.find((c) => c.user_id === user?.id);
+
   const toggleAssignee = (colaborador: Colaborador) => {
+    if (colaborador.user_id === user?.id) return;
     setSelectedAssignees(prev => {
       const exists = prev.find(a => a.user_id === colaborador.user_id);
       if (exists) {
@@ -146,6 +171,10 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
 
     setLoading(true);
     try {
+      const gruposDoDestino = groupsOf(groups, toDepartment);
+      // O grupo de onde veio o "Adicionar tarefa", se a área não mudou; senão o primeiro da área.
+      const grupo = gruposDoDestino.find((g) => g.id === defaultGroupId) ?? gruposDoDestino[0] ?? null;
+
       // Create demand
       const { data: demand, error: demandError } = await supabase
         .from('demands')
@@ -157,34 +186,48 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
           priority,
           deadline: deadline ? format(deadline, 'yyyy-MM-dd') : null,
           created_by: user?.id,
+          group_id: grupo?.id ?? null,
+          // Grupo que nasceu de um status leva o status junto.
+          ...(grupo?.legacy_status ? { status: grupo.legacy_status } : {}),
+          // Etiqueta só onde a coluna está ligada; Status só se for do setor de destino.
+          ...(colunasDoDestino.show_status_labels
+            ? {
+                status_label_id: etiquetas.labels.some((l) => l.id === statusLabelId && l.department === toDepartment)
+                  ? statusLabelId
+                  : null,
+              }
+            : {}),
+          ...(colunasDoDestino.show_frente ? { frente_label_id: frenteLabelId } : {}),
         })
         .select()
         .single();
 
       if (demandError) throw demandError;
 
-      // Add assignees
-      if (selectedAssignees.length > 0) {
-        const assigneesData = selectedAssignees.map(a => ({
-          demand_id: demand.id,
-          user_id: a.user_id,
-        }));
-
+      // Responsáveis: quem abriu entra sempre, junto com os escolhidos.
+      const responsaveis = [
+        ...(user ? [user.id] : []),
+        ...selectedAssignees.map((a) => a.user_id).filter((id) => id !== user?.id),
+      ];
+      if (responsaveis.length > 0) {
         const { error: assigneesError } = await supabase
           .from('demand_assignees')
-          .insert(assigneesData);
+          .insert(responsaveis.map((id) => ({ demand_id: demand.id, user_id: id })));
 
         if (assigneesError) throw assigneesError;
+      }
 
-        // Create notifications for assignees
-        const notificationsData = selectedAssignees.map(a => ({
-          user_id: a.user_id,
+      // Avisa os outros responsáveis; quem abriu não precisa de aviso da própria demanda.
+      const notificationsData = responsaveis
+        .filter((id) => id !== user?.id)
+        .map((id) => ({
+          user_id: id,
           demand_id: demand.id,
           notification_type: 'assignment',
           message: `Você foi atribuído(a) à demanda: ${title}`,
           created_by: user?.id,
         }));
-
+      if (notificationsData.length > 0) {
         await supabase.from('demand_notifications').insert(notificationsData);
       }
 
@@ -354,10 +397,44 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
             </div>
           </div>
 
+          {(colunasDoDestino.show_status_labels || colunasDoDestino.show_frente) && (
+            <div className="grid grid-cols-2 gap-3">
+              {colunasDoDestino.show_status_labels && (
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <LabelSelect
+                    variant="field"
+                    kind="status"
+                    department={toDepartment}
+                    selectedId={statusLabelId}
+                    onSelect={setStatusLabelId}
+                  />
+                </div>
+              )}
+              {colunasDoDestino.show_frente && (
+                <div className="space-y-2">
+                  <Label>Frente de negócio</Label>
+                  <LabelSelect
+                    variant="field"
+                    kind="frente"
+                    department={toDepartment}
+                    selectedId={frenteLabelId}
+                    onSelect={setFrenteLabelId}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Assignees */}
           <div className="space-y-2">
             <Label>Responsáveis</Label>
             <div className="flex flex-wrap gap-2 mb-2">
+              {user && (
+                <Badge variant="secondary" title="Quem abre a demanda entra como responsável">
+                  {eu?.full_name ? `${eu.full_name} (você)` : 'Você'}
+                </Badge>
+              )}
               {selectedAssignees.map((assignee) => (
                 <Badge key={assignee.user_id} variant="secondary" className="gap-1 pr-1">
                   {assignee.full_name || 'Usuário'}
@@ -371,25 +448,13 @@ const CreateDemandDialog = ({ open, onOpenChange, onSuccess }: CreateDemandDialo
                 </Badge>
               ))}
             </div>
-            <div className="border rounded-lg max-h-32 overflow-y-auto">
-              {colaboradores.map((colaborador) => (
-                <div
-                  key={colaborador.user_id}
-                  className={`flex items-center gap-2 p-2 cursor-pointer hover:bg-muted transition-colors ${
-                    selectedAssignees.find(a => a.user_id === colaborador.user_id) ? 'bg-primary/10' : ''
-                  }`}
-                  onClick={() => toggleAssignee(colaborador)}
-                >
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={colaborador.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {colaborador.full_name?.[0] || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm">{colaborador.full_name || 'Usuário'}</span>
-                </div>
-              ))}
-            </div>
+            <ColaboradorPicker
+              colaboradores={colaboradores}
+              isSelected={(userId) => userId === user?.id || selectedAssignees.some((a) => a.user_id === userId)}
+              onToggle={toggleAssignee}
+              className="border rounded-lg"
+              listClassName="max-h-40"
+            />
           </div>
 
           {/* Actions */}

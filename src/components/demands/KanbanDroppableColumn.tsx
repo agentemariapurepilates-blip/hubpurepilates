@@ -6,20 +6,22 @@ import KanbanDraggableCard from './KanbanDraggableCard';
 interface KanbanDroppableColumnProps {
   id: string;
   label: string;
+  /** Cor do grupo, em hex. */
   color: string;
   demands: Demand[];
+  pausesDeadline: boolean;
   onDemandClick: (demand: Demand) => void;
 }
 
-const KanbanDroppableColumn = ({ id, label, color, demands, onDemandClick }: KanbanDroppableColumnProps) => {
+const KanbanDroppableColumn = ({ id, label, color, demands, pausesDeadline, onDemandClick }: KanbanDroppableColumnProps) => {
   const { isOver, setNodeRef } = useDroppable({ id });
 
   return (
     <div className="w-72 shrink-0">
       {/* Column Header */}
       <div className="flex items-center gap-2 mb-3 px-1">
-        <div className={`w-3 h-3 rounded-full ${color}`} />
-        <h3 className="font-semibold text-sm">{label}</h3>
+        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} />
+        <h3 className="font-semibold text-sm truncate">{label}</h3>
         <Badge variant="secondary" className="ml-auto text-xs">
           {demands.length}
         </Badge>
@@ -43,6 +45,7 @@ const KanbanDroppableColumn = ({ id, label, color, demands, onDemandClick }: Kan
             <KanbanDraggableCard
               key={demand.id}
               demand={demand}
+              pausesDeadline={pausesDeadline}
               onDemandClick={onDemandClick}
             />
           ))
