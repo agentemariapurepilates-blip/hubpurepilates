@@ -174,8 +174,10 @@ const PureDesignEditor = () => {
       next.splice(index + 1, 0, { ...prev[index] });
       return next;
     });
+  // A lista pode ficar vazia: quem quer trocar todas as datas exclui as duas e
+  // adiciona as novas. Sem itens, a arte mantém a altura base e o card sai vazio.
   const removeRepeat = (index: number) =>
-    setRepeatItems((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+    setRepeatItems((prev) => prev.filter((_, i) => i !== index));
   const setRepeatText = (index: number, text: string) =>
     setRepeatItems((prev) => prev.map((it, i) => (i === index ? { ...it, text } : it)));
   const setRepeatVariant = (index: number, variant: string) =>
@@ -587,10 +589,9 @@ const PureDesignEditor = () => {
                       <button
                         type="button"
                         onClick={() => removeRepeat(i)}
-                        disabled={repeatItems.length <= 1}
                         title="Excluir data"
                         aria-label="Excluir data"
-                        className="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                        className="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
