@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { PedidosVerbaProfessores } from '@/features/geral/verba-professores/PedidosVerbaProfessores';
+import { DestinatariosVerbaProfessores } from '@/features/geral/verba-professores/DestinatariosVerbaProfessores';
 
 type PlanKey = '1500_3m' | '2000_3m' | '2500';
 type StatusKey = 'pendente' | 'aprovada';
@@ -219,6 +220,11 @@ const MidiaAdicionalUnidades = () => {
         </Card>
 
         <div className="mt-6">
+          {isAdmin && (
+            <div className="mb-6">
+              <DestinatariosVerbaProfessores />
+            </div>
+          )}
           <PedidosVerbaProfessores modo="todos" />
         </div>
       </div>

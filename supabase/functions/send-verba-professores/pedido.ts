@@ -108,13 +108,37 @@ export function formatarData(iso: string): string {
 }
 
 /**
- * Corpo enviado ao webhook do n8n. Mesmos campos que a send-midia-adicional
- * manda, para o workflow ser uma CÓPIA do da Mídia Adicional:
- * `plano` e `plano_label` continuam existindo, com o texto da verba, e o
- * e-mail duplicado já sai certo trocando só o caminho do webhook. Os campos
- * próprios (valor_verba, qtd_professores) vão junto para quem quiser usar.
+ * E-mails da lista de destinatários prontos para o campo "Para" do Gmail:
+ * só os válidos, sem repetição (ignorando maiúsculas) e sem espaços.
+ * A tabela já tem UNIQUE, mas "Rh@x.com" e "rh@x.com" passariam nele.
  */
-export function corpoDoWebhook(id: string, pedido: PedidoDeVerba, enviadoPor: string | null) {
+export function destinatariosDoEmail(linhas: Array<{ email: string | null }>): string[] {
+  const vistos = new Set<string>();
+  const saida: string[] = [];
+  for (const { email } of linhas) {
+    const limpo = (email ?? '').trim();
+    if (!EMAIL.test(limpo) || vistos.has(limpo.toLowerCase())) continue;
+    vistos.add(limpo.toLowerCase());
+    saida.push(limpo);
+  }
+  return saida;
+}
+
+/**
+ * Corpo enviado ao webhook do n8n. Mesmos campos que a send-midia-adicional
+ * manda, para o workflow ser uma CÓPIA do da Mídia Adicional: `plano` e
+ * `plano_label` continuam existindo, com o texto da verba. Os campos próprios
+ * (valor_verba, qtd_professores) vão junto para quem quiser usar.
+ *
+ * Diferença: `destinatarios`. Na Mídia Adicional quem recebe é fixo no n8n;
+ * aqui é a lista que os admins cadastram no Hub, e o Gmail usa no "Para".
+ */
+export function corpoDoWebhook(
+  id: string,
+  pedido: PedidoDeVerba,
+  enviadoPor: string | null,
+  destinatarios: string[],
+) {
   const planoLabel =
     `${formatarReais(pedido.valor_verba)} — campanha de recrutamento de ${rotuloDeProfessores(pedido.qtd_professores)}`;
 
@@ -133,5 +157,7 @@ export function corpoDoWebhook(id: string, pedido: PedidoDeVerba, enviadoPor: st
     email_unidade: pedido.email_unidade,
     email_franqueado: pedido.email_franqueado,
     submitted_by: enviadoPor,
+    // Lista cadastrada pelos admins no Hub; o nó Gmail do n8n usa no "Para".
+    destinatarios,
   };
 }

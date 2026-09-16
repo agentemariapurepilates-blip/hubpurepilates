@@ -6,14 +6,20 @@
 // só é registrada no log — igual à Mídia Adicional, o pedido já está gravado e
 // aparece na Visão Geral das Unidades.
 //
-// Diferença: a validação mora em pedido.ts, com testes, e é a mesma da tela.
+// Diferenças:
+// - A validação mora em pedido.ts, com testes, e é a mesma da tela.
+// - Quem recebe o e-mail vem da tabela verba_professores_email_recipients,
+//   cadastrada pelos admins no Hub, e não de uma lista fixa no n8n. Ela é lida
+//   com a CHAVE DE SERVIÇO: quem faz o pedido é franqueado, e a RLS da lista
+//   (só admin) devolveria vazio para ele. Lista vazia = pedido gravado, sem
+//   e-mail, com registro no log.
 //
 // PUBLICADA em 16/09/2026 no projeto evprrtvbvjnjixogjsmn (verify_jwt ligado).
 // E-mail: workflow n8n wtW40NSsKLIkYIt1 (copia do da Midia Adicional) -- ver n8n/README.md.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getCorsHeaders } from '../_shared/cors.ts'
-import { corpoDoWebhook, validarPedido } from './pedido.ts'
+import { corpoDoWebhook, destinatariosDoEmail, validarPedido } from './pedido.ts'
 
 const N8N_WEBHOOK_URL = Deno.env.get('VERBA_PROFESSORES_WEBHOOK_URL')
   || 'https://backend.purepilates.com.br/webhook/verba-professores-email'
@@ -73,10 +79,25 @@ Deno.serve(async (req) => {
     }
 
     try {
+      const servico = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+      const { data: linhas, error: listaError } = await servico
+        .from('verba_professores_email_recipients')
+        .select('email')
+        .eq('ativo', true)
+
+      if (listaError) throw new Error(`lista de destinatarios: ${listaError.message}`)
+
+      const destinatarios = destinatariosDoEmail(linhas ?? [])
+      if (destinatarios.length === 0) {
+        throw new Error(
+          `pedido ${inserted.id} gravado SEM e-mail: nenhum destinatario ativo em verba_professores_email_recipients`,
+        )
+      }
+
       const webhookResp = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(corpoDoWebhook(inserted.id, pedido, user.email ?? null)),
+        body: JSON.stringify(corpoDoWebhook(inserted.id, pedido, user.email ?? null, destinatarios)),
       })
 
       if (!webhookResp.ok) {
@@ -84,7 +105,7 @@ Deno.serve(async (req) => {
         console.error('n8n webhook error:', webhookResp.status, errText)
       }
     } catch (err) {
-      console.error('Falha ao chamar webhook n8n:', err)
+      console.error('Aviso por e-mail nao enviado:', err)
     }
 
     return new Response(

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   corpoDoWebhook,
+  destinatariosDoEmail,
   formatarData,
   formatarReais,
   lerReais,
@@ -82,7 +83,7 @@ describe('corpoDoWebhook', () => {
     const r = validarPedido({ ...valido, email_franqueado: 'ana@exemplo.com' });
     if (!r.ok) throw new Error(r.erro);
 
-    expect(corpoDoWebhook('abc', r.pedido, 'ana@exemplo.com')).toEqual({
+    expect(corpoDoWebhook('abc', r.pedido, 'ana@exemplo.com', ['rh@purepilates.com.br'])).toEqual({
       id: 'abc',
       tipo: 'verba_professores',
       nome_franqueado: 'Ana Souza',
@@ -97,12 +98,29 @@ describe('corpoDoWebhook', () => {
       email_unidade: 'moema@purepilates.com.br',
       email_franqueado: 'ana@exemplo.com',
       submitted_by: 'ana@exemplo.com',
+      destinatarios: ['rh@purepilates.com.br'],
     });
   });
 
   it('singular para um professor', () => {
     const r = validarPedido({ ...valido, qtd_professores: 1 });
     if (!r.ok) throw new Error(r.erro);
-    expect(corpoDoWebhook('x', r.pedido, null).plano_label).toBe('R$ 3.500,00 — campanha de recrutamento de 1 professor');
+    expect(corpoDoWebhook('x', r.pedido, null, []).plano_label).toBe('R$ 3.500,00 — campanha de recrutamento de 1 professor');
+  });
+});
+
+describe('destinatariosDoEmail', () => {
+  it('limpa espaços, descarta inválidos e repetidos (sem diferenciar maiúsculas)', () => {
+    expect(destinatariosDoEmail([
+      { email: ' rh@purepilates.com.br ' },
+      { email: 'RH@purepilates.com.br' },
+      { email: 'invalido' },
+      { email: null },
+      { email: 'renan.vaz@purepilates.com.br' },
+    ])).toEqual(['rh@purepilates.com.br', 'renan.vaz@purepilates.com.br']);
+  });
+
+  it('lista vazia continua vazia', () => {
+    expect(destinatariosDoEmail([])).toEqual([]);
   });
 });
