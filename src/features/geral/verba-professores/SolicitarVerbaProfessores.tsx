@@ -290,14 +290,13 @@ const SolicitarVerbaProfessores = () => {
             <CardContent className="space-y-4">
               <div className="text-sm text-foreground/80 leading-relaxed space-y-2">
                 <p>
-                  <strong>[Texto placeholder]</strong> Substitua este bloco pelo texto definitivo das regras de
-                  faturamento e aplicação da campanha de recrutamento de novos professores.
+                  O valor solicitado será faturado pela unidade conforme as regras vigentes. A solicitação é
+                  analisada pela equipe de RH e direcionada ao marketing, que veicula a campanha de recrutamento
+                  após a aprovação.
                 </p>
                 <p>
-                  O valor solicitado será faturado pela unidade conforme as regras vigentes. A campanha será
-                  veiculada pelo time central de marketing, após análise e aprovação da solicitação.
-                  Os prazos, formatos e canais de veiculação seguem as diretrizes da Pure Pilates para o período
-                  selecionado.
+                  Os candidatos captados pela campanha são repassados para a unidade. Os prazos, formatos e canais
+                  de veiculação seguem as diretrizes da Pure Pilates.
                 </p>
               </div>
               <label className="flex items-start gap-3 cursor-pointer">
@@ -311,6 +310,16 @@ const SolicitarVerbaProfessores = () => {
               </label>
             </CardContent>
           </Card>
+
+          {/* Única diferença de comportamento em relação à Mídia Adicional: aqui
+              há regras de valor e quantidade, e um botão desabilitado sem
+              motivo deixou a pessoa sem saber o que corrigir. O aviso só
+              aparece depois do aceite, quando ela já acha que terminou. */}
+          {aceitouRegras && !validacao.ok && (
+            <p role="alert" className="text-sm text-destructive text-right">
+              {validacao.erro}
+            </p>
+          )}
 
           <div className="flex items-center justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => navigate('/')}>Cancelar</Button>

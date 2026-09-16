@@ -67,6 +67,15 @@ describe('formatação', () => {
     ['R$ 2000', 2000],
     ['', null],
     ['abc', null],
+    // Centavos digitados com vírgula não podem virar parte dos reais:
+    // "9.000,00" já foi lido como 900000, e "15.000,00" passava do teto e
+    // travava o botão de envio sem nenhum aviso.
+    ['9.000,00', 9000],
+    ['15.000,00', 15000],
+    ['2000,50', 2000],
+    ['R$ 1.500,00', 1500],
+    ['9.000,', 9000],
+    [',50', null],
   ])('lerReais(%s) → %s', (digitado, valor) => {
     expect(lerReais(digitado)).toBe(valor);
   });

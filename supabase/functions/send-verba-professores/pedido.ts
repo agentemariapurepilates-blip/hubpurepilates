@@ -91,9 +91,15 @@ export function formatarReais(valor: number): string {
   return `R$ ${inteiro},00`;
 }
 
-/** O que a pessoa digitou no campo de valor → reais inteiros (ou null se vazio). */
+/**
+ * O que a pessoa digitou no campo de valor → reais inteiros (ou null se vazio).
+ *
+ * Só a parte ANTES da vírgula conta. A versão anterior removia todo caractere
+ * que não fosse dígito, então "9.000,00" virava 900000 e "15.000,00" passava do
+ * teto — e o botão de envio ficava desabilitado sem dizer por quê.
+ */
 export function lerReais(digitado: string): number | null {
-  const digitos = digitado.replace(/\D/g, '');
+  const digitos = digitado.split(',')[0].replace(/\D/g, '');
   return digitos ? Number(digitos) : null;
 }
 
