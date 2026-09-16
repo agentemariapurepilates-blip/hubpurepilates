@@ -8,7 +8,8 @@
 //
 // Diferença: a validação mora em pedido.ts, com testes, e é a mesma da tela.
 //
-// NAO PUBLICADA AINDA. Ver n8n/README.md, seção verba-professores.
+// PUBLICADA em 16/09/2026 no projeto evprrtvbvjnjixogjsmn (verify_jwt ligado).
+// O e-mail depende do workflow do n8n -- ver n8n/README.md, seção verba-professores.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getCorsHeaders } from '../_shared/cors.ts'

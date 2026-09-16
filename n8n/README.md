@@ -526,5 +526,5 @@ versionado nesta pasta — ele só existe no n8n. Para o e-mail sair igual:
    de 2 professores`. Se quiser, ajuste o assunto para citar professores; os
    campos `valor_verba_fmt` e `qtd_professores` também chegam.
 
-Antes disso, a migration `20260916120000_verba_professores_requests.sql` precisa
-estar aplicada e a function publicada. Nada disso foi feito ainda.
+A migration `20260916120000_verba_professores_requests.sql` e a function
+`send-verba-professores` já estão no ar (16/09/2026). Falta só este workflow.

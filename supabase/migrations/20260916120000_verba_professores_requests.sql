@@ -6,7 +6,8 @@
 -- vira valor livre (valor_verba) e quantidade de professores. Tabela propria
 -- porque aquela tem CHECK nos tres planos fixos.
 --
--- NAO APLICADA AINDA.
+-- APLICADA em 16/09/2026 no projeto evprrtvbvjnjixogjsmn, pelo SQL Editor (o
+-- projeto nao registra historico em supabase_migrations; nao use db push).
 --
 -- Duas travas a mais que a tabela da Midia Adicional nao tem:
 -- - O INSERT exige status 'pendente'. Sem isso, qualquer usuario logado poderia
