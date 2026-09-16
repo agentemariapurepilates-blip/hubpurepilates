@@ -519,8 +519,10 @@ Hub (formulário, cópia do "Solicitar Mídia Adicional")
 "Midia Adicional - Notificacao por email" (id `q1798bRiMtETXEho`). O arquivo não
 fica versionado aqui porque o original também não fica.
 
-Mudou só: caminho do webhook (`verba-professores-email`), nome, assunto
-("Verba para novos professores - <unidade>") e título do e-mail. **Destinatários,
+Mudou: caminho do webhook (`verba-professores-email`), nome, e o **e-mail inteiro**,
+redesenhado com a identidade da marca. A fonte do HTML e do assunto é
+[`verba-professores-email.mjs`](verba-professores-email.mjs) — edite lá e aplique no nó
+Gmail; `node n8n/verba-professores-email.mjs --previa` gera uma prévia com dados de exemplo. **Destinatários,
 credencial do Gmail, tabela e "responder para" são os mesmos da Mídia Adicional**
 — ao mudar a lista de quem recebe numa, mude na outra.
 
