@@ -34,6 +34,7 @@ import {
   Bot,
   ChevronDown,
   Inbox,
+  UserPlus,
   Image as ImageIcon,
   Radar,
   GraduationCap,
@@ -139,9 +140,9 @@ export const sectionFromPath = (path: string): SectionKey | null => {
   // Antes de '/minha-area': o Hub tem /minha-area/dashboard (Mídia Adicional),
   // que NÃO pertence a esta seção. Por isso o teste é '/dashboard/' com barra.
   if (path.startsWith('/dashboard/')) return 'dashboard';
-  // '/autorizar-midia-adicional' (Solicitar Mídia adicional) faz parte do fluxo
+  // '/autorizar-midia-adicional' e '/autorizar-verba-professores' fazem parte do fluxo
   // da Minha Área, então abre/destaca essa seção mesmo estando fora do prefixo.
-  if (path.startsWith('/minha-area') || path.startsWith('/autorizar-midia-adicional')) return 'minha-area';
+  if (path.startsWith('/minha-area') || path.startsWith('/autorizar-midia-adicional') || path.startsWith('/autorizar-verba-professores')) return 'minha-area';
   if (path.startsWith('/admin')) return 'admin';
   return null;
 };
@@ -290,6 +291,7 @@ const Sidebar = () => {
       ? [{ name: 'Mídia adicional', href: '/minha-area/midia-adicional', icon: Megaphone, disabled: false }]
       : []),
     { name: 'Solicitar Mídia adicional', href: '/autorizar-midia-adicional', icon: ImageIcon, disabled: false },
+    { name: 'Solicitar Verba para professores', href: '/autorizar-verba-professores', icon: UserPlus, disabled: false },
     { name: 'Minhas solicitações', href: '/minha-area/minhas-solicitacoes', icon: Inbox, disabled: false },
   ];
 

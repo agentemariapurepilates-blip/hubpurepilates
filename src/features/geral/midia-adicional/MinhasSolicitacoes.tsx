@@ -4,7 +4,8 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Inbox, ArrowLeft, Loader2, Plus, FileText } from 'lucide-react';
+import { Inbox, ArrowLeft, Loader2, Plus, FileText, UserPlus } from 'lucide-react';
+import { PedidosVerbaProfessores } from '@/features/geral/verba-professores/PedidosVerbaProfessores';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -102,13 +103,19 @@ const MinhasSolicitacoes = () => {
               Minhas solicitações
             </h1>
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-              Histórico das suas solicitações de mídia adicional.
+              Histórico das suas solicitações de mídia adicional e de verba para novos professores.
             </p>
           </div>
-          <Button onClick={() => navigate('/autorizar-midia-adicional')} className="shrink-0">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova solicitação
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+            <Button variant="outline" onClick={() => navigate('/autorizar-verba-professores')}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Verba para professores
+            </Button>
+            <Button onClick={() => navigate('/autorizar-midia-adicional')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Solicitar mídia adicional
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -179,6 +186,10 @@ const MinhasSolicitacoes = () => {
             )}
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <PedidosVerbaProfessores modo="meus" />
+        </div>
       </div>
     </MainLayout>
   );

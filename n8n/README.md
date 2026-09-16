@@ -497,3 +497,34 @@ O que voltar tem que ser olhado linha por linha. Hoje o que casa são **caminhos
 de arquivo** e **URLs** citados neste README, que obviamente não são segredo. O
 `id` da credencial do Gmail (`GfnvRU8IivJHJehE`, 16 caracteres) também não é — é
 só o identificador interno do n8n, não dá acesso a nada fora da instância.
+
+---
+
+## Verba para novos professores — e-mail do pedido
+
+O pedido de verba para campanha de recrutamento de professores (Minha Área →
+Solicitar Verba para professores) segue **o mesmo caminho da Mídia Adicional**,
+do pedido à aprovação:
+
+```
+Hub (formulário, cópia do "Solicitar Mídia Adicional")
+  └─> Edge Function `send-verba-professores`   (cópia da send-midia-adicional)
+        1. valida (pedido.ts, com testes) e grava em verba_professores_requests
+        2. POST em /webhook/verba-professores-email
+             └─> n8n: cópia do workflow da Mídia Adicional (/webhook/midia-adicional-email)
+```
+
+**Não há arquivo de workflow aqui**, porque o da Mídia Adicional também não está
+versionado nesta pasta — ele só existe no n8n. Para o e-mail sair igual:
+
+1. No n8n, **duplique** o workflow que recebe `midia-adicional-email`.
+2. No nó Webhook da cópia, troque o caminho para **`verba-professores-email`**.
+3. Ative. Nada mais precisa mudar: a function manda **os mesmos campos** que a
+   send-midia-adicional (`nome_franqueado`, `nome_unidade`, `data_inauguracao_fmt`,
+   `plano_label`, `email_unidade`, `email_franqueado`, `submitted_by`...), com o
+   texto da verba em `plano_label` — ex.: `R$ 3.500,00 — campanha de recrutamento
+   de 2 professores`. Se quiser, ajuste o assunto para citar professores; os
+   campos `valor_verba_fmt` e `qtd_professores` também chegam.
+
+Antes disso, a migration `20260916120000_verba_professores_requests.sql` precisa
+estar aplicada e a function publicada. Nada disso foi feito ainda.

@@ -14,6 +14,11 @@ describe('sectionFromPath', () => {
     expect(sectionFromPath('/minha-area/dashboard')).toBe('minha-area');
   });
 
+  it('os dois pedidos de verba abrem Minha Área, mesmo fora do prefixo /minha-area', () => {
+    expect(sectionFromPath('/autorizar-midia-adicional')).toBe('minha-area');
+    expect(sectionFromPath('/autorizar-verba-professores')).toBe('minha-area');
+  });
+
   it('não mexe nas seções que já existiam', () => {
     expect(sectionFromPath('/feed')).toBe('colaboradores');
     expect(sectionFromPath('/agente-design/gerar-foto')).toBe('agentes');

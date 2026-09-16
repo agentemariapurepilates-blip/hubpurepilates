@@ -8,6 +8,7 @@ import { Building2, ArrowLeft, Loader2, Inbox, CircleCheck } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { PedidosVerbaProfessores } from '@/features/geral/verba-professores/PedidosVerbaProfessores';
 
 type PlanKey = '1500_3m' | '2000_3m' | '2500';
 type StatusKey = 'pendente' | 'aprovada';
@@ -129,7 +130,7 @@ const MidiaAdicionalUnidades = () => {
             Visão Geral das Unidades
           </h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Unidades que solicitaram mídia adicional, com status atual de cada pedido.
+            Unidades que solicitaram mídia adicional ou verba para novos professores, com o status de cada pedido.
           </p>
         </div>
 
@@ -216,6 +217,10 @@ const MidiaAdicionalUnidades = () => {
             )}
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <PedidosVerbaProfessores modo="todos" />
+        </div>
       </div>
     </MainLayout>
   );

@@ -29,6 +29,7 @@ const Tutoriais = lazy(() => import("./features/geral/tutoriais/Tutoriais"));
 const OnboardingInstrutor = lazy(() => import("./features/geral/tutoriais/OnboardingInstrutor"));
 const AutorizarMidiaAdicional = lazy(() => import("./features/geral/midia-adicional/AutorizarMidiaAdicional"));
 const MinhasSolicitacoes = lazy(() => import("./features/geral/midia-adicional/MinhasSolicitacoes"));
+const SolicitarVerbaProfessores = lazy(() => import("./features/geral/verba-professores/SolicitarVerbaProfessores"));
 const Perfil = lazy(() => import("./features/geral/conta/Perfil"));
 const Notificacoes = lazy(() => import("./features/geral/conta/Notificacoes"));
 const Auth = lazy(() => import("./features/geral/auth/Auth"));
@@ -137,6 +138,7 @@ function App() {
             <Route path="/autorizar-midia-adicional" element={<ProtectedRoute><AutorizarMidiaAdicional /></ProtectedRoute>} />
             <Route path="/midia-adicional/unidades" element={<ProtectedRoute><MidiaAdicionalUnidades /></ProtectedRoute>} />
             <Route path="/minha-area/minhas-solicitacoes" element={<ProtectedRoute><MinhasSolicitacoes /></ProtectedRoute>} />
+            <Route path="/autorizar-verba-professores" element={<ProtectedRoute><SolicitarVerbaProfessores /></ProtectedRoute>} />
             <Route path="/manual-sistema" element={<ProtectedRoute><ManualSistema /></ProtectedRoute>} />
             <Route path="/tutoriais" element={<ProtectedRoute><Tutoriais /></ProtectedRoute>} />
             <Route path="/onboarding-instrutor" element={<ProtectedRoute><OnboardingInstrutor /></ProtectedRoute>} />
