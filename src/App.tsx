@@ -22,6 +22,7 @@ const QuantoValeDomingo = lazy(() => import("./features/geral/domingos/QuantoVal
 const MateriaisImplantacao = lazy(() => import("./features/geral/artes/MateriaisImplantacao"));
 const PureDesign = lazy(() => import("./features/geral/artes/PureDesign"));
 const PureStore = lazy(() => import("./features/geral/pure-store/PureStore"));
+const SegredosPilar = lazy(() => import("./features/geral/segredos-pilar/SegredosPilar"));
 const PureDesignEditor = lazy(() => import("./features/geral/artes/PureDesignEditor"));
 const Parcerias = lazy(() => import("./features/geral/parcerias/Parcerias"));
 const ManualSistema = lazy(() => import("./features/geral/manual/ManualSistema"));
@@ -125,6 +126,7 @@ function App() {
             <Route path="/novidades" element={<ProtectedRoute><NovidadesDoMes /></ProtectedRoute>} />
             <Route path="/avisos" element={<ProtectedRoute><Avisos /></ProtectedRoute>} />
             <Route path="/pure-store" element={<ProtectedRoute><PureStore /></ProtectedRoute>} />
+            <Route path="/segredos-de-pilar" element={<ProtectedRoute><SegredosPilar /></ProtectedRoute>} />
             <Route path="/calendario-marketing" element={<ProtectedRoute><CalendarioMarketing /></ProtectedRoute>} />
             <Route path="/midias-sociais" element={<ProtectedRoute><MidiasSociais /></ProtectedRoute>} />
             <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
