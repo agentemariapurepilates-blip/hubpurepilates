@@ -514,17 +514,19 @@ Hub (formulário, cópia do "Solicitar Mídia Adicional")
              └─> n8n: cópia do workflow da Mídia Adicional (/webhook/midia-adicional-email)
 ```
 
-**Não há arquivo de workflow aqui**, porque o da Mídia Adicional também não está
-versionado nesta pasta — ele só existe no n8n. Para o e-mail sair igual:
+**Já está no ar** (16/09/2026): workflow **"Verba para novos professores - Notificacao por email"**
+(id `wtW40NSsKLIkYIt1`, ativo), criado pela API do n8n como cópia do
+"Midia Adicional - Notificacao por email" (id `q1798bRiMtETXEho`). O arquivo não
+fica versionado aqui porque o original também não fica.
 
-1. No n8n, **duplique** o workflow que recebe `midia-adicional-email`.
-2. No nó Webhook da cópia, troque o caminho para **`verba-professores-email`**.
-3. Ative. Nada mais precisa mudar: a function manda **os mesmos campos** que a
-   send-midia-adicional (`nome_franqueado`, `nome_unidade`, `data_inauguracao_fmt`,
-   `plano_label`, `email_unidade`, `email_franqueado`, `submitted_by`...), com o
-   texto da verba em `plano_label` — ex.: `R$ 3.500,00 — campanha de recrutamento
-   de 2 professores`. Se quiser, ajuste o assunto para citar professores; os
-   campos `valor_verba_fmt` e `qtd_professores` também chegam.
+Mudou só: caminho do webhook (`verba-professores-email`), nome, assunto
+("Verba para novos professores - <unidade>") e título do e-mail. **Destinatários,
+credencial do Gmail, tabela e "responder para" são os mesmos da Mídia Adicional**
+— ao mudar a lista de quem recebe numa, mude na outra.
+
+O texto da verba chega em `plano_label` (ex.: `R$ 3.500,00 — campanha de
+recrutamento de 2 professores`), na linha "Aporte solicitado". Os campos
+`valor_verba_fmt` e `qtd_professores` também chegam, se quiser usá-los.
 
 A migration `20260916120000_verba_professores_requests.sql` e a function
-`send-verba-professores` já estão no ar (16/09/2026). Falta só este workflow.
+`send-verba-professores` também estão no ar desde 16/09/2026.
