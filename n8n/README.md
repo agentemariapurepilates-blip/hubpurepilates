@@ -514,7 +514,7 @@ Hub (formulário, cópia do "Solicitar Mídia Adicional")
              └─> n8n: cópia do workflow da Mídia Adicional (/webhook/midia-adicional-email)
 ```
 
-**Já está no ar** (16/09/2026): workflow **"Verba para novos professores - Notificacao por email"**
+**Já está no ar** (16/09/2026). Quem recebe vem da lista que os admins cadastram no Hub (Colaboradores → Visão Geral das Unidades; campo "Para" = `{{ $json.body.destinatarios.join(', ') }}`). Workflow **"Verba para novos professores - Notificacao por email"**
 (id `wtW40NSsKLIkYIt1`, ativo), criado pela API do n8n como cópia do
 "Midia Adicional - Notificacao por email" (id `q1798bRiMtETXEho`). O arquivo não
 fica versionado aqui porque o original também não fica.
@@ -522,9 +522,9 @@ fica versionado aqui porque o original também não fica.
 Mudou: caminho do webhook (`verba-professores-email`), nome, e o **e-mail inteiro**,
 redesenhado com a identidade da marca. A fonte do HTML e do assunto é
 [`verba-professores-email.mjs`](verba-professores-email.mjs) — edite lá e aplique no nó
-Gmail; `node n8n/verba-professores-email.mjs --previa` gera uma prévia com dados de exemplo. **Destinatários,
-credencial do Gmail, tabela e "responder para" são os mesmos da Mídia Adicional**
-— ao mudar a lista de quem recebe numa, mude na outra.
+Gmail; `node n8n/verba-professores-email.mjs --previa` gera uma prévia com dados de exemplo.
+**Credencial do Gmail e "responder para" são os mesmos da Mídia Adicional**; os
+destinatários, não: aqui vêm da lista do Hub.
 
 O texto da verba chega em `plano_label` (ex.: `R$ 3.500,00 — campanha de
 recrutamento de 2 professores`), na linha "Aporte solicitado". Os campos

@@ -14,7 +14,7 @@
 //   (só admin) devolveria vazio para ele. Lista vazia = pedido gravado, sem
 //   e-mail, com registro no log.
 //
-// PUBLICADA em 16/09/2026 no projeto evprrtvbvjnjixogjsmn (verify_jwt ligado).
+// PUBLICADA em 16/09/2026 no projeto evprrtvbvjnjixogjsmn (verify_jwt ligado); v2 le a lista.
 // E-mail: workflow n8n wtW40NSsKLIkYIt1 (copia do da Midia Adicional) -- ver n8n/README.md.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'

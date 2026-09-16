@@ -1,6 +1,6 @@
 -- Destinatarios do E-MAIL DOS PEDIDOS DE VERBA PARA NOVOS PROFESSORES.
 --
--- NAO APLICADA AINDA.
+-- APLICADA em 16/09/2026 no projeto evprrtvbvjnjixogjsmn (via API de gerenciamento).
 --
 -- Pedido do usuario (16/09/2026): quem recebe o aviso de cada pedido deixa de
 -- ser uma lista fixa no n8n e passa a ser cadastrada no Hub, por admin -- e so
