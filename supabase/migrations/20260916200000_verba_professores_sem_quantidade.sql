@@ -9,6 +9,8 @@
 -- ORDEM: aplicar DEPOIS de publicar a send-verba-professores que nao grava
 -- mais qtd_professores. Antes disso, a versao antiga da function tentaria
 -- gravar numa coluna inexistente e o pedido falharia.
+--
+-- APLICADA em 16/09/2026, depois da function v3 e do e-mail atualizado no n8n.
 
 ALTER TABLE public.verba_professores_requests
   DROP COLUMN IF EXISTS qtd_professores;
