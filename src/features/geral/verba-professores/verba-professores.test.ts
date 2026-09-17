@@ -13,7 +13,6 @@ const valido = {
   nome_unidade: 'Pure Pilates Moema',
   data_inauguracao: '2026-11-05',
   valor_verba: 3500,
-  qtd_professores: 2,
   email_unidade: 'moema@purepilates.com.br',
   email_franqueado: '',
 };
@@ -37,13 +36,16 @@ describe('validarPedido', () => {
     ['verba com centavos', { valor_verba: 1500.5 }],
     ['verba em texto', { valor_verba: '3500' }],
     ['verba acima do teto', { valor_verba: 1_000_001 }],
-    ['zero professores', { qtd_professores: 0 }],
-    ['professores demais', { qtd_professores: 51 }],
-    ['professores fracionados', { qtd_professores: 1.5 }],
     ['e-mail da unidade inválido', { email_unidade: 'moema' }],
     ['e-mail do franqueado inválido', { email_franqueado: 'ana@' }],
   ])('recusa %s', (_nome, troca) => {
     expect(validarPedido({ ...valido, ...troca }).ok).toBe(false);
+  });
+
+  it('ignora a quantidade de professores, que saiu do formulário (o site antigo ainda pode mandar)', () => {
+    const r = validarPedido({ ...valido, qtd_professores: 99 });
+    expect(r.ok).toBe(true);
+    expect(r.ok && Object.keys(r.pedido)).not.toContain('qtd_professores');
   });
 
   it('não aceita escolher o status nem o dono do pedido', () => {
@@ -100,10 +102,9 @@ describe('corpoDoWebhook', () => {
       data_inauguracao: '2026-11-05',
       data_inauguracao_fmt: '05/11/2026',
       plano: 'verba_professores',
-      plano_label: 'R$ 3.500,00 — campanha de recrutamento de 2 professores',
+      plano_label: 'R$ 3.500,00 — campanha de recrutamento de novos professores',
       valor_verba: 3500,
       valor_verba_fmt: 'R$ 3.500,00',
-      qtd_professores: 2,
       email_unidade: 'moema@purepilates.com.br',
       email_franqueado: 'ana@exemplo.com',
       submitted_by: 'ana@exemplo.com',
@@ -111,11 +112,6 @@ describe('corpoDoWebhook', () => {
     });
   });
 
-  it('singular para um professor', () => {
-    const r = validarPedido({ ...valido, qtd_professores: 1 });
-    if (!r.ok) throw new Error(r.erro);
-    expect(corpoDoWebhook('x', r.pedido, null, []).plano_label).toBe('R$ 3.500,00 — campanha de recrutamento de 1 professor');
-  });
 });
 
 describe('destinatariosDoEmail', () => {

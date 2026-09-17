@@ -7,14 +7,14 @@
 //
 // O FLUXO É O DA MÍDIA ADICIONAL, DO PEDIDO À APROVAÇÃO (pedido do usuário em
 // 16/09/2026): mesmos campos, mesmo e-mail pelo n8n, mesma aprovação. A única
-// diferença é que os planos A/B/C viram VERBA LIVRE + QUANTIDADE DE PROFESSORES.
+// diferença é que os planos A/B/C viram VERBA LIVRE.
+//
+// A quantidade de professores existiu na primeira versão e saiu a pedido do
+// usuário (16/09/2026). Se ainda chegar (site antigo em cache), é ignorada.
 
 /** Verba em reais inteiros. Centavos não fazem sentido numa verba de mídia. */
 export const VALOR_MINIMO = 1;
 export const VALOR_MAXIMO = 1_000_000;
-
-export const PROFESSORES_MINIMO = 1;
-export const PROFESSORES_MAXIMO = 50;
 
 const TAMANHO_MAXIMO_TEXTO = 200;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -24,7 +24,6 @@ export interface PedidoDeVerba {
   nome_unidade: string;
   data_inauguracao: string;
   valor_verba: number;
-  qtd_professores: number;
   email_unidade: string;
   email_franqueado: string | null;
 }
@@ -68,11 +67,6 @@ export function validarPedido(corpo: unknown): ResultadoDaValidacao {
     return { ok: false, erro: `A verba precisa ser um valor inteiro em reais, de R$ ${VALOR_MINIMO} a ${formatarReais(VALOR_MAXIMO)}.` };
   }
 
-  const qtd_professores = c.qtd_professores;
-  if (typeof qtd_professores !== 'number' || !Number.isInteger(qtd_professores)
-      || qtd_professores < PROFESSORES_MINIMO || qtd_professores > PROFESSORES_MAXIMO) {
-    return { ok: false, erro: `A quantidade de professores precisa ser de ${PROFESSORES_MINIMO} a ${PROFESSORES_MAXIMO}.` };
-  }
 
   if (!EMAIL.test(email_unidade)) return { ok: false, erro: 'E-mail da unidade inválido.' };
   if (email_franqueado && !EMAIL.test(email_franqueado)) {
@@ -81,7 +75,7 @@ export function validarPedido(corpo: unknown): ResultadoDaValidacao {
 
   return {
     ok: true,
-    pedido: { nome_franqueado, nome_unidade, data_inauguracao, valor_verba, qtd_professores, email_unidade, email_franqueado },
+    pedido: { nome_franqueado, nome_unidade, data_inauguracao, valor_verba, email_unidade, email_franqueado },
   };
 }
 
@@ -101,10 +95,6 @@ export function formatarReais(valor: number): string {
 export function lerReais(digitado: string): number | null {
   const digitos = digitado.split(',')[0].replace(/\D/g, '');
   return digitos ? Number(digitos) : null;
-}
-
-export function rotuloDeProfessores(n: number): string {
-  return `${n} ${n === 1 ? 'professor' : 'professores'}`;
 }
 
 /** '2026-10-05' → '05/10/2026', sem depender de fuso nem de ICU. */
@@ -134,7 +124,7 @@ export function destinatariosDoEmail(linhas: Array<{ email: string | null }>): s
  * Corpo enviado ao webhook do n8n. Mesmos campos que a send-midia-adicional
  * manda, para o workflow ser uma CÓPIA do da Mídia Adicional: `plano` e
  * `plano_label` continuam existindo, com o texto da verba. Os campos próprios
- * (valor_verba, qtd_professores) vão junto para quem quiser usar.
+ * (valor_verba, valor_verba_fmt) vão junto para quem quiser usar.
  *
  * Diferença: `destinatarios`. Na Mídia Adicional quem recebe é fixo no n8n;
  * aqui é a lista que os admins cadastram no Hub, e o Gmail usa no "Para".
@@ -146,7 +136,7 @@ export function corpoDoWebhook(
   destinatarios: string[],
 ) {
   const planoLabel =
-    `${formatarReais(pedido.valor_verba)} — campanha de recrutamento de ${rotuloDeProfessores(pedido.qtd_professores)}`;
+    `${formatarReais(pedido.valor_verba)} — campanha de recrutamento de novos professores`;
 
   return {
     id,
@@ -159,7 +149,6 @@ export function corpoDoWebhook(
     plano_label: planoLabel,
     valor_verba: pedido.valor_verba,
     valor_verba_fmt: formatarReais(pedido.valor_verba),
-    qtd_professores: pedido.qtd_professores,
     email_unidade: pedido.email_unidade,
     email_franqueado: pedido.email_franqueado,
     submitted_by: enviadoPor,

@@ -10,8 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
-  PROFESSORES_MAXIMO,
-  PROFESSORES_MINIMO,
   formatarReais,
   lerReais,
   validarPedido,
@@ -20,8 +18,8 @@ import {
 // CÓPIA DE midia-adicional/AutorizarMidiaAdicional.tsx, do começo ao fim, a
 // pedido do usuário (16/09/2026): mesmo banner, mesmos campos, mesmo bloco de
 // regras, mesma tela de sucesso. A ÚNICA diferença é o bloco "Plano de
-// investimento", que aqui vira "Verba da campanha" (valor livre + quantidade de
-// professores). Ao mudar uma das duas telas, mude a outra.
+// investimento", que aqui vira "Verba da campanha" (valor livre). Ao mudar uma
+// das duas telas, mude a outra.
 
 const SolicitarVerbaProfessores = () => {
   const { user, loading: authLoading } = useAuth();
@@ -31,7 +29,6 @@ const SolicitarVerbaProfessores = () => {
   const [nomeUnidade, setNomeUnidade] = useState('');
   const [dataInauguracao, setDataInauguracao] = useState('');
   const [valorDigitado, setValorDigitado] = useState('');
-  const [qtdProfessores, setQtdProfessores] = useState('');
   const [emailUnidade, setEmailUnidade] = useState('');
   const [emailFranqueado, setEmailFranqueado] = useState('');
   const [aceitouRegras, setAceitouRegras] = useState(false);
@@ -58,7 +55,6 @@ const SolicitarVerbaProfessores = () => {
     setNomeUnidade('');
     setDataInauguracao('');
     setValorDigitado('');
-    setQtdProfessores('');
     setEmailUnidade('');
     setEmailFranqueado('');
     setAceitouRegras(false);
@@ -71,7 +67,6 @@ const SolicitarVerbaProfessores = () => {
     nome_unidade: nomeUnidade,
     data_inauguracao: dataInauguracao,
     valor_verba: valorVerba,
-    qtd_professores: qtdProfessores === '' ? null : Number(qtdProfessores),
     email_unidade: emailUnidade,
     email_franqueado: emailFranqueado,
   });
@@ -228,7 +223,7 @@ const SolicitarVerbaProfessores = () => {
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-heading">Verba da campanha *</CardTitle>
-              <CardDescription>Informe o valor e quantos professores a unidade precisa contratar.</CardDescription>
+              <CardDescription>Informe quanto a unidade quer investir na campanha.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -241,17 +236,6 @@ const SolicitarVerbaProfessores = () => {
                   placeholder="Ex.: 2.000" required />
                 <p className="text-xs text-muted-foreground">
                   {valorVerba ? formatarReais(valorVerba) : 'Valor em reais, sem centavos.'}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="qtd-professores">Quantidade de professores *</Label>
-                <Input id="qtd-professores" type="number" inputMode="numeric"
-                  min={PROFESSORES_MINIMO} max={PROFESSORES_MAXIMO} step={1}
-                  value={qtdProfessores}
-                  onChange={(e) => setQtdProfessores(e.target.value.replace(/D/g, ''))}
-                  placeholder="Ex.: 2" required />
-                <p className="text-xs text-muted-foreground">
-                  De {PROFESSORES_MINIMO} a {PROFESSORES_MAXIMO} professores.
                 </p>
               </div>
             </CardContent>

@@ -71,13 +71,9 @@ export function montarModelo(v = campo) {
       <tr><td style="padding:24px 32px 0;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${ROSADO};border-radius:10px;">
           <tr>
-            <td width="55%" style="padding:18px 20px;border-right:1px solid #f1d3da;">
+            <td style="padding:18px 20px;">
               <p style="margin:0 0 4px;font-family:${CORPO};font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:${CINZA};">Verba solicitada</p>
               <p style="margin:0;font-family:${TITULO};font-size:26px;font-weight:800;color:${VERMELHO};white-space:nowrap;">${v('valor_verba_fmt')}</p>
-            </td>
-            <td width="45%" style="padding:18px 20px;">
-              <p style="margin:0 0 4px;font-family:${CORPO};font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:${CINZA};">Professores</p>
-              <p style="margin:0;font-family:${TITULO};font-size:26px;font-weight:800;color:${PRETO};">${v('qtd_professores')}</p>
             </td>
           </tr>
         </table>
@@ -121,7 +117,6 @@ const EXEMPLO = {
   id: '3f6c1a2e-8b4d-4e1a-9c2f-7d5e0b1a4c33',
   nome_unidade: 'Pure Pilates Moema',
   valor_verba_fmt: 'R$ 9.000,00',
-  qtd_professores: 3,
   nome_franqueado: 'Ana Souza',
   data_inauguracao_fmt: '05/11/2026',
   email_unidade: 'moema@purepilates.com.br',

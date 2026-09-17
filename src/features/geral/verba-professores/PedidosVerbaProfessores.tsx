@@ -6,10 +6,10 @@ import { Loader2, Inbox, CircleCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { formatarData, formatarReais, rotuloDeProfessores } from '../../../../supabase/functions/send-verba-professores/pedido';
+import { formatarData, formatarReais } from '../../../../supabase/functions/send-verba-professores/pedido';
 
 // Lista de pedidos de verba para novos professores, em dois modos:
-// Mesmo cartão das listas da Mídia Adicional; no lugar do plano, verba + professores.
+// Mesmo cartão das listas da Mídia Adicional; no lugar do plano, a verba.
 // - 'meus'  → Minha Área > Minhas solicitações (só os do usuário, só leitura)
 // - 'todos' → Visão Geral das Unidades (colaborador/admin, com "Aprovar verba")
 // A RLS de verba_professores_requests é quem garante quem vê o quê; o filtro
@@ -24,7 +24,6 @@ interface PedidoVerba {
   nome_unidade: string;
   data_inauguracao: string;
   valor_verba: number;
-  qtd_professores: number;
   email_unidade: string;
   email_franqueado: string | null;
   status: StatusKey;
@@ -59,7 +58,7 @@ export function PedidosVerbaProfessores({ modo }: Props) {
     try {
       let consulta = supabase
         .from('verba_professores_requests' as never)
-        .select('id, nome_franqueado, nome_unidade, data_inauguracao, valor_verba, qtd_professores, email_unidade, email_franqueado, status, created_at')
+        .select('id, nome_franqueado, nome_unidade, data_inauguracao, valor_verba, email_unidade, email_franqueado, status, created_at')
         .order('created_at', { ascending: false });
       if (modo === 'meus') consulta = consulta.eq('user_id', user!.id);
 
@@ -148,7 +147,7 @@ export function PedidosVerbaProfessores({ modo }: Props) {
                         {p.nome_franqueado} · Inauguração em {formatarData(p.data_inauguracao)}
                       </p>
                       <p className="text-sm text-primary font-medium mt-1">
-                        {formatarReais(p.valor_verba)} · {rotuloDeProfessores(p.qtd_professores)}
+                        {formatarReais(p.valor_verba)}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Contato: {p.email_unidade}

@@ -527,8 +527,9 @@ Gmail; `node n8n/verba-professores-email.mjs --previa` gera uma prévia com dado
 destinatários, não: aqui vêm da lista do Hub.
 
 O texto da verba chega em `plano_label` (ex.: `R$ 3.500,00 — campanha de
-recrutamento de 2 professores`), na linha "Aporte solicitado". Os campos
-`valor_verba_fmt` e `qtd_professores` também chegam, se quiser usá-los.
+recrutamento de novos professores`), na linha "Aporte solicitado". O campo
+`valor_verba_fmt` também chega, se quiser usá-lo. (A quantidade de professores
+saiu do pedido em 16/09/2026.)
 
 A migration `20260916120000_verba_professores_requests.sql` e a function
 `send-verba-professores` também estão no ar desde 16/09/2026.
