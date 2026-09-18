@@ -41,7 +41,7 @@ const SolicitarVerbaProfessores = () => {
       <MainLayout>
         <div className="max-w-2xl mx-auto py-12 text-center">
           <h1 className="text-xl font-heading font-bold mb-2">Acesso restrito</h1>
-          <p className="text-muted-foreground">Faça login para solicitar verba para novos professores.</p>
+          <p className="text-muted-foreground">Faça login para pedir a Campanha Aporte Recrutamento.</p>
           <Button variant="outline" className="mt-6" onClick={() => navigate('/')}>
             Voltar ao início
           </Button>
@@ -140,7 +140,7 @@ const SolicitarVerbaProfessores = () => {
         <div className="mb-6">
           <h1 className="text-xl sm:text-2xl font-heading font-bold flex items-center gap-2">
             <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-            Solicitar Verba para Novos Professores
+            Campanha Aporte Recrutamento
           </h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             Preencha os dados abaixo para solicitar autorização de investimento em campanha de recrutamento
@@ -181,7 +181,7 @@ const SolicitarVerbaProfessores = () => {
         <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
           <p className="text-sm text-blue-900">
-            Se você já solicitou verba para novos professores, acesse{' '}
+            Se você já pediu a Campanha Aporte Recrutamento, acesse{' '}
             <button
               type="button"
               onClick={() => navigate('/minha-area/minhas-solicitacoes')}

@@ -297,8 +297,8 @@ const Sidebar = () => {
     ...(isAdmin
       ? [{ name: 'Mídia adicional', href: '/minha-area/midia-adicional', icon: Megaphone, disabled: false }]
       : []),
-    { name: 'Solicitar Mídia adicional', href: '/autorizar-midia-adicional', icon: ImageIcon, disabled: false },
-    { name: 'Solicitar Verba para professores', href: '/autorizar-verba-professores', icon: UserPlus, disabled: false },
+    { name: 'Campanha Aporte Aula Experimental', href: '/autorizar-midia-adicional', icon: ImageIcon, disabled: false },
+    { name: 'Campanha Aporte Recrutamento', href: '/autorizar-verba-professores', icon: UserPlus, disabled: false },
     { name: 'Minhas solicitações', href: '/minha-area/minhas-solicitacoes', icon: Inbox, disabled: false },
   ];
 

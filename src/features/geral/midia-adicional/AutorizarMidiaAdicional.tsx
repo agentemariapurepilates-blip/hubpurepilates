@@ -61,7 +61,7 @@ const SolicitarMidiaAdicional = () => {
       <MainLayout>
         <div className="max-w-2xl mx-auto py-12 text-center">
           <h1 className="text-xl font-heading font-bold mb-2">Acesso restrito</h1>
-          <p className="text-muted-foreground">Faça login para solicitar mídia adicional.</p>
+          <p className="text-muted-foreground">Faça login para pedir a Campanha Aporte Aula Experimental.</p>
           <Button variant="outline" className="mt-6" onClick={() => navigate('/')}>
             Voltar ao início
           </Button>
@@ -162,7 +162,7 @@ const SolicitarMidiaAdicional = () => {
         <div className="mb-6">
           <h1 className="text-xl sm:text-2xl font-heading font-bold flex items-center gap-2">
             <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-            Solicitar Mídia Adicional
+            Campanha Aporte Aula Experimental
           </h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             Preencha os dados abaixo para solicitar autorização de investimento adicional em campanha de aula
@@ -203,7 +203,7 @@ const SolicitarMidiaAdicional = () => {
         <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
           <p className="text-sm text-blue-900">
-            Se você já solicitou mídia adicional, acesse{' '}
+            Se você já pediu a Campanha Aporte Aula Experimental, acesse{' '}
             <button
               type="button"
               onClick={() => navigate('/minha-area/minhas-solicitacoes')}

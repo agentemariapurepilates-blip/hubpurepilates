@@ -103,24 +103,24 @@ const MinhasSolicitacoes = () => {
               Minhas solicitações
             </h1>
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-              Histórico das suas solicitações de mídia adicional e de verba para novos professores.
+              Histórico dos seus pedidos de Campanha Aporte Aula Experimental e Campanha Aporte Recrutamento.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 shrink-0">
             <Button variant="outline" onClick={() => navigate('/autorizar-verba-professores')}>
               <UserPlus className="h-4 w-4 mr-2" />
-              Verba para professores
+              Campanha Aporte Recrutamento
             </Button>
             <Button onClick={() => navigate('/autorizar-midia-adicional')}>
               <Plus className="h-4 w-4 mr-2" />
-              Solicitar mídia adicional
+              Campanha Aporte Aula Experimental
             </Button>
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-heading">Solicitações de Mídia Adicional</CardTitle>
+            <CardTitle className="text-base font-heading">Campanha Aporte Aula Experimental</CardTitle>
             <CardDescription>
               {loading
                 ? 'Carregando...'

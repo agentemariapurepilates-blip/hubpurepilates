@@ -114,7 +114,9 @@ export function PedidosVerbaProfessores({ modo }: Props) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base font-heading">
-          {modo === 'meus' ? 'Verba para novos professores' : 'Unidades com verba para novos professores solicitada'}
+          {modo === 'meus'
+            ? 'Campanha Aporte Recrutamento'
+            : 'Unidades com Campanha Aporte Recrutamento solicitada'}
         </CardTitle>
         <CardDescription>{descricao}</CardDescription>
       </CardHeader>
