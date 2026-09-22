@@ -27,7 +27,7 @@ export interface CertRow {
 export function normalizeHeader(s: string): string {
   return s
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
     .toUpperCase();
