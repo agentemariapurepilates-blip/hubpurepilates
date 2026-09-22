@@ -138,7 +138,7 @@ export const sectionFromPath = (path: string): SectionKey | null => {
   // seção própria. Se o teste ficasse depois, '/inauguracoes' continuaria
   // casando com a lista de colaboradores e a seção errada abriria.
   if (path.startsWith('/inauguracoes')) return 'inauguracoes';
-  if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais', '/leads-rh', '/purepedia'].some((p) => path.startsWith(p))) return 'colaboradores';
+  if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais', '/colaborador/pure-store', '/leads-rh', '/purepedia'].some((p) => path.startsWith(p))) return 'colaboradores';
   // Antes de '/minha-area': o Hub tem /minha-area/dashboard (Mídia Adicional),
   // que NÃO pertence a esta seção. Por isso o teste é '/dashboard/' com barra.
   if (path.startsWith('/dashboard/')) return 'dashboard';
@@ -167,6 +167,11 @@ const Sidebar = () => {
   // Mesmo comportamento pro dropdown do PurePedia (dentro de Colaboradores).
   const [purepediaOpen, setPurepediaOpen] = useState(() =>
     PUREPEDIA_PATHS.includes(location.pathname),
+  );
+
+  // E pro dropdown da Pure Store, que abre sozinho em qualquer tela dela.
+  const [pureStoreOpen, setPureStoreOpen] = useState(() =>
+    location.pathname.startsWith('/colaborador/pure-store'),
   );
 
   // A cada carga/reload: abre a seção da rota atual (accordion). Os itens do topo
@@ -265,6 +270,13 @@ const Sidebar = () => {
   const academyNavigation = [
     { name: 'Gerar certificados', href: '/academy/gerar-certificados', icon: GraduationCap, disabled: false },
     { name: 'Automação de contratos', href: '/academy/gerar-contratos', icon: FileSignature, disabled: false },
+  ];
+
+  // Sub-grupo Pure Store (dentro de Colaboradores). A aba /pure-store, do franqueado,
+  // continua solta no menu Geral: são coisas diferentes.
+  const pureStoreNavigation = [
+    { name: 'Gerador de pedidos', href: '/colaborador/pure-store/pedidos', icon: ShoppingBag },
+    { name: 'Gerenciador de pedidos', href: '/colaborador/pure-store/gerenciador', icon: ClipboardList },
   ];
 
   // Sub-grupo Mídias Sociais (calendários por marca, dentro de Colaboradores)
@@ -536,6 +548,62 @@ const Sidebar = () => {
                     {item.name}
                   </NavLink>
                 ))}
+
+                {/* Pure Store — mesmo molde do PurePedia: o item leva pra página
+                    com os dois atalhos, e a setinha abre as telas aqui. */}
+                <Collapsible open={pureStoreOpen} onOpenChange={setPureStoreOpen}>
+                  <div className="flex items-center gap-1">
+                    <NavLink
+                      to="/colaborador/pure-store"
+                      end
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                          isActive
+                            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                            : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                        )
+                      }
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                      Pure Store
+                    </NavLink>
+                    <CollapsibleTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={pureStoreOpen ? 'Recolher Pure Store' : 'Expandir Pure Store'}
+                        className="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+                      >
+                        <ChevronDown
+                          className={cn('h-4 w-4 transition-transform duration-200', pureStoreOpen && 'rotate-180')}
+                        />
+                      </button>
+                    </CollapsibleTrigger>
+                  </div>
+                  <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+                    <div className="mt-0.5 ml-4 pl-2 border-l border-sidebar-border/60 space-y-0.5">
+                      {pureStoreNavigation.map((item) => (
+                        <NavLink
+                          key={item.name}
+                          to={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={({ isActive }) =>
+                            cn(
+                              'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                              isActive
+                                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                            )
+                          }
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.name}
+                        </NavLink>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             </CollapsibleContent>
           </Collapsible>

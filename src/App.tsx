@@ -58,6 +58,9 @@ const IndicadoresAdministracao = lazy(() => import("./features/colaborador/indic
 // Mídia paga — o Cérebro das campanhas e o relatório com a análise da IA.
 // Leads RH — candidatos vindos dos formularios de recrutamento do Meta.
 const LeadsRH = lazy(() => import("./features/colaborador/leads-rh/LeadsRH"));
+const PureStoreColaborador = lazy(() => import("./features/colaborador/pure-store/PureStoreColaborador"));
+const PedidosPureStore = lazy(() => import("./features/colaborador/pure-store/PedidosPureStore"));
+const GerenciadorPedidosPureStore = lazy(() => import("./features/colaborador/pure-store/GerenciadorPedidos"));
 // PurePedia — base de conhecimento exclusiva dos colaboradores.
 const PurePedia = lazy(() => import("./features/colaborador/purepedia/PurePedia"));
 const PlaybookWellhub = lazy(() => import("./features/colaborador/purepedia/PlaybookWellhub"));
@@ -131,6 +134,9 @@ function App() {
             <Route path="/midias-sociais" element={<ProtectedRoute><MidiasSociais /></ProtectedRoute>} />
             <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
             <Route path="/pedidos-demanda" element={<ProtectedRoute><PedidosDemanda /></ProtectedRoute>} />
+            <Route path="/colaborador/pure-store" element={<ProtectedRoute requireColaborador><PureStoreColaborador /></ProtectedRoute>} />
+            <Route path="/colaborador/pure-store/pedidos" element={<ProtectedRoute requireColaborador><PedidosPureStore /></ProtectedRoute>} />
+            <Route path="/colaborador/pure-store/gerenciador" element={<ProtectedRoute requireColaborador><GerenciadorPedidosPureStore /></ProtectedRoute>} />
             <Route path="/notificacoes" element={<ProtectedRoute><Notificacoes /></ProtectedRoute>} />
             {/* Artes Prontas foi descontinuada â€” tudo agora em Pure Design. */}
             <Route path="/artes-prontas" element={<Navigate to="/pure-design?tab=prontas" replace />} />

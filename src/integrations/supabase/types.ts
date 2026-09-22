@@ -789,6 +789,92 @@ export type Database = {
         }
         Relationships: []
       }
+      pure_store_pedido_itens: {
+        Row: {
+          id: string
+          pedido_id: string
+          posicao: number
+          produto: string
+          quantidade: number
+          tamanho: string
+          valor_unitario: number
+        }
+        Insert: {
+          id?: string
+          pedido_id: string
+          posicao?: number
+          produto: string
+          quantidade: number
+          tamanho?: string
+          valor_unitario: number
+        }
+        Update: {
+          id?: string
+          pedido_id?: string
+          posicao?: number
+          produto?: string
+          quantidade?: number
+          tamanho?: string
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pure_store_pedido_itens_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pure_store_pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pure_store_pedidos: {
+        Row: {
+          cliente_nome: string
+          cliente_telefone: string
+          cliente_unidade: string
+          created_at: string
+          criado_por: string | null
+          desconto_percentual: number
+          desconto_valor: number
+          id: string
+          numero: number
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          cliente_nome: string
+          cliente_telefone?: string
+          cliente_unidade?: string
+          created_at?: string
+          criado_por?: string | null
+          desconto_percentual?: number
+          desconto_valor?: number
+          id?: string
+          numero?: number
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          cliente_nome?: string
+          cliente_telefone?: string
+          cliente_unidade?: string
+          created_at?: string
+          criado_por?: string | null
+          desconto_percentual?: number
+          desconto_valor?: number
+          id?: string
+          numero?: number
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       social_media_comments: {
         Row: {
           comment: string

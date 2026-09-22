@@ -19,6 +19,13 @@ describe('sectionFromPath', () => {
     expect(sectionFromPath('/autorizar-verba-professores')).toBe('minha-area');
   });
 
+  it('o gerador de pedidos abre Colaboradores, e a aba do franqueado segue fora de seção', () => {
+    expect(sectionFromPath('/colaborador/pure-store/pedidos')).toBe('colaboradores');
+    // '/pure-store' é a aba do franqueado, item solto do menu. Se alguém usar esse
+    // prefixo na lista de Colaboradores, a seção errada passa a abrir lá.
+    expect(sectionFromPath('/pure-store')).toBe(null);
+  });
+
   it('não mexe nas seções que já existiam', () => {
     expect(sectionFromPath('/feed')).toBe('colaboradores');
     expect(sectionFromPath('/agente-design/gerar-foto')).toBe('agentes');
