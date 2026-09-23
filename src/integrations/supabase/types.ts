@@ -463,6 +463,36 @@ export type Database = {
           },
         ]
       }
+      evento_confirmacoes: {
+        Row: {
+          criado_em: string
+          evento: string
+          id: string
+          nome: string
+          turma: string
+          user_id: string
+          whatsapp: string
+        }
+        Insert: {
+          criado_em?: string
+          evento: string
+          id?: string
+          nome: string
+          turma: string
+          user_id: string
+          whatsapp: string
+        }
+        Update: {
+          criado_em?: string
+          evento?: string
+          id?: string
+          nome?: string
+          turma?: string
+          user_id?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       marketing_events: {
         Row: {
           created_at: string
@@ -1047,6 +1077,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirmar_presenca_evento: {
+        Args: { _evento: string; _nome: string; _whatsapp: string }
+        Returns: Database["public"]["Tables"]["evento_confirmacoes"]["Row"]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -45,6 +45,7 @@ const MidiaAdicionalUnidades = lazy(() => import("./features/colaborador/unidade
 const ColabMidiasSociais = lazy(() => import("./features/colaborador/marketing/ColabMidiasSociais"));
 const DashboardMidiaAdicional = lazy(() => import("./features/colaborador/dashboard/DashboardMidiaAdicional"));
 const Inauguracoes = lazy(() => import("./features/colaborador/inauguracoes/Inauguracoes"));
+const EventoConfirmacao = lazy(() => import("./features/colaborador/evento/EventoConfirmacao"));
 
 // Painel de Indicadores (banco Supabase separado â€” ver integrations/supabase/indicadores.ts)
 const IndicadoresVisaoGeral = lazy(() => import("./features/colaborador/indicadores/VisaoGeral"));
@@ -134,6 +135,7 @@ function App() {
             <Route path="/midias-sociais" element={<ProtectedRoute><MidiasSociais /></ProtectedRoute>} />
             <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
             <Route path="/pedidos-demanda" element={<ProtectedRoute><PedidosDemanda /></ProtectedRoute>} />
+            <Route path="/colaborador/evento" element={<ProtectedRoute requireColaborador><EventoConfirmacao /></ProtectedRoute>} />
             <Route path="/colaborador/pure-store" element={<ProtectedRoute requireColaborador><PureStoreColaborador /></ProtectedRoute>} />
             <Route path="/colaborador/pure-store/pedidos" element={<ProtectedRoute requireColaborador><PedidosPureStore /></ProtectedRoute>} />
             <Route path="/colaborador/pure-store/gerenciador" element={<ProtectedRoute requireColaborador><GerenciadorPedidosPureStore /></ProtectedRoute>} />
