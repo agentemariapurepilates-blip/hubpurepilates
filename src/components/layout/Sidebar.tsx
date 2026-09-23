@@ -52,7 +52,6 @@ import {
   UserSearch,
 } from 'lucide-react';
 import SimboloSegredosPilar from '@/features/geral/segredos-pilar/SimboloSegredosPilar';
-import { usePublicacaoSegredosPilar } from '@/features/geral/segredos-pilar/usePublicacaoSegredosPilar';
 import type { LucideIcon } from 'lucide-react';
 
 const SectionHeader = ({
@@ -157,7 +156,6 @@ const Sidebar = () => {
 
   const isFranqueado = userType === 'franqueado';
   const hasUnitAccess = useHasUnitAccess();
-  const { publicado: segredosPilarPublicado } = usePublicacaoSegredosPilar();
 
   // Dropdown "Tutoriais" — abre sozinho quando a rota atual é a página-hub ou uma das filhas.
   const [tutoriaisOpen, setTutoriaisOpen] = useState(() =>
@@ -213,10 +211,8 @@ const Sidebar = () => {
     { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
     { name: 'Avisos', href: '/avisos', icon: Megaphone },
     { name: 'Pure Store', href: '/pure-store', icon: ShoppingBag },
-    // Só colaboradores até um admin publicar para todos (ver usePublicacaoSegredosPilar).
-    ...(isColaborador || segredosPilarPublicado
-      ? [{ name: 'Os segredos de Pilar', href: '/segredos-de-pilar', icon: SimboloSegredosPilar }]
-      : []),
+    // A aba é de todo mundo: quem é liberado um a um é o vídeo, dentro dela.
+    { name: 'Os segredos de Pilar', href: '/segredos-de-pilar', icon: SimboloSegredosPilar },
     // Parcerias: oculto da produção a pedido (a rota /parcerias continua existindo).
     // Para reexibir, basta descomentar a linha abaixo.
     // { name: 'Parcerias', href: '/parcerias', icon: Handshake },

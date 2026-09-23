@@ -40,6 +40,8 @@ export interface ResumoPedido {
   percentual: number;
   /** Quanto o desconto tirou, em reais. */
   desconto: number;
+  /** Digitado à mão no pedido; entra depois do desconto. */
+  frete: number;
   total: number;
 }
 
@@ -65,12 +67,18 @@ const emCentavos = (valor: number) => Math.round(valor * 100) / 100;
 export const totalDoItem = (item: Pick<ItemPedido, 'quantidade' | 'valorUnitario'>) =>
   emCentavos(Math.max(0, item.quantidade) * Math.max(0, item.valorUnitario));
 
-export function calcularResumo(itens: ItemPedido[], descontoPercentual: number): ResumoPedido {
+/** O desconto incide só sobre os produtos; o frete entra por último, inteiro. */
+export function calcularResumo(
+  itens: ItemPedido[],
+  descontoPercentual: number,
+  freteInformado = 0,
+): ResumoPedido {
   const subtotal = emCentavos(itens.reduce((soma, item) => soma + totalDoItem(item), 0));
   // Percentual fora da faixa (digitação, colar de outro lugar) não pode virar desconto negativo nem total negativo.
   const percentual = Number.isFinite(descontoPercentual) ? Math.min(100, Math.max(0, descontoPercentual)) : 0;
   const desconto = emCentavos((subtotal * percentual) / 100);
-  return { subtotal, percentual, desconto, total: emCentavos(subtotal - desconto) };
+  const frete = Number.isFinite(freteInformado) ? emCentavos(Math.max(0, freteInformado)) : 0;
+  return { subtotal, percentual, desconto, frete, total: emCentavos(subtotal - desconto + frete) };
 }
 
 export const formatarReal = (valor: number) =>

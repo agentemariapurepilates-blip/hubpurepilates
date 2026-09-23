@@ -11,17 +11,32 @@
 // Subpastas viram temporadas (um nível só). Vídeos soltos na raiz formam a
 // temporada sem título.
 //
+// LIBERAÇÃO POR EPISÓDIO (23/09/2026): a aba é de todo mundo, mas cada vídeo só
+// abre depois que um admin o solta (tabela segredos_pilar_liberacoes). Para quem
+// não pode ver, a função devolve o episódio SEM o id do Drive e sem a capa —
+// aparece como "Em breve" e não há endereço de vídeo para achar no navegador.
+// Colaborador e admin veem tudo, para preparar a publicação.
+//
 // Só usuário logado no Hub consegue a lista (verify_jwt ligado + getUser).
 //
 // PUBLICADA em 16/09/2026 no projeto evprrtvbvjnjixogjsmn.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getCorsHeaders } from '../_shared/cors.ts'
-import { lerPasta, montarEpisodios, ordenarTemporadas, tituloDaTemporada, type Temporada } from './pasta.ts'
+import { lerPasta, montarEpisodios, ordenarTemporadas, tituloDaTemporada, type Episodio, type Temporada } from './pasta.ts'
 
-// Mesma chave de src/features/geral/segredos-pilar/usePublicacaoSegredosPilar.ts.
-const CHAVE_PUBLICACAO = 'segredos-de-pilar'
-const PASTA_ID =Deno.env.get('SEGREDOS_PILAR_PASTA_ID') || '1jg9kXH5QZkh-0yC1dy-Z3vAK0uNSMTOz'
+const PASTA_ID = Deno.env.get('SEGREDOS_PILAR_PASTA_ID') || '1jg9kXH5QZkh-0yC1dy-Z3vAK0uNSMTOz'
+
+type EpisodioResposta = {
+  /** Identidade na tela. É o id do Drive quando a pessoa pode assistir. */
+  chave: string
+  numero: number | null
+  titulo: string
+  capa: string | null
+  /** Nulo para quem ainda não pode assistir. */
+  driveId: string | null
+  liberado: boolean
+}
 
 async function buscarPasta(id: string) {
   const res = await fetch(`https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(id)}`, {
@@ -29,6 +44,27 @@ async function buscarPasta(id: string) {
   })
   if (!res.ok) throw new Error(`Drive respondeu ${res.status} para a pasta ${id}`)
   return lerPasta(await res.text())
+}
+
+/** Esconde o vídeo de quem não pode ver: sem id do Drive, sem capa, sem endereço. */
+function paraResposta(
+  episodios: Episodio[],
+  temporada: string | null,
+  liberados: Set<string>,
+  vePreview: boolean,
+): EpisodioResposta[] {
+  return episodios.map((ep, i) => {
+    const liberado = liberados.has(ep.driveId)
+    const podeAssistir = liberado || vePreview
+    return {
+      chave: podeAssistir ? ep.driveId : `bloqueado:${temporada ?? 'raiz'}:${i}`,
+      numero: ep.numero,
+      titulo: ep.titulo,
+      capa: podeAssistir ? ep.capa : null,
+      driveId: podeAssistir ? ep.driveId : null,
+      liberado,
+    }
+  })
 }
 
 Deno.serve(async (req) => {
@@ -52,26 +88,15 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Antes de um admin publicar para todos (linha em timeline_visibility, mesmo
-  // botão da Timeline), só colaborador/admin recebe a lista — a tela esconde a
-  // aba, mas é aqui que o franqueado é barrado de verdade.
-  const { data: publicacao } = await supabaseClient
-    .from('timeline_visibility')
-    .select('is_published')
-    .eq('month_key', CHAVE_PUBLICACAO)
-    .maybeSingle()
-  if (publicacao?.is_published !== true) {
-    const [{ data: colaborador }, { data: admin }] = await Promise.all([
-      supabaseClient.rpc('is_colaborador', { _user_id: user.id }),
-      supabaseClient.rpc('has_role', { _user_id: user.id, _role: 'admin' }),
-    ])
-    if (colaborador !== true && admin !== true) {
-      return new Response(JSON.stringify({ error: 'Série ainda não publicada.' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-  }
+  // Quem monta a série (colaborador/admin) enxerga os episódios ainda fechados,
+  // para conferir antes de soltar.
+  const [{ data: colaborador }, { data: admin }, { data: liberacoes }] = await Promise.all([
+    supabaseClient.rpc('is_colaborador', { _user_id: user.id }),
+    supabaseClient.rpc('has_role', { _user_id: user.id, _role: 'admin' }),
+    supabaseClient.from('segredos_pilar_liberacoes').select('drive_id'),
+  ])
+  const vePreview = colaborador === true || admin === true
+  const liberados = new Set((liberacoes ?? []).map((l: { drive_id: string }) => l.drive_id))
 
   try {
     const raiz = await buscarPasta(PASTA_ID)
@@ -87,11 +112,17 @@ Deno.serve(async (req) => {
       )),
     ]
 
-    return new Response(JSON.stringify({ temporadas: ordenarTemporadas(temporadas) }), {
+    const resposta = ordenarTemporadas(temporadas).map((t) => ({
+      titulo: t.titulo,
+      episodios: paraResposta(t.episodios, t.titulo, liberados, vePreview),
+    }))
+
+    return new Response(JSON.stringify({ temporadas: resposta, vePreview }), {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=120',
+        // Curto e privado: a resposta muda assim que um episódio é liberado.
+        'Cache-Control': 'private, max-age=30',
       },
     })
   } catch (err) {

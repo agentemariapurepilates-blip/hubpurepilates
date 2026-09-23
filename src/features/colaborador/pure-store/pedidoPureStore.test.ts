@@ -44,7 +44,20 @@ describe('contas do pedido', () => {
   });
 
   it('pedido vazio tem total zero', () => {
-    expect(calcularResumo([], 20)).toEqual({ subtotal: 0, percentual: 20, desconto: 0, total: 0 });
+    expect(calcularResumo([], 20)).toEqual({ subtotal: 0, percentual: 20, desconto: 0, frete: 0, total: 0 });
+  });
+
+  it('o frete entra depois do desconto, inteiro', () => {
+    // 324,90 - 20% = 259,92, mais 35,50 de frete.
+    const resumo = calcularResumo([item(2, 60), item(1, 70), item(1, 134.9)], 20, 35.5);
+    expect(resumo.desconto).toBe(64.98);
+    expect(resumo.frete).toBe(35.5);
+    expect(resumo.total).toBe(295.42);
+  });
+
+  it('frete negativo ou inválido conta como zero', () => {
+    expect(calcularResumo([item(1, 100)], 0, -20).total).toBe(100);
+    expect(calcularResumo([item(1, 100)], 0, Number.NaN).frete).toBe(0);
   });
 
   it('mostra o valor em real do jeito brasileiro', () => {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { Link } from 'react-router-dom';
-import { ClipboardList, Loader2, MoreHorizontal, Pencil, Search, Trash2 } from 'lucide-react';
+import { ArrowLeft, ClipboardList, FileDown, FileText, Loader2, MoreHorizontal, Pencil, Search, Trash2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,14 +14,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { formatarReal } from './pedidoPureStore';
+import { baixarPedidoPdf } from './pedidoPdf';
+import { baixarRelatorioPdf, descreverPeriodo, resumirPedidos } from './relatorioPdf';
 import {
   COR_STATUS,
   STATUS_PEDIDO,
+  TITULO_CURTO,
   TITULO_STATUS,
   excluirPedido,
   listarPedidos,
@@ -34,8 +38,35 @@ import {
 const normalizar = (texto: string) =>
   texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-/** Data local no formato do campo de data (yyyy-mm-dd); o banco guarda em UTC. */
-const diaLocal = (iso: string) => new Date(iso).toLocaleDateString('sv-SE');
+/** O PDF do pedido salvo: os valores vêm gravados, não são recalculados. */
+const baixarPdfDoPedido = (pedido: PedidoSalvo) =>
+  baixarPedidoPdf({
+    numero: pedido.numero,
+    cliente: {
+      nome: pedido.cliente_nome,
+      unidade: pedido.cliente_unidade,
+      telefone: pedido.cliente_telefone,
+    },
+    itens: pedido.itens.map((item) => ({
+      id: item.id,
+      produto: item.produto,
+      tamanho: item.tamanho,
+      quantidade: item.quantidade,
+      valorUnitario: item.valor_unitario,
+    })),
+    resumo: {
+      subtotal: pedido.subtotal,
+      percentual: pedido.desconto_percentual,
+      desconto: pedido.desconto_valor,
+      frete: pedido.frete,
+      total: pedido.total,
+    },
+    dataDoPedido: pedido.data_pedido,
+    criadoEm: new Date(pedido.created_at),
+  });
+
+/** "2026-09-23" vira "23/09/2026" sem passar por Date: assim o fuso não muda o dia. */
+const diaBR = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
 const dataHora = (iso: string) =>
   new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -69,7 +100,7 @@ const CartaoPedido = ({
           {...(arrastavel ? { ...listeners, ...attributes } : {})}
         >
           <p className="text-xs text-muted-foreground">
-            Pedido {pedido.numero} · {dataHora(pedido.created_at)}
+            Pedido {pedido.numero} · {diaBR(pedido.data_pedido)}
           </p>
           <p className="truncate font-medium">{pedido.cliente_nome}</p>
           {pedido.cliente_unidade && (
@@ -98,6 +129,10 @@ const CartaoPedido = ({
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar pedido
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => baixarPdfDoPedido(pedido)}>
+              <FileDown className="mr-2 h-4 w-4" />
+              Baixar PDF
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {STATUS_PEDIDO.filter((s) => s !== pedido.status).map((status) => (
@@ -174,6 +209,7 @@ const GerenciadorPedidos = () => {
   const [ate, setAte] = useState('');
   const [aberto, setAberto] = useState<PedidoSalvo | null>(null);
   const [arrastando, setArrastando] = useState<PedidoSalvo | null>(null);
+  const [aba, setAba] = useState<'quadro' | 'relatorios'>('quadro');
 
   const sensores = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -218,12 +254,40 @@ const GerenciadorPedidos = () => {
     return pedidos.filter((pedido) => {
       const alvo = normalizar(`${pedido.cliente_nome} ${pedido.cliente_unidade} ${pedido.numero}`);
       if (!termos.every((termo) => alvo.includes(termo))) return false;
-      const dia = diaLocal(pedido.created_at);
+      const dia = pedido.data_pedido.slice(0, 10);
       if (de && dia < de) return false;
       if (ate && dia > ate) return false;
       return true;
     });
   }, [pedidos, busca, de, ate]);
+
+  // O relatório é exatamente o que os filtros acima deixaram na tela.
+  const pedidosDoRelatorio = useMemo(
+    () =>
+      filtrados.map((pedido) => ({
+        numero: pedido.numero,
+        data_pedido: pedido.data_pedido,
+        cliente_nome: pedido.cliente_nome,
+        cliente_unidade: pedido.cliente_unidade,
+        status: TITULO_CURTO[pedido.status],
+        quantidadeDeItens: pedido.itens.length,
+        total: pedido.total,
+      })),
+    [filtrados],
+  );
+  const relatorio = useMemo(() => resumirPedidos(pedidosDoRelatorio), [pedidosDoRelatorio]);
+
+  const baixarRelatorio = async () => {
+    try {
+      await baixarRelatorioPdf({
+        pedidos: pedidosDoRelatorio,
+        periodo: { de: de || undefined, ate: ate || undefined, busca: busca.trim() || undefined },
+      });
+    } catch (erro) {
+      console.error('Erro ao gerar o relatório:', erro);
+      toast({ title: 'Erro ao gerar o relatório', description: 'Tente de novo.', variant: 'destructive' });
+    }
+  };
 
   const mover = async (id: string, status: StatusPedido) => {
     const antes = pedidos;
@@ -261,7 +325,13 @@ const GerenciadorPedidos = () => {
     <MainLayout>
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pure Store</p>
+          <Link
+            to="/colaborador/pure-store"
+            className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Pure Store
+          </Link>
           <h1 className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
             <ClipboardList className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
             Gerenciador de pedidos
@@ -308,51 +378,127 @@ const GerenciadorPedidos = () => {
           </span>
         </div>
 
-        {carregando ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : pedidos.length === 0 ? (
-          <Card>
-            <CardContent className="space-y-2 p-10 text-center">
-              <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground" />
-              <p className="font-medium">Nenhum pedido ainda</p>
-              <p className="text-sm text-muted-foreground">
-                Os pedidos criados no Gerador aparecem aqui, começando em “Pedido realizado”.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <DndContext
-            sensors={sensores}
-            onDragStart={(e) => setArrastando(pedidos.find((p) => p.id === e.active.id) ?? null)}
-            onDragCancel={() => setArrastando(null)}
-            onDragEnd={aoSoltar}
-          >
-            <div className="flex flex-col gap-4 overflow-x-auto pb-2 sm:flex-row">
-              {STATUS_PEDIDO.map((status) => (
-                <Coluna
-                  key={status}
-                  status={status}
-                  pedidos={filtrados.filter((p) => p.status === status)}
-                  onAbrir={setAberto}
-                  onMover={mover}
-                  onExcluir={remover}
-                />
-              ))}
+        <Tabs value={aba} onValueChange={(v) => setAba(v as 'quadro' | 'relatorios')}>
+          <TabsList>
+            <TabsTrigger value="quadro" className="gap-1.5">
+              <ClipboardList className="h-4 w-4" />
+              Quadro
+            </TabsTrigger>
+            <TabsTrigger value="relatorios" className="gap-1.5">
+              <FileText className="h-4 w-4" />
+              Relatórios
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="quadro" className="mt-4">
+            {carregando ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : pedidos.length === 0 ? (
+              <Card>
+                <CardContent className="space-y-2 p-10 text-center">
+                  <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground" />
+                  <p className="font-medium">Nenhum pedido ainda</p>
+                  <p className="text-sm text-muted-foreground">
+                    Os pedidos criados no Gerador aparecem aqui, começando em “Pedido realizado”.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <DndContext
+                sensors={sensores}
+                onDragStart={(e) => setArrastando(pedidos.find((p) => p.id === e.active.id) ?? null)}
+                onDragCancel={() => setArrastando(null)}
+                onDragEnd={aoSoltar}
+              >
+                <div className="flex flex-col gap-4 overflow-x-auto pb-2 sm:flex-row">
+                  {STATUS_PEDIDO.map((status) => (
+                    <Coluna
+                      key={status}
+                      status={status}
+                      pedidos={filtrados.filter((p) => p.status === status)}
+                      onAbrir={setAberto}
+                      onMover={mover}
+                      onExcluir={remover}
+                    />
+                  ))}
+                </div>
+
+                <DragOverlay>
+                  {arrastando && (
+                    <div className="w-64 rotate-2 rounded-lg border bg-card p-3 shadow-xl">
+                      <p className="text-xs text-muted-foreground">Pedido {arrastando.numero}</p>
+                      <p className="truncate font-medium">{arrastando.cliente_nome}</p>
+                      <p className="text-sm font-semibold tabular-nums">{formatarReal(arrastando.total)}</p>
+                    </div>
+                  )}
+                </DragOverlay>
+              </DndContext>
+            )}
+          </TabsContent>
+
+          <TabsContent value="relatorios" className="mt-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              O relatório usa os filtros acima. Período: <strong>{descreverPeriodo({ de: de || undefined, ate: ate || undefined })}</strong>
+              {busca.trim() && (
+                <>
+                  {' '}· busca: <strong>{busca.trim()}</strong>
+                </>
+              )}
+              .
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Pedidos</p>
+                  <p className="text-2xl font-bold tabular-nums">{relatorio.quantidade}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Valor total</p>
+                  <p className="text-2xl font-bold tabular-nums">{formatarReal(relatorio.total)}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Ticket médio</p>
+                  <p className="text-2xl font-bold tabular-nums">{formatarReal(relatorio.ticketMedio)}</p>
+                </CardContent>
+              </Card>
             </div>
 
-            <DragOverlay>
-              {arrastando && (
-                <div className="w-64 rotate-2 rounded-lg border bg-card p-3 shadow-xl">
-                  <p className="text-xs text-muted-foreground">Pedido {arrastando.numero}</p>
-                  <p className="truncate font-medium">{arrastando.cliente_nome}</p>
-                  <p className="text-sm font-semibold tabular-nums">{formatarReal(arrastando.total)}</p>
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
-        )}
+            {relatorio.porStatus.length > 0 && (
+              <Card>
+                <CardContent className="p-0">
+                  {relatorio.porStatus.map((linha) => (
+                    <div
+                      key={linha.status}
+                      className="flex items-center gap-3 border-b px-4 py-2.5 text-sm last:border-b-0"
+                    >
+                      <span className="min-w-0 flex-1 truncate">{linha.status}</span>
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                        {linha.quantidade} {linha.quantidade === 1 ? 'pedido' : 'pedidos'}
+                      </span>
+                      <span className="w-28 shrink-0 text-right font-medium tabular-nums">
+                        {formatarReal(linha.total)}
+                      </span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="flex justify-end">
+              <Button onClick={baixarRelatorio} disabled={relatorio.quantidade === 0} className="gap-2">
+                <FileDown className="h-4 w-4" />
+                Baixar relatório em PDF
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={aberto !== null} onOpenChange={(o) => !o && setAberto(null)}>
@@ -368,7 +514,10 @@ const GerenciadorPedidos = () => {
                   {aberto.cliente_unidade && <p className="text-muted-foreground">{aberto.cliente_unidade}</p>}
                   {aberto.cliente_telefone && <p className="text-muted-foreground">{aberto.cliente_telefone}</p>}
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Criado em {dataHora(aberto.created_at)} · {TITULO_STATUS[aberto.status]}
+                    Pedido de {diaBR(aberto.data_pedido)} · {TITULO_STATUS[aberto.status]}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Registrado no Hub em {dataHora(aberto.created_at)}
                   </p>
                 </div>
 
@@ -387,7 +536,11 @@ const GerenciadorPedidos = () => {
                   ))}
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => baixarPdfDoPedido(aberto)}>
+                    <FileDown className="h-4 w-4" />
+                    Baixar PDF
+                  </Button>
                   <Button asChild variant="outline" size="sm" className="gap-1.5">
                     <Link to={`/colaborador/pure-store/pedidos?pedido=${aberto.id}`}>
                       <Pencil className="h-4 w-4" />
@@ -405,6 +558,12 @@ const GerenciadorPedidos = () => {
                     <dt className="text-muted-foreground">Desconto ({aberto.desconto_percentual}%)</dt>
                     <dd className="tabular-nums text-muted-foreground">– {formatarReal(aberto.desconto_valor)}</dd>
                   </div>
+                  {aberto.frete > 0 && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Frete</dt>
+                      <dd className="tabular-nums">+ {formatarReal(aberto.frete)}</dd>
+                    </div>
+                  )}
                   <div className="flex justify-between text-base font-bold">
                     <dt>Total</dt>
                     <dd className="tabular-nums">{formatarReal(aberto.total)}</dd>

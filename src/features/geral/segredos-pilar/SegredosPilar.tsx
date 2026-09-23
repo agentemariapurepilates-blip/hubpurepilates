@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,25 +11,30 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Eye,
+  Clock,
   Loader2,
   Maximize,
   Minimize,
   Play,
   RefreshCcw,
   Send,
+  Undo2,
 } from 'lucide-react';
 import logoHorizontal from '@/assets/segredos-pilar/logo-horizontal-escuro.png';
 import SimboloSegredosPilar from './SimboloSegredosPilar';
-import { usePublicacaoSegredosPilar } from './usePublicacaoSegredosPilar';
-import type { Episodio, Temporada } from '../../../../supabase/functions/segredos-pilar-episodios/pasta';
 
-// Os segredos de Pilar — série em vídeo. Começa só para colaboradores e um
-// admin libera para todos pelo botão "Publicar para todos" (como a Timeline).
+// Os segredos de Pilar — série em vídeo.
 //
-// Os vídeos moram numa pasta do Drive e tocam pelo player do Drive dentro de um
-// iframe (o tráfego de vídeo não passa pelo Supabase — decisão de 16/09/2026).
-// A lista vem da Edge Function segredos-pilar-episodios.
+// A aba é de todo mundo. O que é liberado um a um é o VÍDEO: enquanto o admin
+// não solta um episódio (tabela segredos_pilar_liberacoes), o franqueado vê o
+// cartão com "Em breve" e nem recebe o endereço do vídeo — quem corta isso é a
+// Edge Function segredos-pilar-episodios.
+//
+// O trailer é um vídeo da própria pasta (subpasta "Clipes"), liberado como
+// qualquer outro — hoje é o único solto para as unidades.
+//
+// Os episódios moram numa pasta do Drive e tocam pelo player do Drive dentro de
+// um iframe (o tráfego de vídeo não passa pelo Supabase — decisão de 16/09/2026).
 //
 // Para ninguém "cair" no Drive:
 // - o iframe não tem allowFullScreen: a tela cheia é a nossa, sobre o bloco que
@@ -37,9 +42,27 @@ import type { Episodio, Temporada } from '../../../../supabase/functions/segredo
 // - um bloco transparente cobre o canto superior direito, onde o Drive põe o
 //   botão "abrir em nova janela".
 // Isso esconde o Drive da interface. Não é sigilo: quem abrir o inspetor do
-// navegador ainda encontra o endereço do iframe.
+// navegador ainda encontra o endereço do iframe de um episódio já liberado.
 
-type Resposta = { temporadas: Temporada[] };
+export interface EpisodioDaTela {
+  chave: string;
+  numero: number | null;
+  titulo: string;
+  capa: string | null;
+  /** Nulo quando a pessoa ainda não pode assistir. */
+  driveId: string | null;
+  liberado: boolean;
+}
+
+interface TemporadaDaTela {
+  titulo: string | null;
+  episodios: EpisodioDaTela[];
+}
+
+type Resposta = {
+  temporadas: TemporadaDaTela[];
+  vePreview: boolean;
+};
 
 const CHAVE_ASSISTIDOS = 'segredos-pilar:assistidos';
 const CHAVE_ULTIMO = 'segredos-pilar:ultimo';
@@ -61,105 +84,102 @@ const gravarLocal = (chave: string, valor: unknown) => {
   }
 };
 
-const rotuloDoEpisodio = (ep: Episodio) => (ep.numero !== null ? `Episódio ${ep.numero}` : 'Especial');
+const rotuloDoEpisodio = (ep: EpisodioDaTela) =>
+  ep.numero !== null ? `Episódio ${ep.numero}` : 'Especial';
 
 const SegredosPilar = () => {
-  const { isAdmin, isColaborador } = useAuth();
-  const { publicado, carregando: carregandoPublicacao, publicar } = usePublicacaoSegredosPilar();
-  // Antes de publicar, só colaboradores/admins (pré-visualização), como na Timeline.
-  const podeVer = publicado || isColaborador;
+  const { user, isAdmin } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['segredos-pilar-episodios'],
-    enabled: podeVer,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke<Resposta>('segredos-pilar-episodios');
       if (error) throw error;
       return data!;
     },
-    staleTime: 2 * 60 * 1000,
+    staleTime: 60 * 1000,
   });
 
-  const temporadas = useMemo(() => data?.temporadas ?? [], [data]);
-  // Ordem de reprodução: todas as temporadas em sequência.
-  const fila = useMemo(() => temporadas.flatMap((t) => t.episodios), [temporadas]);
+  const temporadas: TemporadaDaTela[] = useMemo(() => data?.temporadas ?? [], [data]);
+
+  const fila = useMemo(() => temporadas.flatMap((t) => t.episodios).filter((e) => e.liberado), [temporadas]);
+  const aLiberar = useMemo(
+    () => temporadas.flatMap((t) => t.episodios).filter((e) => !e.liberado).length,
+    [temporadas],
+  );
 
   const [assistidos, setAssistidos] = useState<string[]>(() => lerLocal(CHAVE_ASSISTIDOS, []));
   const [ultimo, setUltimo] = useState<string | null>(() => lerLocal(CHAVE_ULTIMO, null));
-  const [tocando, setTocando] = useState<Episodio | null>(null);
+  const [tocando, setTocando] = useState<EpisodioDaTela | null>(null);
 
-  const abrir = useCallback((ep: Episodio) => {
+  const abrir = useCallback((ep: EpisodioDaTela) => {
+    if (!ep.liberado && !ep.driveId) return;
     setTocando(ep);
-    setUltimo(ep.driveId);
-    gravarLocal(CHAVE_ULTIMO, ep.driveId);
+    setUltimo(ep.chave);
+    gravarLocal(CHAVE_ULTIMO, ep.chave);
     setAssistidos((atual) => {
-      if (atual.includes(ep.driveId)) return atual;
-      const novo = [...atual, ep.driveId];
+      if (atual.includes(ep.chave)) return atual;
+      const novo = [...atual, ep.chave];
       gravarLocal(CHAVE_ASSISTIDOS, novo);
       return novo;
     });
   }, []);
 
+  const liberar = useMutation({
+    mutationFn: async (ep: EpisodioDaTela) => {
+      if (!ep.driveId) throw new Error('Episódio sem id do Drive.');
+      const { error } = await supabase
+        .from('segredos_pilar_liberacoes')
+        .insert({ drive_id: ep.driveId, liberado_por: user?.id ?? null });
+      if (error) throw error;
+    },
+    onSuccess: (_, ep) => {
+      toast.success(`${rotuloDoEpisodio(ep)} liberado para todas as unidades.`);
+      queryClient.invalidateQueries({ queryKey: ['segredos-pilar-episodios'] });
+    },
+    onError: (erro) => {
+      console.error(erro);
+      toast.error('Não foi possível liberar o episódio.');
+    },
+  });
+
+  const recolher = useMutation({
+    mutationFn: async (ep: EpisodioDaTela) => {
+      if (!ep.driveId) throw new Error('Episódio sem id do Drive.');
+      const { error } = await supabase.from('segredos_pilar_liberacoes').delete().eq('drive_id', ep.driveId);
+      if (error) throw error;
+    },
+    onSuccess: (_, ep) => {
+      toast.success(`${rotuloDoEpisodio(ep)} voltou para "Em breve".`);
+      queryClient.invalidateQueries({ queryKey: ['segredos-pilar-episodios'] });
+    },
+    onError: (erro) => {
+      console.error(erro);
+      toast.error('Não foi possível recolher o episódio.');
+    },
+  });
+
   // Destaque: o último aberto (continuar) ou o primeiro ainda não visto.
   const destaque = useMemo(() => {
-    const ultimoEp = fila.find((e) => e.driveId === ultimo);
+    const ultimoEp = fila.find((e) => e.chave === ultimo);
     if (ultimoEp) return { ep: ultimoEp, continuar: true };
-    const proximo = fila.find((e) => !assistidos.includes(e.driveId)) ?? fila[0];
+    const proximo = fila.find((e) => !assistidos.includes(e.chave)) ?? fila[0];
     return proximo ? { ep: proximo, continuar: false } : null;
   }, [fila, ultimo, assistidos]);
 
-  const indiceTocando = tocando ? fila.findIndex((e) => e.driveId === tocando.driveId) : -1;
-
-  if (!podeVer) {
-    return (
-      <MainLayout>
-        <div className="max-w-6xl mx-auto">
-          <section className="rounded-3xl bg-neutral-950 text-white min-h-[340px] flex flex-col items-center justify-center gap-5 p-8 text-center">
-            {carregandoPublicacao ? (
-              <Loader2 className="h-8 w-8 animate-spin text-white/60" />
-            ) : (
-              <>
-                <h1>
-                  <span className="sr-only">Os segredos de Pilar</span>
-                  <img src={logoHorizontal} alt="" aria-hidden className="h-20 sm:h-28 w-auto" />
-                </h1>
-                <p className="text-white/70">Em breve.</p>
-              </>
-            )}
-          </section>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  const handlePublicar = () =>
-    publicar.mutate(undefined, {
-      onSuccess: () => toast.success('Os segredos de Pilar publicado para todos!'),
-      onError: (err) => {
-        console.error(err);
-        toast.error('Erro ao publicar a série.');
-      },
-    });
+  const indiceTocando = tocando ? fila.findIndex((e) => e.chave === tocando.chave) : -1;
 
   return (
     <MainLayout>
       <div className="max-w-6xl mx-auto">
-        {/* Barra de publicação — mesmo molde da Timeline do Mês */}
-        {isAdmin && !publicado && !carregandoPublicacao && (
-          <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
-            <div className="flex items-center gap-3 flex-1">
-              <Eye className="h-5 w-5 text-primary shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Modo pré-visualização</p>
-                <p className="text-xs text-muted-foreground">
-                  Apenas colaboradores podem ver a série. Franqueados verão &quot;em breve&quot;.
-                </p>
-              </div>
-            </div>
-            <Button onClick={handlePublicar} disabled={publicar.isPending} className="gap-2">
-              <Send className="h-4 w-4" />
-              {publicar.isPending ? 'Publicando...' : 'Publicar para todos'}
-            </Button>
+        {isAdmin && aLiberar > 0 && (
+          <div className="mb-6 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+            <Clock className="h-5 w-5 text-primary shrink-0" />
+            <p className="text-sm text-foreground">
+              {aLiberar} {aLiberar === 1 ? 'episódio ainda aparece' : 'episódios ainda aparecem'} como{' '}
+              <strong>Em breve</strong> para as unidades. Solte um a um pelo botão no cartão.
+            </p>
           </div>
         )}
 
@@ -187,6 +207,10 @@ const SegredosPilar = () => {
               />
             </h1>
 
+            <p className="mt-3 text-sm sm:text-base text-white/75">
+              A novela de vendas da rede: os erros que fazem o aluno fechar com o concorrente — e a virada.
+            </p>
+
             {isLoading && (
               <p className="mt-4 flex items-center gap-2 text-white/70">
                 <Loader2 className="h-4 w-4 animate-spin" /> Carregando episódios…
@@ -210,7 +234,7 @@ const SegredosPilar = () => {
                     {destaque.continuar ? 'Continuar' : 'Assistir'}
                   </Button>
                   <span className="text-sm text-white/60">
-                    {fila.length} {fila.length === 1 ? 'episódio' : 'episódios'}
+                    {fila.length} {fila.length === 1 ? 'vídeo disponível' : 'vídeos disponíveis'}
                   </span>
                 </div>
               </>
@@ -228,10 +252,6 @@ const SegredosPilar = () => {
           </div>
         )}
 
-        {!isLoading && !isError && fila.length === 0 && (
-          <p className="mt-8 text-center text-muted-foreground">Os episódios chegam em breve.</p>
-        )}
-
         {temporadas.map((temporada) => (
           <section key={temporada.titulo ?? 'raiz'} className="mt-10">
             <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4">
@@ -240,10 +260,14 @@ const SegredosPilar = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {temporada.episodios.map((ep) => (
                 <CardDoEpisodio
-                  key={ep.driveId}
+                  key={ep.chave}
                   ep={ep}
-                  assistido={assistidos.includes(ep.driveId)}
+                  assistido={assistidos.includes(ep.chave)}
+                  ehAdmin={isAdmin}
+                  ocupado={liberar.isPending || recolher.isPending}
                   onPlay={() => abrir(ep)}
+                  onLiberar={() => liberar.mutate(ep)}
+                  onRecolher={() => recolher.mutate(ep)}
                 />
               ))}
             </div>
@@ -264,43 +288,106 @@ const SegredosPilar = () => {
   );
 };
 
-const CardDoEpisodio = ({ ep, assistido, onPlay }: { ep: Episodio; assistido: boolean; onPlay: () => void }) => (
-  <button
-    type="button"
-    onClick={onPlay}
-    className="group text-left rounded-2xl overflow-hidden bg-card border border-border/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-  >
-    <div className="relative aspect-video bg-neutral-900 overflow-hidden">
-      {ep.capa ? (
-        <img
-          src={ep.capa}
-          alt=""
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-      ) : (
-        <div className="h-full w-full bg-gradient-to-br from-primary/80 to-neutral-900 flex items-center justify-center">
-          <span className="text-6xl font-bold text-white/30">{ep.numero ?? '★'}</span>
+const CardDoEpisodio = ({
+  ep,
+  assistido,
+  ehAdmin,
+  ocupado,
+  onPlay,
+  onLiberar,
+  onRecolher,
+}: {
+  ep: EpisodioDaTela;
+  assistido: boolean;
+  ehAdmin: boolean;
+  ocupado: boolean;
+  onPlay: () => void;
+  onLiberar: () => void;
+  onRecolher: () => void;
+}) => {
+  // Sem id do Drive não há o que tocar: é o cartão fechado do franqueado.
+  const podeTocar = Boolean(ep.driveId);
+
+  return (
+    <div className="rounded-2xl overflow-hidden bg-card border border-border/60">
+      <button
+        type="button"
+        onClick={podeTocar ? onPlay : undefined}
+        disabled={!podeTocar}
+        className={cn(
+          'group w-full text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+          podeTocar ? 'cursor-pointer' : 'cursor-default',
+        )}
+      >
+        <div className="relative aspect-video bg-neutral-900 overflow-hidden">
+          {ep.capa ? (
+            <img
+              src={ep.capa}
+              alt=""
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              className={cn(
+                'h-full w-full object-cover transition-transform duration-500',
+                podeTocar && 'group-hover:scale-105',
+                !ep.liberado && 'opacity-70',
+              )}
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-primary/80 to-neutral-900 flex items-center justify-center">
+              <span className="text-6xl font-bold text-white/30">{ep.numero ?? '★'}</span>
+            </div>
+          )}
+
+          {podeTocar && (
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+              <span className="h-14 w-14 rounded-full bg-white/95 text-neutral-950 flex items-center justify-center opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-all">
+                <Play className="h-6 w-6 fill-current ml-0.5" />
+              </span>
+            </div>
+          )}
+
+          {!ep.liberado && (
+            <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-neutral-950/85 px-2.5 py-1 text-[11px] font-semibold text-white">
+              <Clock className="h-3 w-3" />
+              Em breve
+            </span>
+          )}
+
+          {assistido && ep.liberado && (
+            <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white">
+              <Check className="h-3 w-3" /> Assistido
+            </span>
+          )}
+        </div>
+
+        <div className="p-4">
+          <p className="text-xs font-semibold text-primary uppercase tracking-wider">{rotuloDoEpisodio(ep)}</p>
+          <p className="mt-1 text-base font-semibold text-foreground leading-snug">{ep.titulo}</p>
+          {!ep.liberado && !ehAdmin && (
+            <p className="mt-1 text-xs text-muted-foreground">Ainda não liberado para as unidades.</p>
+          )}
+        </div>
+      </button>
+
+      {/* Só o admin solta (ou recolhe) um episódio. O trailer é fixo. */}
+      {ehAdmin && (
+        <div className="border-t border-border/60 px-4 py-3">
+          {ep.liberado ? (
+            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" disabled={ocupado} onClick={onRecolher}>
+              <Undo2 className="h-4 w-4" />
+              Tirar do ar
+            </Button>
+          ) : (
+            <Button size="sm" className="gap-1.5" disabled={ocupado} onClick={onLiberar}>
+              <Send className="h-4 w-4" />
+              Publicar para todos
+            </Button>
+          )}
         </div>
       )}
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-        <span className="h-14 w-14 rounded-full bg-white/95 text-neutral-950 flex items-center justify-center opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-all">
-          <Play className="h-6 w-6 fill-current ml-0.5" />
-        </span>
-      </div>
-      {assistido && (
-        <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white">
-          <Check className="h-3 w-3" /> Assistido
-        </span>
-      )}
     </div>
-    <div className="p-4">
-      <p className="text-xs font-semibold text-primary uppercase tracking-wider">{rotuloDoEpisodio(ep)}</p>
-      <p className="mt-1 text-base font-semibold text-foreground leading-snug">{ep.titulo}</p>
-    </div>
-  </button>
-);
+  );
+};
 
 const Player = ({
   ep,
@@ -309,17 +396,17 @@ const Player = ({
   onTrocar,
   onFechar,
 }: {
-  ep: Episodio;
-  anterior: Episodio | null;
-  proximo: Episodio | null;
-  onTrocar: (ep: Episodio) => void;
+  ep: EpisodioDaTela;
+  anterior: EpisodioDaTela | null;
+  proximo: EpisodioDaTela | null;
+  onTrocar: (ep: EpisodioDaTela) => void;
   onFechar: () => void;
 }) => {
   const telaRef = useRef<HTMLDivElement>(null);
   const [telaCheia, setTelaCheia] = useState(false);
   const [carregando, setCarregando] = useState(true);
 
-  useEffect(() => setCarregando(true), [ep.driveId]);
+  useEffect(() => setCarregando(true), [ep.chave]);
 
   useEffect(() => {
     const aoMudar = () => setTelaCheia(document.fullscreenElement === telaRef.current);
@@ -374,7 +461,7 @@ const Player = ({
             </div>
           )}
           <iframe
-            key={ep.driveId}
+            key={ep.chave}
             src={`https://drive.google.com/file/d/${ep.driveId}/preview`}
             title={ep.titulo}
             allow="autoplay; encrypted-media"

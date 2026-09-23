@@ -14,20 +14,51 @@ import { calcularResumo, type ItemPedido } from './pedidoPureStore';
 type LinhaPedido = Database['public']['Tables']['pure_store_pedidos']['Row'];
 type LinhaItem = Database['public']['Tables']['pure_store_pedido_itens']['Row'];
 
-/** O quadro do Gerenciador, na ordem em que o pedido anda. */
-export const STATUS_PEDIDO = ['realizado', 'separado', 'entregue'] as const;
+/**
+ * As colunas do Gerenciador, na ordem em que o pedido anda: sai de "realizado",
+ * é separado, vai por envio ou retirada, chega ao cliente e fecha em
+ * "finalizado". "Cancelado" é saída de qualquer ponto.
+ */
+export const STATUS_PEDIDO = [
+  'realizado',
+  'separado',
+  'enviado',
+  'retirada',
+  'entregue',
+  'finalizado',
+  'cancelado',
+] as const;
 export type StatusPedido = (typeof STATUS_PEDIDO)[number];
 
 export const TITULO_STATUS: Record<StatusPedido, string> = {
   realizado: 'Pedido realizado',
   separado: 'Pedido separado',
+  enviado: 'Enviado',
+  retirada: 'Retirada',
   entregue: 'Pedido entregue',
+  finalizado: 'Finalizado',
+  cancelado: 'Cancelado',
+};
+
+/** Versão curta, para tabela e relatório: "Pedido separado" não cabe em coluna estreita. */
+export const TITULO_CURTO: Record<StatusPedido, string> = {
+  realizado: 'Realizado',
+  separado: 'Separado',
+  enviado: 'Enviado',
+  retirada: 'Retirada',
+  entregue: 'Entregue',
+  finalizado: 'Finalizado',
+  cancelado: 'Cancelado',
 };
 
 export const COR_STATUS: Record<StatusPedido, string> = {
   realizado: '#579BFC',
   separado: '#FDAB3D',
+  enviado: '#A25DDC',
+  retirada: '#66CCFF',
   entregue: '#00C875',
+  finalizado: '#037F4C',
+  cancelado: '#E2445C',
 };
 
 export interface ItemSalvo {
@@ -45,9 +76,12 @@ export interface PedidoSalvo {
   cliente_nome: string;
   cliente_unidade: string;
   cliente_telefone: string;
+  /** Dia que vale para o cliente (yyyy-mm-dd); pode ser retroativo. */
+  data_pedido: string;
   desconto_percentual: number;
   subtotal: number;
   desconto_valor: number;
+  frete: number;
   total: number;
   status: StatusPedido;
   created_at: string;
@@ -79,9 +113,11 @@ const paraPedido = (linha: LinhaPedido, itens: ItemSalvo[]): PedidoSalvo => ({
   cliente_nome: linha.cliente_nome,
   cliente_unidade: linha.cliente_unidade,
   cliente_telefone: linha.cliente_telefone,
+  data_pedido: linha.data_pedido,
   desconto_percentual: Number(linha.desconto_percentual),
   subtotal: Number(linha.subtotal),
   desconto_valor: Number(linha.desconto_valor),
+  frete: Number(linha.frete),
   total: Number(linha.total),
   status: statusValido(linha.status),
   created_at: linha.created_at,
@@ -96,10 +132,13 @@ export async function salvarPedido(entrada: {
   cliente: DadosDoCliente;
   itens: ItemPedido[];
   descontoPercentual: number;
+  frete: number;
+  /** Data informada na tela (yyyy-mm-dd). */
+  dataPedido: string;
   criadoPor: string | undefined;
 }): Promise<PedidoSalvo> {
   const itens = itensValidos(entrada.itens);
-  const resumo = calcularResumo(itens, entrada.descontoPercentual);
+  const resumo = calcularResumo(itens, entrada.descontoPercentual, entrada.frete);
 
   const { data: pedido, error } = await supabase
     .from('pure_store_pedidos')
@@ -107,9 +146,11 @@ export async function salvarPedido(entrada: {
       cliente_nome: entrada.cliente.nome.trim(),
       cliente_unidade: entrada.cliente.unidade.trim(),
       cliente_telefone: entrada.cliente.telefone.trim(),
+      data_pedido: entrada.dataPedido,
       desconto_percentual: resumo.percentual,
       subtotal: resumo.subtotal,
       desconto_valor: resumo.desconto,
+      frete: resumo.frete,
       total: resumo.total,
       // Nasce em "Pedido realizado"; daí em diante quem move é o Gerenciador.
       status: 'realizado',
@@ -142,6 +183,8 @@ export async function listarPedidos(): Promise<PedidoSalvo[]> {
   const { data: pedidos, error } = await supabase
     .from('pure_store_pedidos')
     .select('*')
+    // Pela data do pedido, que pode ser retroativa; o empate cai na ordem de criação.
+    .order('data_pedido', { ascending: false })
     .order('created_at', { ascending: false });
   if (error) throw error;
   if (!pedidos?.length) return [];
@@ -183,10 +226,16 @@ export async function buscarPedido(id: string): Promise<PedidoSalvo | null> {
  */
 export async function atualizarPedido(
   id: string,
-  entrada: { cliente: DadosDoCliente; itens: ItemPedido[]; descontoPercentual: number },
+  entrada: {
+    cliente: DadosDoCliente;
+    itens: ItemPedido[];
+    descontoPercentual: number;
+    frete: number;
+    dataPedido: string;
+  },
 ): Promise<PedidoSalvo> {
   const itens = itensValidos(entrada.itens);
-  const resumo = calcularResumo(itens, entrada.descontoPercentual);
+  const resumo = calcularResumo(itens, entrada.descontoPercentual, entrada.frete);
 
   const { data: pedido, error } = await supabase
     .from('pure_store_pedidos')
@@ -194,9 +243,11 @@ export async function atualizarPedido(
       cliente_nome: entrada.cliente.nome.trim(),
       cliente_unidade: entrada.cliente.unidade.trim(),
       cliente_telefone: entrada.cliente.telefone.trim(),
+      data_pedido: entrada.dataPedido,
       desconto_percentual: resumo.percentual,
       subtotal: resumo.subtotal,
       desconto_valor: resumo.desconto,
+      frete: resumo.frete,
       total: resumo.total,
     })
     .eq('id', id)

@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Sparkles, CalendarDays, Video, User, Megaphone, ArrowRight,
-  Handshake, BookOpen, ScrollText, Paintbrush, Package, Zap,
+  Sparkles, CalendarDays, Video, Megaphone, ArrowRight, Clapperboard, PlayCircle,
+  Handshake, BookOpen, ScrollText, Paintbrush, Package, Zap, Volume2, VolumeX,
 } from 'lucide-react';
+
+/** Teaser da novela, no YouTube (id do vídeo). */
+const TEASER_SEGREDOS_PILAR = 'agMCwjc2etM';
 
 interface AvisoTitle {
   id: string;
@@ -18,6 +21,7 @@ interface AvisoTitle {
 }
 
 const CHECKLIST = [
+  { icon: Clapperboard, text: 'Os Segredos de Pilar — a novela de vendas' },
   { icon: Sparkles, text: 'Timeline do Mês com as novidades' },
   { icon: Megaphone, text: 'Avisos e comunicados oficiais' },
   { icon: CalendarDays, text: 'Calendário de marketing' },
@@ -30,10 +34,10 @@ const CHECKLIST = [
 ];
 
 const QUICK_LINKS = [
-  { title: 'Novidades do Mês', description: 'Comunicados importantes', icon: Sparkles, href: '/novidades', color: 'bg-amber-500/10 text-amber-500' },
+  { title: 'Os Segredos de Pilar', description: 'A novela de vendas', icon: Clapperboard, href: '/segredos-de-pilar', color: 'bg-primary/10 text-primary' },
+  { title: 'Timeline do Mês', description: 'As novidades do mês', icon: Sparkles, href: '/novidades', color: 'bg-amber-500/10 text-amber-500' },
   { title: 'Calendário de Marketing', description: 'Eventos e campanhas', icon: CalendarDays, href: '/calendario-marketing', color: 'bg-sector-academy/10 text-sector-academy' },
   { title: 'Mídias Sociais', description: 'Conteúdos para redes', icon: Video, href: '/midias-sociais', color: 'bg-sector-franchising/10 text-sector-franchising' },
-  { title: 'Meu Perfil', description: 'Suas informações', icon: User, href: '/perfil', color: 'bg-primary/10 text-primary' },
 ];
 
 const formatDate = (iso: string) =>
@@ -59,6 +63,19 @@ const stripHtml = (html: string | null | undefined): string => {
 const Index = () => {
   const { loading } = useAuth();
   const [avisos, setAvisos] = useState<AvisoTitle[]>([]);
+  const trailerRef = useRef<HTMLIFrameElement>(null);
+  const [comSom, setComSom] = useState(false);
+
+  // Comanda o player do YouTube sem que o clique chegue nele (o iframe fica
+  // sem pointer-events), então não tem como acabar no site do YouTube.
+  const alternarSom = () => {
+    const ligar = !comSom;
+    setComSom(ligar);
+    trailerRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'command', func: ligar ? 'unMute' : 'mute', args: [] }),
+      'https://www.youtube.com',
+    );
+  };
 
   useEffect(() => {
     supabase
@@ -84,31 +101,75 @@ const Index = () => {
 
   return (
     <MainLayout>
-      {/* ━━━━━ HERO FULL-BLEED: ocupa toda a tela menos a sidebar ━━━━━ */}
-      {/* Negative margins quebram o p-4/sm:p-6/lg:p-8 do MainLayout. h-screen pega 100vh. */}
-      <section className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8 h-[55vh] md:h-[70vh] lg:h-[100dvh] overflow-hidden bg-black">
-        <video
-          src="/leo-yang.mp4?v=1"
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+      {/* ━━━━━ HERO: o trailer da novela, de ponta a ponta ━━━━━ */}
+      {/* Negative margins quebram o p-4/sm:p-6/lg:p-8 do MainLayout. */}
+      <section className="relative -mx-4 -mt-4 overflow-hidden bg-neutral-950 sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8">
+        {/* 16:9 sem cortar nada: a altura acompanha a largura e para em 78vh. */}
+        <div className="relative w-full bg-black" style={{ height: 'min(78vh, 56.25vw)' }}>
+          {/*
+            O iframe não recebe clique (pointer-events-none): é isso que impede
+            o YouTube de levar a pessoa para o site dele. Quem manda no player é
+            o botão abaixo, pela API do próprio YouTube (enablejsapi).
+            Começa tocando sozinho e sem som — navegador nenhum deixa tocar com
+            áudio sem alguém clicar.
+          */}
+          <iframe
+            ref={trailerRef}
+            src={`https://www.youtube.com/embed/${TEASER_SEGREDOS_PILAR}?autoplay=1&mute=1&loop=1&playlist=${TEASER_SEGREDOS_PILAR}&playsinline=1&controls=0&rel=0&modestbranding=1&disablekb=1&fs=0&iv_load_policy=3&enablejsapi=1`}
+            title="Teaser — Os Segredos de Pilar"
+            className="pointer-events-none absolute inset-0 h-full w-full"
+            allow="autoplay; encrypted-media"
+            style={{ border: 0 }}
+          />
 
-        {/* Overlay escurecido */}
-        <div className="pointer-events-none absolute inset-0 bg-black/45" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40" />
+          <button
+            type="button"
+            onClick={alternarSom}
+            aria-label={comSom ? 'Desligar o som do trailer' : 'Ligar o som do trailer'}
+            className="absolute inset-0 flex items-end justify-end p-4 sm:p-6"
+          >
+            <span className="inline-flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80">
+              {comSom ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              {comSom ? 'Desligar o som' : 'Ligar o som'}
+            </span>
+          </button>
+        </div>
+
+        <div className="relative mx-auto max-w-3xl px-4 py-9 text-center sm:px-6 md:py-12">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-white">
+            <Sparkles className="h-3 w-3" />
+            Estreia no Hub
+          </span>
+
+          <h1 className="mt-4 font-heading text-3xl font-bold leading-tight text-white md:text-5xl">
+            Os Segredos de Pilar
+          </h1>
+          <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-primary">
+            A novela de vendas da rede
+          </p>
+
+          <p className="mx-auto mt-5 max-w-2xl text-base font-medium leading-relaxed text-white md:text-lg">
+            Quer assistir à nova novela e mudar completamente o seu treinamento de vendas, de um jeito
+            fácil, rápido e muito divertido?
+          </p>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-white/70">
+            Episódio a episódio, ela mostra os maiores erros na hora da venda — e por que tanto aluno
+            acaba fechando com o estúdio concorrente em vez do nosso.
+          </p>
+
+          <div className="mt-7">
+            <Button asChild size="lg" className="gap-2">
+              <Link to="/segredos-de-pilar">
+                <PlayCircle className="h-5 w-5" />
+                Ver Os Segredos de Pilar
+              </Link>
+            </Button>
+          </div>
+        </div>
       </section>
 
       {/* Conteúdo normal centralizado abaixo do hero */}
       <div className="max-w-5xl mx-auto pt-8 md:pt-12">
-        {/* Caption do crédito do vídeo */}
-        <p className="text-[11px] md:text-xs text-muted-foreground italic text-right mb-6 leading-snug">
-          Publicidade contratada com o influencer Leo Young, que já está rodando nas nossas redes.
-        </p>
-
         {/* ━━━━━ Marquee de avisos ━━━━━ */}
         {avisos.length > 0 && (
           <Link

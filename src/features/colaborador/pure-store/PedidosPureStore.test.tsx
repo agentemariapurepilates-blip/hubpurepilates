@@ -114,9 +114,11 @@ describe('editar um pedido salvo', () => {
     cliente_nome: 'Maria Silva',
     cliente_unidade: 'Pure Pilates Moema',
     cliente_telefone: '(11) 90000-0000',
+    data_pedido: '2026-09-15',
     desconto_percentual: 10,
     subtotal: 140,
     desconto_valor: 14,
+    frete: 0,
     total: 126,
     status: 'realizado' as const,
     created_at: '2026-09-22T12:00:00Z',
@@ -135,12 +137,19 @@ describe('editar um pedido salvo', () => {
     expect(screen.getByText(/Editando o/)).toBeInTheDocument();
     expect(screen.getByLabelText('Quantidade')).toHaveValue(2);
     expect(screen.getByLabelText('Desconto (%)')).toHaveValue(10);
+    // A data do pedido volta como foi salva, não como hoje.
+    expect(screen.getByLabelText('Data do pedido')).toHaveValue('2026-09-15');
     expect(linhaDoResumo('Total')).toContain('R$ 126,00');
 
     await user.click(screen.getByRole('button', { name: 'Salvar alterações' }));
 
     await vi.waitFor(() => expect(store.atualizarPedido).toHaveBeenCalledTimes(1));
     expect(store.atualizarPedido.mock.calls[0][0]).toBe('p1');
+    expect(store.atualizarPedido.mock.calls[0][1]).toMatchObject({
+      descontoPercentual: 10,
+      frete: 0,
+      dataPedido: '2026-09-15',
+    });
     expect(store.salvarPedido).not.toHaveBeenCalled();
     expect(rota.navegou).toContain('/colaborador/pure-store/gerenciador');
   });

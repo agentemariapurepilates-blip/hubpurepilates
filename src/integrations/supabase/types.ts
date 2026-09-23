@@ -834,8 +834,10 @@ export type Database = {
           cliente_unidade: string
           created_at: string
           criado_por: string | null
+          data_pedido: string
           desconto_percentual: number
           desconto_valor: number
+          frete: number
           id: string
           numero: number
           status: string
@@ -849,8 +851,10 @@ export type Database = {
           cliente_unidade?: string
           created_at?: string
           criado_por?: string | null
+          data_pedido?: string
           desconto_percentual?: number
           desconto_valor?: number
+          frete?: number
           id?: string
           numero?: number
           status?: string
@@ -864,14 +868,34 @@ export type Database = {
           cliente_unidade?: string
           created_at?: string
           criado_por?: string | null
+          data_pedido?: string
           desconto_percentual?: number
           desconto_valor?: number
+          frete?: number
           id?: string
           numero?: number
           status?: string
           subtotal?: number
           total?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      segredos_pilar_liberacoes: {
+        Row: {
+          drive_id: string
+          liberado_em: string
+          liberado_por: string | null
+        }
+        Insert: {
+          drive_id: string
+          liberado_em?: string
+          liberado_por?: string | null
+        }
+        Update: {
+          drive_id?: string
+          liberado_em?: string
+          liberado_por?: string | null
         }
         Relationships: []
       }

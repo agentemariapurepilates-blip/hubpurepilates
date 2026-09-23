@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Info, Loader2, Pencil, Plus, ShoppingBag, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileDown, Info, Loader2, Pencil, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
   type ItemPedido,
 } from './pedidoPureStore';
 import { atualizarPedido, buscarPedido, itensValidos, salvarPedido } from './pedidosStore';
+import { baixarPedidoPdf } from './pedidoPdf';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -39,6 +40,9 @@ const PedidosPureStore = () => {
   const [cliente, setCliente] = useState({ nome: '', unidade: '', telefone: '' });
   const [itens, setItens] = useState<ItemPedido[]>([linhaVazia()]);
   const [desconto, setDesconto] = useState(0);
+  const [frete, setFrete] = useState(0);
+  // Hoje, no formato do campo de data. A pessoa pode voltar a data ao lançar pedido antigo.
+  const [dataPedido, setDataPedido] = useState(() => new Date().toLocaleDateString('sv-SE'));
   const [salvando, setSalvando] = useState(false);
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -47,7 +51,7 @@ const PedidosPureStore = () => {
   const pedidoId = searchParams.get('pedido');
   const [numeroEmEdicao, setNumeroEmEdicao] = useState<number | null>(null);
   const [carregando, setCarregando] = useState(Boolean(pedidoId));
-  const resumo = calcularResumo(itens, desconto);
+  const resumo = calcularResumo(itens, desconto, frete);
 
   // Veio do Gerenciador com ?pedido=<id>: abre o pedido salvo para editar.
   useEffect(() => {
@@ -77,6 +81,8 @@ const PedidosPureStore = () => {
           })),
         );
         setDesconto(pedido.desconto_percentual);
+        setFrete(pedido.frete);
+        setDataPedido(pedido.data_pedido);
         setNumeroEmEdicao(pedido.numero);
       })
       .catch((erro) => {
@@ -98,6 +104,26 @@ const PedidosPureStore = () => {
     // A tela nunca fica sem nenhuma linha: sem isso não sobra onde clicar para recomeçar.
     setItens((prev) => (prev.length > 1 ? prev.filter((item) => item.id !== id) : [linhaVazia()]));
 
+  const baixarPdf = async () => {
+    const itensParaPdf = itensValidos(itens);
+    if (itensParaPdf.length === 0) {
+      toast({ title: 'Nenhum produto escolhido', description: 'O PDF sairia em branco.', variant: 'destructive' });
+      return;
+    }
+    try {
+      await baixarPedidoPdf({
+        numero: numeroEmEdicao,
+        dataDoPedido: dataPedido,
+        cliente,
+        itens: itensParaPdf,
+        resumo,
+      });
+    } catch (erro) {
+      console.error('Erro ao gerar o PDF do pedido:', erro);
+      toast({ title: 'Erro ao gerar o PDF', description: 'Tente de novo.', variant: 'destructive' });
+    }
+  };
+
   const salvar = async () => {
     if (!cliente.nome.trim()) {
       toast({ title: 'Falta o nome do cliente', description: 'O pedido precisa de um nome para ser encontrado depois.', variant: 'destructive' });
@@ -111,17 +137,32 @@ const PedidosPureStore = () => {
     setSalvando(true);
     try {
       if (pedidoId) {
-        const editado = await atualizarPedido(pedidoId, { cliente, itens, descontoPercentual: desconto });
+        const editado = await atualizarPedido(pedidoId, {
+          cliente,
+          itens,
+          descontoPercentual: desconto,
+          frete,
+          dataPedido,
+        });
         toast({ title: `Pedido ${editado.numero} atualizado`, description: 'As mudanças já aparecem no Gerenciador.' });
         navigate('/colaborador/pure-store/gerenciador');
         return;
       }
 
-      const pedido = await salvarPedido({ cliente, itens, descontoPercentual: desconto, criadoPor: user?.id });
+      const pedido = await salvarPedido({
+        cliente,
+        itens,
+        descontoPercentual: desconto,
+        frete,
+        dataPedido,
+        criadoPor: user?.id,
+      });
       toast({ title: `Pedido ${pedido.numero} salvo`, description: 'Ele já está no Gerenciador, em "Pedido realizado".' });
       setCliente({ nome: '', unidade: '', telefone: '' });
       setItens([linhaVazia()]);
       setDesconto(0);
+      setFrete(0);
+      setDataPedido(new Date().toLocaleDateString('sv-SE'));
     } catch (erro) {
       console.error('Erro ao salvar o pedido:', erro);
       toast({ title: 'Erro ao salvar', description: 'O pedido não foi gravado. Tente de novo.', variant: 'destructive' });
@@ -134,7 +175,14 @@ const PedidosPureStore = () => {
     <MainLayout>
       <div className="mx-auto max-w-5xl space-y-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pure Store</p>
+          {/* Volta para onde a pessoa veio: do Gerenciador, quando está editando um pedido. */}
+          <Link
+            to={pedidoId ? '/colaborador/pure-store/gerenciador' : '/colaborador/pure-store'}
+            className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            {pedidoId ? 'Gerenciador de pedidos' : 'Pure Store'}
+          </Link>
           <h1 className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
             <ShoppingBag className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
             Gerador de pedidos
@@ -170,9 +218,9 @@ const PedidosPureStore = () => {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Dados do cliente</CardTitle>
+            <CardTitle className="text-base">Dados do pedido</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-3">
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="cliente-nome">Nome do cliente</Label>
               <Input
@@ -198,6 +246,15 @@ const PedidosPureStore = () => {
                 value={cliente.telefone}
                 onChange={(e) => setCliente((c) => ({ ...c, telefone: e.target.value }))}
                 placeholder="(11) 99999-9999"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="data-pedido">Data do pedido</Label>
+              <Input
+                id="data-pedido"
+                type="date"
+                value={dataPedido}
+                onChange={(e) => setDataPedido(e.target.value || new Date().toLocaleDateString('sv-SE'))}
               />
             </div>
           </CardContent>
@@ -319,8 +376,19 @@ const PedidosPureStore = () => {
                   onChange={(e) => setDesconto(Number(e.target.value) || 0)}
                 />
               </div>
+              <div className="w-36 space-y-2">
+                <Label htmlFor="frete">Frete (R$)</Label>
+                <Input
+                  id="frete"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={frete}
+                  onChange={(e) => setFrete(Number(e.target.value) || 0)}
+                />
+              </div>
               <p className="pb-2 text-xs text-muted-foreground">
-                Informe o desconto da ação vigente. O valor é calculado sobre o subtotal.
+                O desconto incide sobre os produtos. O frete é digitado à mão e entra inteiro no total.
               </p>
             </div>
 
@@ -335,6 +403,12 @@ const PedidosPureStore = () => {
                 <dt className="text-muted-foreground">Desconto ({resumo.percentual}%)</dt>
                 <dd className="tabular-nums text-muted-foreground">– {formatarReal(resumo.desconto)}</dd>
               </div>
+              {resumo.frete > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Frete</dt>
+                  <dd className="tabular-nums">+ {formatarReal(resumo.frete)}</dd>
+                </div>
+              )}
               <Separator />
               <div className="flex justify-between text-base font-bold">
                 <dt>Total</dt>
@@ -351,6 +425,10 @@ const PedidosPureStore = () => {
               >
                 Ver pedidos salvos
               </Link>
+              <Button type="button" variant="outline" onClick={baixarPdf} className="gap-2">
+                <FileDown className="h-4 w-4" />
+                Baixar PDF
+              </Button>
               <Button onClick={salvar} disabled={salvando || carregando} className="gap-2">
                 {(salvando || carregando) && <Loader2 className="h-4 w-4 animate-spin" />}
                 {pedidoId ? 'Salvar alterações' : 'Salvar pedido'}
