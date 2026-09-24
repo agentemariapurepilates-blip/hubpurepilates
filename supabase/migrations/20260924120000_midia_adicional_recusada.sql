@@ -1,6 +1,6 @@
 -- Recusa de pedido de Campanha Aporte (midia_adicional_requests).
 --
--- NAO APLICADA AINDA.
+-- APLICADA em 24/09/2026 no projeto evprrtvbvjnjixogjsmn.
 --
 -- Ate hoje o admin so podia APROVAR: os status eram 'pendente' e 'aprovada'
 -- (ver 20260515160000_midia_adicional_colaborador.sql). A pedido do usuario

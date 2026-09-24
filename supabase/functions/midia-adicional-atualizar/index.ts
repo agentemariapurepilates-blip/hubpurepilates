@@ -14,7 +14,8 @@
 // nenhuma linha volta do update e a function responde 403 — em vez de dizer
 // "salvo" sem ter salvo nada.
 //
-// NAO PUBLICADA AINDA.
+// PUBLICADA em 24/09/2026 (verify_jwt ligado). O workflow do n8n ja distingue
+// edicao de pedido novo: "EDITADA" no assunto e no titulo, mais "Editado por".
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getCorsHeaders } from '../_shared/cors.ts'
