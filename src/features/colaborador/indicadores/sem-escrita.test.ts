@@ -7,6 +7,12 @@ import { join, sep } from 'node:path';
 // escrita feita daqui valeria para todo mundo na hora, sem desfazer e sem
 // registro de autoria. A garantia não é "botão desabilitado" — é a ausência
 // de qualquer caminho de escrita no código. Este teste é o que sustenta isso.
+//
+// EXCEÇÃO ÚNICA (16/09/2026, pedido do usuário): as metas globais da aba Metas.
+// Elas NÃO passam pelo cliente supabase — vão por `salvarMetasGlobais`, em
+// lib/indicadoresProxy.ts, para o proxy do servidor local, que valida e grava
+// (dev-proxy/metasGlobais.ts). O último teste deste arquivo garante que essa
+// continue sendo a única saída de escrita da feature.
 const RAIZ = 'src/features/colaborador/indicadores';
 const PROIBIDOS = ['.insert(', '.upsert(', '.update(', '.delete(', 'functions.invoke('];
 
@@ -98,5 +104,31 @@ describe('área de Dashboard é somente consulta', () => {
       .filter((arquivo) => IMPORTA_CLIENTE.test(readFileSync(arquivo, 'utf8')));
 
     expect(infratores, MOTIVO_IMPORT).toEqual([]);
+  });
+});
+
+describe('a única escrita da área de Dashboard são as metas globais', () => {
+  // Qualquer fetch com método de escrita dentro da feature. `method: 'GET'` e
+  // fetch sem método passam; PUT/POST/PATCH/DELETE são contados.
+  const METODO_DE_ESCRITA = /method\s*:\s*['"`](PUT|POST|PATCH|DELETE)['"`]/gi;
+  const UNICO_PERMITIDO = join(RAIZ, 'lib', 'indicadoresProxy.ts');
+
+  it('só lib/indicadoresProxy.ts envia método de escrita, e uma única vez', () => {
+    const achados = arquivosDe(RAIZ)
+      .filter((arquivo) => !arquivo.endsWith('.test.ts') && !arquivo.endsWith('.test.tsx'))
+      .flatMap((arquivo) =>
+        [...readFileSync(arquivo, 'utf8').matchAll(METODO_DE_ESCRITA)].map((m) => `${arquivo} → ${m[0]}`),
+      );
+
+    expect(
+      achados,
+      'Uma nova escrita apareceu na área de Dashboard. A exceção liberada é só a das metas ' +
+        'globais (salvarMetasGlobais). Outra escrita precisa de decisão explícita do usuário.',
+    ).toEqual([`${UNICO_PERMITIDO} → method: 'PUT'`]);
+  });
+
+  it('essa escrita aponta para a rota de metas globais do proxy', () => {
+    const conteudo = readFileSync(UNICO_PERMITIDO, 'utf8');
+    expect(conteudo).toContain('`${BASE_DO_PROXY}/metas-globais/${mes}`');
   });
 });

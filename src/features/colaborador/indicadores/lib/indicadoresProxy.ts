@@ -9,8 +9,9 @@
 // desenvolvimento (plugin `indicadores-dev-proxy`, em vite.config.ts), que
 // consulta o banco no processo Node e devolve só o JSON já pronto.
 //
-// SOMENTE GET. O proxy recusa qualquer outro método, coerente com a garantia
-// de somente-consulta da área de Dashboard.
+// LEITURA, com UMA exceção: `salvarMetasGlobais`, a única escrita da área de
+// Dashboard (aba Metas, pedido de 16/09/2026). A validação e a gravação moram
+// no servidor, em dev-proxy/metasGlobais.ts — aqui só se envia o pedido.
 
 const BASE_DO_PROXY = '/api-dev/indicadores';
 
@@ -111,3 +112,59 @@ export async function lerTabelaDeIndicadores<T>(
  * atrasa a mensagem de erro em três vezes.
  */
 export const OPCOES_DE_CONSULTA = { retry: false } as const;
+
+export interface MetaGlobalParaSalvar {
+  date: string;
+  metric_key: string;
+  daily_target: number;
+}
+
+export interface ResultadoDeMetas {
+  criadas: number;
+  atualizadas: number;
+  inalteradas: number;
+}
+
+/**
+ * Grava as metas globais de um mês pelo proxy. O servidor só responde 200
+ * depois de reler o banco e conferir cada valor, então sucesso aqui significa
+ * gravado de verdade.
+ */
+export async function salvarMetasGlobais(
+  mes: string,
+  metas: MetaGlobalParaSalvar[],
+): Promise<ResultadoDeMetas> {
+  let resposta: Response;
+  try {
+    resposta = await fetch(`${BASE_DO_PROXY}/metas-globais/${mes}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ metas }),
+    });
+  } catch (e) {
+    throw erroDoProxy(0, `Não foi possível falar com o servidor: ${(e as Error).message}`);
+  }
+
+  const corpo = await corpoJson(resposta);
+
+  if (!resposta.ok) {
+    const erroDoCorpo = (corpo as { erro?: unknown } | null)?.erro;
+    throw erroDoProxy(
+      resposta.status,
+      typeof erroDoCorpo === 'string' && erroDoCorpo
+        ? erroDoCorpo
+        : `O servidor respondeu ${resposta.status} ao salvar as metas.`,
+    );
+  }
+
+  // Mesmo cuidado da leitura: fora do `npm run dev` a rota não existe e a
+  // resposta pode ser HTML com 200. Isso NÃO é "salvo".
+  const resultado = corpo as Partial<ResultadoDeMetas> | null;
+  if (typeof resultado?.criadas !== 'number' || typeof resultado?.atualizadas !== 'number') {
+    throw erroDoProxy(
+      resposta.status,
+      'As metas não foram salvas: o proxy de indicadores só existe no servidor de desenvolvimento (npm run dev).',
+    );
+  }
+  return resultado as ResultadoDeMetas;
+}

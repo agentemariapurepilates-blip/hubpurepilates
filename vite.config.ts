@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { ErroDeMetas, salvarMetasGlobais, validarPedido } from "./dev-proxy/metasGlobais";
 
 // Proxy de desenvolvimento para as abas Relatório e Integração do Dashboard.
 //
@@ -20,9 +21,13 @@ import path from "path";
 //
 // LIMITES DELIBERADOS
 // - `apply: 'serve'` — o plugin não existe no build de produção.
-// - Só responde a GET. Não há caminho de escrita, coerente com a garantia de
-//   somente-consulta da área de Dashboard.
-// - Só as três tabelas da lista. Não é um proxy genérico para o banco.
+// - Leitura só por GET, e só das três tabelas da lista. Não é um proxy
+//   genérico para o banco.
+// - UMA escrita, e só uma: `PUT /metas-globais/AAAA-MM`, que grava as metas
+//   globais diárias da aba Metas (pedido do usuário em 16/09/2026). Validação
+//   e gravação ficam em dev-proxy/metasGlobais.ts, com testes; aqui só se lê o
+//   corpo e se repassa. Grava no banco de PRODUÇÃO do Painel — o mesmo do
+//   Cloudflare —, então a alteração vale para todo mundo na hora.
 // - `order` e `limit` são validados por formato antes de repassados.
 const TABELAS_PERMITIDAS = ['report_recipients', 'report_settings', 'integration_logs'];
 
@@ -38,11 +43,49 @@ function indicadoresDevProxy(env: Record<string, string>): Plugin {
           res.end(JSON.stringify(corpo));
         };
 
-        if (req.method !== 'GET') {
-          return responder(405, { erro: 'Somente GET. Esta área é de consulta.' });
+        const url = new URL(req.url ?? '', 'http://localhost');
+
+        const rotaDeMetas = /^\/metas-globais\/([^/]+)$/.exec(url.pathname);
+        if (rotaDeMetas) {
+          if (req.method !== 'PUT') {
+            return responder(405, { erro: 'As metas globais só aceitam PUT.' });
+          }
+          if (!env.VITE_INDICADORES_SUPABASE_URL || !env.INDICADORES_SERVICE_KEY) {
+            return responder(503, {
+              erro: 'INDICADORES_SERVICE_KEY não está definida no .env.local. Sem ela não há como salvar metas.',
+            });
+          }
+          try {
+            const partes: Buffer[] = [];
+            for await (const parte of req) partes.push(parte as Buffer);
+            const texto = Buffer.concat(partes).toString('utf8');
+            if (texto.length > 100_000) throw new ErroDeMetas(413, 'Pedido grande demais.');
+
+            let corpo: unknown;
+            try {
+              corpo = JSON.parse(texto);
+            } catch {
+              throw new ErroDeMetas(400, 'O corpo do pedido não é JSON.');
+            }
+
+            const mes = rotaDeMetas[1];
+            const resultado = await salvarMetasGlobais(
+              { base: env.VITE_INDICADORES_SUPABASE_URL, chave: env.INDICADORES_SERVICE_KEY },
+              mes,
+              validarPedido(mes, corpo),
+            );
+            return responder(200, resultado);
+          } catch (e) {
+            if (e instanceof ErroDeMetas) return responder(e.status, { erro: e.message });
+            return responder(502, {
+              erro: `Não foi possível falar com o banco de indicadores: ${(e as Error).message}`,
+            });
+          }
         }
 
-        const url = new URL(req.url ?? '', 'http://localhost');
+        if (req.method !== 'GET') {
+          return responder(405, { erro: 'Somente GET. Fora das metas globais, esta área é de consulta.' });
+        }
         const tabela = url.pathname.replace(/^\//, '');
 
         if (!TABELAS_PERMITIDAS.includes(tabela)) {

@@ -12,8 +12,10 @@ import { IntegrationStatusTab } from './components/admin/IntegrationStatusTab';
 
 // Tela de administração do Painel de Indicadores, em modo somente consulta.
 // Reúne as abas que mostram a configuração hoje mantida no painel publicado
-// em pure-pilates-insights.pages.dev. Nenhuma aba grava no banco — ver a
-// trava de sem-escrita.test.ts na raiz da feature.
+// em pure-pilates-insights.pages.dev. Nenhuma aba grava no banco, com UMA
+// exceção: a aba Metas, que no servidor local (npm run dev) salva as metas
+// globais pelo proxy — ver GlobalGoalsTab.tsx e a trava de sem-escrita.test.ts
+// na raiz da feature.
 //
 // As duas últimas abas (Relatório e Integração) leem tabelas protegidas do
 // projeto de indicadores, que só abrem com a chave de serviço. Elas não usam o
