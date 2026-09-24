@@ -6,44 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Inbox, ArrowLeft, Loader2, Plus, FileText, UserPlus } from 'lucide-react';
 import { PedidosVerbaProfessores } from '@/features/geral/verba-professores/PedidosVerbaProfessores';
+import {
+  COLUNAS_DO_PEDIDO,
+  PLAN_LABEL,
+  STATUS_META,
+  formatarData,
+  formatarDataHora,
+  type MidiaRequest,
+} from './tipos';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-
-type PlanKey = '1500_3m' | '2000_3m' | '2500';
-type StatusKey = 'pendente' | 'aprovada';
-
-interface MidiaRequest {
-  id: string;
-  nome_franqueado: string;
-  nome_unidade: string;
-  data_inauguracao: string;
-  plano: PlanKey;
-  email_unidade: string;
-  email_franqueado: string | null;
-  status: StatusKey;
-  created_at: string;
-}
-
-const PLAN_LABEL: Record<PlanKey, string> = {
-  '1500_3m': 'Plano A · R$ 1.500,00',
-  '2000_3m': 'Plano B · R$ 2.000,00',
-  '2500':    'Plano C · R$ 2.500,00',
-};
-
-const STATUS_META: Record<StatusKey, { label: string; className: string }> = {
-  pendente: { label: 'Pendente', className: 'bg-amber-100 text-amber-800 border-amber-200' },
-  aprovada: { label: 'Verba adicional aprovada', className: 'bg-green-100 text-green-800 border-green-200' },
-};
-
-const formatarData = (dataIso: string) =>
-  new Date(dataIso + 'T00:00:00').toLocaleDateString('pt-BR');
-
-const formatarDataHora = (timestamp: string) =>
-  new Date(timestamp).toLocaleString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
 
 const MinhasSolicitacoes = () => {
   const { user, loading: authLoading } = useAuth();
@@ -58,12 +31,12 @@ const MinhasSolicitacoes = () => {
     try {
       const { data, error } = await supabase
         .from('midia_adicional_requests')
-        .select('id, nome_franqueado, nome_unidade, data_inauguracao, plano, email_unidade, email_franqueado, status, created_at')
+        .select(COLUNAS_DO_PEDIDO)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRequests((data as MidiaRequest[]) || []);
+      setRequests((data ?? []) as unknown as MidiaRequest[]);
     } catch (err) {
       console.error('Erro ao carregar solicitações:', err);
       toast.error('Não foi possível carregar suas solicitações.');
@@ -174,6 +147,13 @@ const MinhasSolicitacoes = () => {
                             Contato: {req.email_unidade}
                             {req.email_franqueado ? ` · ${req.email_franqueado}` : ''}
                           </p>
+                          {req.status === 'recusada' && (
+                            <p className="text-sm text-destructive mt-2">
+                              {req.motivo_recusa
+                                ? `Motivo: ${req.motivo_recusa}`
+                                : 'O pedido foi recusado. Fale com o time de marketing para entender o motivo.'}
+                            </p>
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground sm:text-right shrink-0">
                           Enviada em<br className="hidden sm:inline" /> {formatarDataHora(req.created_at)}
