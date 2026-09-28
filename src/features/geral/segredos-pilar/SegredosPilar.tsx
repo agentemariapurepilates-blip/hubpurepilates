@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import logoHorizontal from '@/assets/segredos-pilar/logo-horizontal-escuro.png';
 import SimboloSegredosPilar from './SimboloSegredosPilar';
+import { useContagens, useVisualizacoes, type QuemViuEpisodio } from './useVisualizacoes';
+import OlhinhoDoEpisodio from './OlhinhoDoEpisodio';
 
 // Os segredos de Pilar — série em vídeo.
 //
@@ -88,8 +90,11 @@ const rotuloDoEpisodio = (ep: EpisodioDaTela) =>
   ep.numero !== null ? `Episódio ${ep.numero}` : 'Especial';
 
 const SegredosPilar = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isColaborador } = useAuth();
   const queryClient = useQueryClient();
+  // Número do olhinho: todo mundo vê. A lista de quem viu, só a sede (RLS).
+  const contagens = useContagens();
+  const { porEpisodio, registrar } = useVisualizacoes(isColaborador);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['segredos-pilar-episodios'],
@@ -115,6 +120,8 @@ const SegredosPilar = () => {
 
   const abrir = useCallback((ep: EpisodioDaTela) => {
     if (!ep.liberado && !ep.driveId) return;
+    // Conta uma vez por pessoa por episódio; reabrir não soma.
+    void registrar(ep.driveId);
     setTocando(ep);
     setUltimo(ep.chave);
     gravarLocal(CHAVE_ULTIMO, ep.chave);
@@ -124,7 +131,7 @@ const SegredosPilar = () => {
       gravarLocal(CHAVE_ASSISTIDOS, novo);
       return novo;
     });
-  }, []);
+  }, [registrar]);
 
   const liberar = useMutation({
     mutationFn: async (ep: EpisodioDaTela) => {
@@ -265,6 +272,9 @@ const SegredosPilar = () => {
                   assistido={assistidos.includes(ep.chave)}
                   ehAdmin={isAdmin}
                   ocupado={liberar.isPending || recolher.isPending}
+                  totalDeVisualizacoes={(ep.driveId && contagens[ep.driveId]) || 0}
+                  detalheDeQuemViu={ep.driveId ? porEpisodio[ep.driveId] : undefined}
+                  podeVerQuemViu={isColaborador}
                   onPlay={() => abrir(ep)}
                   onLiberar={() => liberar.mutate(ep)}
                   onRecolher={() => recolher.mutate(ep)}
@@ -293,6 +303,9 @@ const CardDoEpisodio = ({
   assistido,
   ehAdmin,
   ocupado,
+  totalDeVisualizacoes,
+  detalheDeQuemViu,
+  podeVerQuemViu,
   onPlay,
   onLiberar,
   onRecolher,
@@ -301,6 +314,10 @@ const CardDoEpisodio = ({
   assistido: boolean;
   ehAdmin: boolean;
   ocupado: boolean;
+  totalDeVisualizacoes: number;
+  /** Só chega para colaborador/admin — é a lista do olhinho. */
+  detalheDeQuemViu?: QuemViuEpisodio;
+  podeVerQuemViu: boolean;
   onPlay: () => void;
   onLiberar: () => void;
   onRecolher: () => void;
@@ -369,20 +386,38 @@ const CardDoEpisodio = ({
         </div>
       </button>
 
-      {/* Só o admin solta (ou recolhe) um episódio. O trailer é fixo. */}
-      {ehAdmin && (
-        <div className="border-t border-border/60 px-4 py-3">
+      {/* Olhinho para todos (só o número) + os botões do admin.
+          Fora do <button> do cartão: a lista do olhinho é outro botão. */}
+      {(ehAdmin || ep.liberado) && (
+        <div className="border-t border-border/60 px-4 py-3 flex items-center justify-between gap-3">
           {ep.liberado ? (
-            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" disabled={ocupado} onClick={onRecolher}>
-              <Undo2 className="h-4 w-4" />
-              Tirar do ar
-            </Button>
+            <OlhinhoDoEpisodio
+              total={totalDeVisualizacoes}
+              detalhe={detalheDeQuemViu}
+              podeVerLista={podeVerQuemViu}
+              rotulo={`${rotuloDoEpisodio(ep)} · ${ep.titulo}`}
+            />
           ) : (
-            <Button size="sm" className="gap-1.5" disabled={ocupado} onClick={onLiberar}>
-              <Send className="h-4 w-4" />
-              Publicar para todos
-            </Button>
+            <span />
           )}
+          {ehAdmin &&
+            (ep.liberado ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground"
+                disabled={ocupado}
+                onClick={onRecolher}
+              >
+                <Undo2 className="h-4 w-4" />
+                Tirar do ar
+              </Button>
+            ) : (
+              <Button size="sm" className="gap-1.5" disabled={ocupado} onClick={onLiberar}>
+                <Send className="h-4 w-4" />
+                Publicar para todos
+              </Button>
+            ))}
         </div>
       )}
     </div>

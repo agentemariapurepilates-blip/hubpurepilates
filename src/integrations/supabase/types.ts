@@ -929,6 +929,24 @@ export type Database = {
         }
         Relationships: []
       }
+      segredos_pilar_views: {
+        Row: {
+          drive_id: string
+          user_id: string
+          visto_em: string
+        }
+        Insert: {
+          drive_id: string
+          user_id: string
+          visto_em?: string
+        }
+        Update: {
+          drive_id?: string
+          user_id?: string
+          visto_em?: string
+        }
+        Relationships: []
+      }
       social_media_comments: {
         Row: {
           comment: string
@@ -1089,6 +1107,10 @@ export type Database = {
         Returns: boolean
       }
       is_colaborador: { Args: { _user_id: string }; Returns: boolean }
+      segredos_pilar_contagem: {
+        Args: Record<string, never>
+        Returns: { drive_id: string; total: number }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
