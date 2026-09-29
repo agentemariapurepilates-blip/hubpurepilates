@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { useGlobalGoals } from '../../hooks/useGlobalGoals';
 import { useMesesComMeta } from '../../hooks/useMesesComMeta';
@@ -22,11 +23,16 @@ import { AlertTriangle, Loader2, Save, Target, Undo2 } from 'lucide-react';
 
 // Metas globais diárias (daily_goals com unit_id nulo), mês a mês.
 //
-// EDITÁVEL SÓ NO SERVIDOR LOCAL. A gravação passa pelo proxy do `npm run dev`
-// (vite.config.ts → dev-proxy/metasGlobais.ts), que usa a chave de serviço do
-// banco de indicadores. No build de produção esse proxy não existe, então lá a
-// aba continua somente consulta — um botão "Salvar" que não salva seria pior
-// que não ter botão.
+// EDITÁVEL PARA ADMIN DO HUB, e no Hub publicado também. Até 29/09/2026 era
+// `import.meta.env.DEV`: a gravação passava pelo proxy do `npm run dev`, que é
+// quem tinha a chave de serviço do banco de indicadores, e em
+// hub.purepilates.com.br a aba ficava somente consulta. O Renan tentou
+// cadastrar outubro em 16/09 e não conseguiu. Hoje quem grava é a Edge Function
+// `metas-globais-salvar`, que roda nos dois lugares.
+//
+// A trava de verdade é a da function, que confere o papel em `user_roles` com
+// o token de quem chamou. Esconder o botão aqui é só não oferecer o que não
+// vai funcionar — quem chamar a URL na mão continua batendo na mesma porta.
 //
 // A gravação vai para o banco de PRODUÇÃO do Painel, o mesmo do Cloudflare. Por
 // isso o aviso fixo na tela e a confirmação ao trocar de mês com alteração
@@ -43,11 +49,16 @@ function rotuloDoMes(mes: string): string {
 const METRICAS_COM_META = ['experimentais', 'experimentais_presenca', 'matriculas_total', 'matriculas_purepass'];
 
 interface GlobalGoalsTabProps {
-  /** Liga a edição. Por padrão, só no servidor de desenvolvimento. */
+  /** Liga a edição. Sem isto, vale o papel de quem está logado. */
   editavel?: boolean;
 }
 
-export function GlobalGoalsTab({ editavel = import.meta.env.DEV }: GlobalGoalsTabProps) {
+export function GlobalGoalsTab({ editavel: editavelPedido }: GlobalGoalsTabProps) {
+  const { isAdmin } = useAuth();
+  // A prop existe para a tela de teste poder forçar os dois estados; no app
+  // ela não é passada, e quem decide é o papel.
+  const editavel = editavelPedido ?? isAdmin;
+
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const hoje = new Date();
     return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
