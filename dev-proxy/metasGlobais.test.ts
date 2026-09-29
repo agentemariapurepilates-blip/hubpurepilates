@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ErroDeMetas, salvarMetasGlobais, validarPedido, type MetaDoDia } from './metas-globais';
+import { ErroDeMetas, salvarMetasGlobais, validarPedido, type MetaDoDia } from './metasGlobais';
 
 // Banco falso que entende só o que o módulo usa da API REST: GET do mês, PATCH
 // por id e POST. Guarda cada chamada para o teste conferir O QUE foi escrito,

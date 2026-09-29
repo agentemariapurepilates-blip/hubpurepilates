@@ -127,18 +127,8 @@ describe('a única escrita da área de Dashboard são as metas globais', () => {
     ).toEqual([`${UNICO_PERMITIDO} → method: 'PUT'`]);
   });
 
-  it('essa escrita aponta para a function de metas globais', () => {
+  it('essa escrita aponta para a rota de metas globais do proxy', () => {
     const conteudo = readFileSync(UNICO_PERMITIDO, 'utf8');
-    expect(conteudo).toContain('/functions/v1/metas-globais-salvar');
-    expect(conteudo).toContain('fetch(URL_DE_GRAVACAO');
-  });
-
-  // A varredura acima conta `method:` em fetch. `supabase.functions.invoke`
-  // escreve sem passar por ela, e por isso está na lista de PROIBIDOS lá em
-  // cima — este teste é o lembrete de por quê, no lugar onde alguém pensaria
-  // em trocar o fetch por invoke achando que é a mesma coisa.
-  it('e usa fetch, não functions.invoke, para continuar visível à varredura', () => {
-    const conteudo = readFileSync(UNICO_PERMITIDO, 'utf8');
-    expect(conteudo).not.toContain('functions.invoke(');
+    expect(conteudo).toContain('`${BASE_DO_PROXY}/metas-globais/${mes}`');
   });
 });
