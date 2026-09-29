@@ -1,12 +1,22 @@
-// Gravação das METAS GLOBAIS DIÁRIAS (daily_goals com unit_id nulo) pelo proxy
-// do servidor de desenvolvimento. Roda no processo Node do `npm run dev`, nunca
-// no navegador — ver o plugin `indicadores-dev-proxy` em vite.config.ts.
+// Gravação das METAS GLOBAIS DIÁRIAS (daily_goals com unit_id nulo).
+//
+// ONDE ISTO RODA, E POR QUE MORA AQUI
+// Na Edge Function `metas-globais-salvar`, com a chave de serviço do banco de
+// indicadores. Nasceu em `dev-proxy/`, servindo só o `npm run dev` — e foi
+// exatamente esse o defeito que o Renan achou: a aba Metas gravava na máquina de
+// quem programava e continuava somente consulta no Hub publicado. Veio para
+// `_shared/` em 29/09/2026 para existir UMA cópia da validação; duplicá-la seria
+// deixar duas versões da mesma regra divergirem sem ninguém ver.
+//
+// Não importa nada e não usa API de Deno nem de Node: a conexão (`{ base, chave }`)
+// chega por argumento. É o que deixa a suíte do Vitest, que roda em Node, chamar
+// as mesmas funções que a function chama em Deno.
 //
 // POR QUE ESTA É A ÚNICA ESCRITA DA ÁREA DE DASHBOARD
 // A Administração nasceu somente consulta (spec de 30/07/2026). Em 16/09/2026 o
 // usuário pediu para cadastrar metas pelo Hub, como faz no painel do Cloudflare.
 // A exceção é estreita de propósito: só esta tabela, só metas globais, só as
-// quatro métricas da aba, e só no servidor local.
+// quatro métricas da aba, e só para admin do Hub.
 //
 // POR QUE NÃO É UM UPSERT
 // O painel original faz `upsert(onConflict: 'unit_id,date,metric_key')`. Com

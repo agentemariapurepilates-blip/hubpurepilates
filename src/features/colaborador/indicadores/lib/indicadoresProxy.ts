@@ -10,8 +10,19 @@
 // consulta o banco no processo Node e devolve só o JSON já pronto.
 //
 // LEITURA, com UMA exceção: `salvarMetasGlobais`, a única escrita da área de
-// Dashboard (aba Metas, pedido de 16/09/2026). A validação e a gravação moram
-// no servidor, em dev-proxy/metasGlobais.ts — aqui só se envia o pedido.
+// Dashboard (aba Metas, pedido de 16/09/2026).
+//
+// A ESCRITA NÃO PASSA POR AQUI, e é a diferença que fez este arquivo mudar em
+// 29/09/2026. Ela vai para a Edge Function `metas-globais-salvar`, que existe
+// no Hub PUBLICADO — o proxy só existe no `npm run dev`, e por isso a aba
+// gravava na máquina de quem programava e era somente consulta para o
+// franqueado. A validação e a gravação moram em
+// supabase/functions/_shared/metas-globais.ts; aqui só se envia o pedido.
+
+// O cliente do HUB, e não o de indicadores: ele entra só para dizer quem está
+// pedindo. A varredura de `sem-escrita.test.ts` proíbe o de indicadores fora
+// da feature justamente porque é o que aponta para o banco de produção.
+import { supabase } from '@/integrations/supabase/client';
 
 const BASE_DO_PROXY = '/api-dev/indicadores';
 
@@ -125,21 +136,44 @@ export interface ResultadoDeMetas {
   inalteradas: number;
 }
 
+/** O endereço da function que grava, no projeto Supabase do Hub. */
+const URL_DE_GRAVACAO = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/metas-globais-salvar`;
+
 /**
- * Grava as metas globais de um mês pelo proxy. O servidor só responde 200
- * depois de reler o banco e conferir cada valor, então sucesso aqui significa
- * gravado de verdade.
+ * Grava as metas globais de um mês pela Edge Function `metas-globais-salvar`.
+ * Ela só responde 200 depois de reler o banco e conferir cada valor, então
+ * sucesso aqui significa gravado de verdade.
+ *
+ * POR QUE `fetch` E NÃO `supabase.functions.invoke`
+ * Duas razões, as duas de guarda. `sem-escrita.test.ts` proíbe o invoke em
+ * toda a área de Dashboard, e essa trava vale mais do
+ * que a conveniência de uma linha. E ela conta os métodos de escrita esperando
+ * achar exatamente um, aqui — trocar de transporte esconderia a única escrita
+ * da feature justamente da varredura que a mantém única.
+ *
+ * O token é o da sessão do HUB. Quem manda no acesso é a function, que confere
+ * o papel de admin em `user_roles` com esse mesmo token; aqui só se diz quem
+ * está pedindo.
  */
 export async function salvarMetasGlobais(
   mes: string,
   metas: MetaGlobalParaSalvar[],
 ): Promise<ResultadoDeMetas> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw erroDoProxy(401, 'Sua sessão expirou. Entre de novo para salvar as metas.');
+  }
+
   let resposta: Response;
   try {
-    resposta = await fetch(`${BASE_DO_PROXY}/metas-globais/${mes}`, {
+    resposta = await fetch(URL_DE_GRAVACAO, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ metas }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ mes, metas }),
     });
   } catch (e) {
     throw erroDoProxy(0, `Não foi possível falar com o servidor: ${(e as Error).message}`);
@@ -157,13 +191,14 @@ export async function salvarMetasGlobais(
     );
   }
 
-  // Mesmo cuidado da leitura: fora do `npm run dev` a rota não existe e a
-  // resposta pode ser HTML com 200. Isso NÃO é "salvo".
+  // Mesmo cuidado da leitura: uma function que não foi publicada responde com
+  // algo que não é a contagem — e 200 com corpo estranho NÃO é "salvo".
   const resultado = corpo as Partial<ResultadoDeMetas> | null;
   if (typeof resultado?.criadas !== 'number' || typeof resultado?.atualizadas !== 'number') {
     throw erroDoProxy(
       resposta.status,
-      'As metas não foram salvas: o proxy de indicadores só existe no servidor de desenvolvimento (npm run dev).',
+      'As metas não foram salvas: a function `metas-globais-salvar` não respondeu com a '
+        + 'contagem. Provavelmente ela ainda não foi publicada neste projeto.',
     );
   }
   return resultado as ResultadoDeMetas;
