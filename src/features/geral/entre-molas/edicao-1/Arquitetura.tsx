@@ -2,7 +2,7 @@ import { Citacao, Corpo, Foto, Miolo, Pagina, type Lado } from '../diagramacao';
 import { MATERIAS } from './materias';
 import studioPure from './fotos/arquitetura/studio-pure.jpg';
 import logoCreme from '../assets/logo-entre-molas-creme.png';
-import carolina from './fotos/arquitetura/carolina-loducca.jpg';
+import caroline from './fotos/arquitetura/caroline-lo-duca-serroni.jpg';
 
 // Arquitetura e Pure Academy (3 páginas). Texto exatamente como no Canva.
 
@@ -29,20 +29,20 @@ export const Arquitetura1 = ({ lado }: { lado: Lado }) => (
   </Pagina>
 );
 
-// A foto da Carolina é o destaque da página: sangrada no topo, com a legenda; a fala dela vem logo abaixo.
+// A foto da Caroline é o destaque da página: sangrada no topo, com a legenda; a fala dela vem logo abaixo.
 export const Arquitetura2 = ({ lado }: { lado: Lado }) => (
   <Pagina lado={lado} numero={P + 1}>
     <Miolo className="!top-0">
       <figure className="relative -mx-[64px] min-h-0 w-[820px] max-w-none flex-1 overflow-hidden">
         <img
-          src={carolina}
-          alt="Carolina Loducca"
+          src={caroline}
+          alt="Caroline Lo Duca Serroni"
           draggable={false}
           className="h-full w-full select-none object-cover"
           style={{ objectPosition: '50% 24%' }}
         />
         <figcaption className="em-sans absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-[64px] pb-[18px] pt-[70px] text-[#f7ecdc]">
-          <span className="em-display block text-[40px] font-extrabold uppercase leading-[0.95]">Carolina Loducca</span>
+          <span className="em-display block text-[40px] font-extrabold uppercase leading-[0.95]">Caroline Lo Duca Serroni</span>
           <span className="mt-[4px] block text-[16px] font-semibold uppercase tracking-[0.14em]">
             Sócia e Diretora de Implantação e Novos Negócios
           </span>
