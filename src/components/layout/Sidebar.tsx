@@ -27,6 +27,7 @@ import {
   ShoppingBag,
   Handshake,
   BookOpen,
+  BookOpenText,
   ScrollText,
   BarChart3,
   Heart,
@@ -52,6 +53,7 @@ import {
   UserSearch,
 } from 'lucide-react';
 import SimboloSegredosPilar from '@/features/geral/segredos-pilar/SimboloSegredosPilar';
+import { EDICOES_ENTRE_MOLAS } from '@/features/geral/entre-molas/edicoes';
 import type { LucideIcon } from 'lucide-react';
 
 const SectionHeader = ({
@@ -167,6 +169,11 @@ const Sidebar = () => {
     PUREPEDIA_PATHS.includes(location.pathname),
   );
 
+  // Entre Molas: submenu com as edições da revista, aberto quando uma está na tela.
+  const [entreMolasOpen, setEntreMolasOpen] = useState(() =>
+    location.pathname.startsWith('/entre-molas'),
+  );
+
   // E pro dropdown da Pure Store, que abre sozinho em qualquer tela dela.
   const [pureStoreOpen, setPureStoreOpen] = useState(() =>
     location.pathname.startsWith('/colaborador/pure-store'),
@@ -191,6 +198,7 @@ const Sidebar = () => {
     if (auto) setOpenSection(auto);
     if (TUTORIAIS_PATHS.includes(location.pathname)) setTutoriaisOpen(true);
     if (PUREPEDIA_PATHS.includes(location.pathname)) setPurepediaOpen(true);
+    if (location.pathname.startsWith('/entre-molas')) setEntreMolasOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
@@ -209,6 +217,7 @@ const Sidebar = () => {
   const mainNavigation = [
     { name: 'Página Inicial', href: '/', icon: Home },
     { name: 'Timeline do Mês', href: '/novidades', icon: Sparkles },
+    { name: 'Entre Molas', href: '/entre-molas', icon: BookOpenText },
     { name: 'Avisos', href: '/avisos', icon: Megaphone },
     { name: 'Pure Store', href: '/pure-store', icon: ShoppingBag },
     // A aba é de todo mundo: quem é liberado um a um é o vídeo, dentro dela.
@@ -337,7 +346,62 @@ const Sidebar = () => {
       <nav className="flex-1 p-4 space-y-0.5 overflow-y-auto" style={{ overflowAnchor: 'none' }}>
         {/* Itens soltos no topo — sem grupo "Geral", sempre visíveis. */}
         <div className="space-y-0.5 pb-1">
-          {mainNavigation.map((item) => (
+          {mainNavigation.map((item) =>
+                item.href === '/entre-molas' ? (
+                  // Entre Molas: o nome leva à estante de edições; a seta abre a lista.
+                  <Collapsible key={item.name} open={entreMolasOpen} onOpenChange={setEntreMolasOpen}>
+                    <div className="flex items-center gap-1">
+                      <NavLink
+                        to={item.href}
+                        end
+                        onClick={() => setMobileOpen(false)}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                            isActive
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                              : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                          )
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.name}
+                      </NavLink>
+                      <CollapsibleTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={entreMolasOpen ? 'Recolher edições' : 'Expandir edições'}
+                          className="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+                        >
+                          <ChevronDown
+                            className={cn('h-4 w-4 transition-transform duration-200', entreMolasOpen && 'rotate-180')}
+                          />
+                        </button>
+                      </CollapsibleTrigger>
+                    </div>
+                    <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+                      <div className="mt-0.5 ml-4 pl-2 border-l border-sidebar-border/60 space-y-0.5">
+                        {EDICOES_ENTRE_MOLAS.map((ed) => (
+                          <NavLink
+                            key={ed.slug}
+                            to={`/entre-molas/${ed.slug}`}
+                            onClick={() => setMobileOpen(false)}
+                            className={({ isActive }) =>
+                              cn(
+                                'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                                isActive
+                                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                  : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                              )
+                            }
+                          >
+                            {ed.nome}
+                          </NavLink>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : (
                 <NavLink
                   key={item.name}
                   to={item.href}
@@ -354,7 +418,8 @@ const Sidebar = () => {
                   <item.icon className="h-4 w-4" />
                   {item.name}
                 </NavLink>
-              ))}
+                ),
+              )}
 
               {/* Tutoriais — dropdown delicado; o header leva pra página-hub */}
               <Collapsible open={tutoriaisOpen} onOpenChange={setTutoriaisOpen}>

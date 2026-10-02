@@ -23,6 +23,8 @@ const MateriaisImplantacao = lazy(() => import("./features/geral/artes/Materiais
 const PureDesign = lazy(() => import("./features/geral/artes/PureDesign"));
 const PureStore = lazy(() => import("./features/geral/pure-store/PureStore"));
 const SegredosPilar = lazy(() => import("./features/geral/segredos-pilar/SegredosPilar"));
+const EntreMolas = lazy(() => import("./features/geral/entre-molas/EntreMolas"));
+const EntreMolasEdicoes = lazy(() => import("./features/geral/entre-molas/Estante"));
 const PureDesignEditor = lazy(() => import("./features/geral/artes/PureDesignEditor"));
 const Parcerias = lazy(() => import("./features/geral/parcerias/Parcerias"));
 const ManualSistema = lazy(() => import("./features/geral/manual/ManualSistema"));
@@ -131,6 +133,8 @@ function App() {
             <Route path="/avisos" element={<ProtectedRoute><Avisos /></ProtectedRoute>} />
             <Route path="/pure-store" element={<ProtectedRoute><PureStore /></ProtectedRoute>} />
             <Route path="/segredos-de-pilar" element={<ProtectedRoute><SegredosPilar /></ProtectedRoute>} />
+            <Route path="/entre-molas" element={<ProtectedRoute><EntreMolasEdicoes /></ProtectedRoute>} />
+            <Route path="/entre-molas/:edicao" element={<ProtectedRoute><EntreMolas /></ProtectedRoute>} />
             <Route path="/calendario-marketing" element={<ProtectedRoute><CalendarioMarketing /></ProtectedRoute>} />
             <Route path="/midias-sociais" element={<ProtectedRoute><MidiasSociais /></ProtectedRoute>} />
             <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />

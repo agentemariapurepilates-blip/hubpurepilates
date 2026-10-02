@@ -1,0 +1,311 @@
+/* Entre Molas — revista folheável.
+   As páginas são desenhadas num tamanho fixo (820 × 1000, o mesmo do Canva) e
+   a revista inteira é escalada para caber na tela. Assim a diagramação não
+   quebra de uma tela para outra. */
+
+.em-stage {
+  --em-papel: #f4e6d2;
+  --em-papel-2: #ecdcc4;
+  /* identidade Entre Molas: o vinho é o do logo */
+  --em-vinho: #a9293b;
+  --em-vinho-escuro: #6e1624;
+  --em-tinta: #221613;
+  --em-creme: #f7ecdc;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 45%, #3a2622 0%, #1b1210 55%, #0f0a09 100%);
+  color: var(--em-creme);
+}
+
+.em-display { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; }
+.em-serif { font-family: 'Montserrat', system-ui, sans-serif; font-weight: 400; } /* texto de apoio: fonte oficial */
+.em-sans { font-family: 'Montserrat', system-ui, sans-serif; }
+
+/* ---------- Livro ---------- */
+
+.em-book {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 3200px;
+  transition: transform 0.9s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+.em-slot {
+  position: absolute;
+  top: 0;
+  width: 820px;
+  height: 1000px;
+}
+
+.em-page {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--em-papel);
+  color: var(--em-tinta);
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6), 0 10px 20px -10px rgba(0, 0, 0, 0.4);
+}
+
+/* sombra da lombada: escurece a borda que encosta no meio da revista */
+.em-page::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 70px;
+  pointer-events: none;
+  z-index: 30;
+}
+.em-page--direita::after {
+  left: 0;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.08) 35%, transparent);
+}
+.em-page--esquerda::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.08) 35%, transparent);
+}
+.em-page--solta::after { display: none; }
+
+/* folha girando */
+.em-leaf {
+  position: absolute;
+  top: 0;
+  width: 820px;
+  height: 1000px;
+  transform-style: preserve-3d;
+  z-index: 20;
+}
+.em-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.em-face--verso { transform: rotateY(180deg); }
+.em-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+
+/* ---------- Páginas internas ---------- */
+
+.em-tom--papel { background: var(--em-papel); color: var(--em-tinta); }
+.em-tom--vinho { background: #a9293b; color: var(--em-creme); --em-vinho: #f7ecdc; }
+.em-tom--escuro { background: #1d1413; color: var(--em-creme); --em-vinho: #e0566b; }
+.em-tom--vinho .em-grao, .em-tom--escuro .em-grao { opacity: 0.18; }
+
+.em-corpo {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1.55;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.em-corpo p + p { text-indent: 1.4em; }
+.em-corpo p.em-sem-recuo { text-indent: 0; }
+.em-corpo--2 { column-count: 2; column-gap: 38px; }
+.em-corpo--capitular > p:first-child::first-letter {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  float: left;
+  font-size: 118px;
+  line-height: 0.8;
+  padding: 8px 10px 0 0;
+  color: var(--em-vinho);
+}
+.em-destaque { font-weight: 600; }
+
+.em-foto-vazia {
+  background:
+    repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.035) 0 14px, transparent 14px 28px),
+    rgba(169, 41, 59, 0.08);
+  outline: 1px dashed rgba(169, 41, 59, 0.35);
+  outline-offset: -10px;
+  color: var(--em-vinho);
+}
+
+/* ---------- Canto da página levantando no hover ---------- */
+
+.em-hot {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  z-index: 15;
+  cursor: pointer;
+}
+.em-curl {
+  position: absolute;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 50;
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1), height 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.em-curl--direita {
+  right: 0;
+  background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.18) 50%, #fff7ea 56%, #e3d0b4 78%, #cdb795 100%);
+  box-shadow: -8px -8px 22px rgba(0, 0, 0, 0.25);
+  border-top-left-radius: 6px;
+}
+.em-curl--esquerda {
+  left: 0;
+  background: linear-gradient(225deg, transparent 50%, rgba(0, 0, 0, 0.18) 50%, #fff7ea 56%, #e3d0b4 78%, #cdb795 100%);
+  box-shadow: 8px -8px 22px rgba(0, 0, 0, 0.25);
+  border-top-right-radius: 6px;
+}
+.em-slot:hover .em-curl { width: 120px; height: 120px; }
+.em-slot .em-page { transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+.em-slot--direita.em-slot--vira:hover .em-page { transform: perspective(2400px) rotateY(-4deg); transform-origin: left center; }
+.em-slot--esquerda.em-slot--vira:hover .em-page { transform: perspective(2400px) rotateY(4deg); transform-origin: right center; }
+
+/* ---------- Grão de papel ---------- */
+
+.em-grao {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* ---------- Capa ---------- */
+
+.em-capa {
+  background: #f3ebe3;
+  color: var(--em-tinta);
+}
+
+/* fundo da capa: a foto de parede com luz do Canva, com o véu claro que o
+   Canva põe por cima (31%) */
+.em-seda {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255, 252, 248, 0.31), rgba(255, 252, 248, 0.31)),
+    url('./assets/fundo-seda.jpg') 62% center / cover no-repeat;
+}
+.em-capa .em-grao { opacity: 0.12; mix-blend-mode: multiply; }
+
+@keyframes em-sobe {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes em-brilho {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+.em-sobe { opacity: 0; animation: em-sobe 1s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+/* reflexo de papel couché que atravessa a capa */
+.em-verniz {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 60;
+}
+.em-verniz::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.09) 46%, rgba(255, 255, 255, 0.03) 54%, transparent 70%);
+  animation: em-brilho 7s ease-in-out 1.5s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .em-sobe { animation: none; opacity: 1; }
+  .em-verniz::before { animation: none; display: none; }
+  .em-book { transition: none; }
+}
+
+/* fotos antigas (a história da rede): cor original, só um pouco mais de contraste */
+.em-foto-historica { filter: contrast(1.06) saturate(1.05); }
+
+/* carimbo "Confidencial" (Os Segredos de Pilar) */
+.em-carimbo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 34px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--em-vinho);
+  border: 3px solid currentColor;
+  padding: 4px 16px 2px;
+  transform: rotate(-8deg);
+  opacity: 0.9;
+}
+
+/* Motion "Leve a Pure para novos horizontes" (Expansão): as palavras entram em contorno, uma a uma, acendem em
+   cascata e a última fica cheia, com a seta apontando adiante. Recomeça sozinho. */
+.em-hz-palavra {
+  /* contorno limpo: o traço é pintado antes e o preenchimento (na cor da página) cobre as emendas das letras */
+  color: #a9293b;
+  paint-order: stroke fill;
+  -webkit-text-stroke: 3px #f7ecdc;
+  opacity: 0;
+  animation: em-hz-palavra 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation-delay: calc(var(--i) * 0.42s);
+}
+.em-hz-final {
+  color: #a9293b;
+  paint-order: stroke fill;
+  -webkit-text-stroke: 3px #f7ecdc;
+  opacity: 0;
+  animation: em-hz-final 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation-delay: calc(var(--i) * 0.42s);
+}
+.em-hz-seta {
+  opacity: 0;
+  animation: em-hz-seta 9s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.42s);
+}
+@keyframes em-hz-palavra {
+  0% { opacity: 0; transform: translateY(40px); color: #a9293b; }
+  8% { opacity: 1; transform: none; }
+  27% { color: #a9293b; }
+  31% { color: #f7ecdc; }
+  38% { color: #a9293b; }
+  90% { opacity: 1; transform: none; }
+  96%, 100% { opacity: 0; transform: translateY(-16px); color: #a9293b; }
+}
+@keyframes em-hz-final {
+  0% { opacity: 0; transform: translateY(40px); color: #a9293b; -webkit-text-stroke-color: #f7ecdc; }
+  8% { opacity: 1; transform: none; }
+  27% { color: #a9293b; }
+  33% { color: #ffffff; -webkit-text-stroke-color: #ffffff; }
+  90% { opacity: 1; transform: none; color: #ffffff; -webkit-text-stroke-color: #ffffff; }
+  96%, 100% { opacity: 0; transform: translateY(-16px); color: #ffffff; }
+}
+@keyframes em-hz-seta {
+  0%, 31% { opacity: 0; transform: translateX(-40px); }
+  38% { opacity: 1; transform: translateX(0); }
+  48% { transform: translateX(18px); }
+  58% { transform: translateX(0); }
+  68% { transform: translateX(18px); }
+  78% { transform: translateX(0); }
+  90% { opacity: 1; transform: translateX(0); }
+  96%, 100% { opacity: 0; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .em-hz-palavra, .em-hz-final, .em-hz-seta { animation: none; opacity: 1; }
+  .em-hz-final { color: #ffffff; -webkit-text-stroke-color: #ffffff; }
+}
+
+/* Seta "vire a página" por cima de um vídeo: atravessa o quadro inteiro, da esquerda para a direita, em laço. */
+.em-seta-cruza { opacity: 0; animation: em-seta-cruza 2.6s cubic-bezier(0.5, 0, 0.3, 1) infinite; }
+@keyframes em-seta-cruza {
+  0% { opacity: 0; transform: translateX(-380px); }
+  18% { opacity: 0.92; }
+  78% { opacity: 0.92; }
+  100% { opacity: 0; transform: translateX(760px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .em-seta-cruza { animation: none; opacity: 0.9; transform: translateX(300px); }
+}
