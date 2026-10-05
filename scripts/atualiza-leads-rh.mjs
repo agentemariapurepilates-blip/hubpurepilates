@@ -22,9 +22,10 @@
  * está no .gitignore — o token nunca pode ir para o repositório.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { mesclarLeads } from './lib/mescla-leads.mjs';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DESTINO = join(RAIZ, 'src/features/colaborador/leads-rh/dados-locais/leads-rh.json');
@@ -121,7 +122,21 @@ async function paginado(url) {
     }
   }
 
-  leads.sort((a, b) => String(b.created_time).localeCompare(String(a.created_time)));
+  // O Meta só entrega os últimos 90 dias. Sem mesclar, cada execução apagava do
+  // arquivo o que já tinha saído dessa janela — o lead de junho que a tela
+  // mostrava em 30/08 já não existia em 05/10. Agora o que o Meta deixa de
+  // devolver continua guardado.
+  let anteriores = [];
+  if (existsSync(DESTINO)) {
+    try {
+      anteriores = JSON.parse(readFileSync(DESTINO, 'utf8')).leads ?? [];
+    } catch {
+      console.log(cor.ruim('  Arquivo anterior ilegível: seguindo só com o que o Meta devolveu.'));
+    }
+  }
+  const mescla = mesclarLeads(anteriores, leads);
+  leads.length = 0;
+  leads.push(...mescla.leads);
   // `automatica` diz à tela que existe agendamento nesta máquina, para o
   // painel poder mostrar a próxima carga em vez de "não agendada". Quem roda
   // o script na mão passa --manual e o painel não promete a próxima.
@@ -136,6 +151,12 @@ async function paginado(url) {
 
   console.log('');
   console.log(cor.ok(`  ${leads.length} candidatos gravados`) + cor.fraco(`  (${teste} de teste)`));
+  console.log(
+    cor.fraco(
+      `  ${mescla.adicionados} novos · ${mescla.atualizados} atualizados · ` +
+        `${mescla.preservados} guardados que o Meta já não entrega`,
+    ),
+  );
   console.log(cor.fraco(`  ${conjuntos} conjuntos · atualizado em ${new Date().toLocaleString('pt-BR')}`));
 
   if (bloqueados.length > 0) {
