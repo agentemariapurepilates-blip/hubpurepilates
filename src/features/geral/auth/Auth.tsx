@@ -7,6 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
+import { LoginPureSystem } from './LoginPureSystem';
+
+/**
+ * A entrada pelo PureSystem fica fora do ar até o time do PureSystem liberar a
+ * FUNCIONALIDADE do Hub e as Edge Functions `puresystem-login` e
+ * `puresystem-vincular` serem publicadas. Sem isso a aba apareceria para todo
+ * mundo e recusaria todo mundo — o guia manda falhar fechado.
+ * Para ligar: trocar para true (nada mais muda).
+ */
+const LOGIN_PURESYSTEM_ATIVO = false;
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
@@ -470,8 +481,9 @@ const Auth = () => {
         <Card className="card-pure">
           <Tabs defaultValue="login" className="w-full">
             <CardHeader className="pb-0">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className={cn('grid w-full', LOGIN_PURESYSTEM_ATIVO ? 'grid-cols-3' : 'grid-cols-2')}>
                 <TabsTrigger value="login">Entrar</TabsTrigger>
+                {LOGIN_PURESYSTEM_ATIVO && <TabsTrigger value="puresystem">PureSystem</TabsTrigger>}
                 <TabsTrigger value="signup">Cadastrar</TabsTrigger>
               </TabsList>
             </CardHeader>
@@ -544,6 +556,12 @@ const Auth = () => {
                   </button>
                 </form>
               </TabsContent>
+
+              {LOGIN_PURESYSTEM_ATIVO && (
+                <TabsContent value="puresystem" className="mt-0">
+                  <LoginPureSystem />
+                </TabsContent>
+              )}
 
               <TabsContent value="signup" className="mt-0">
                 <form onSubmit={handleSignup} className="space-y-4">
