@@ -51,6 +51,7 @@ import {
   PartyPopper,
   Gauge,
   UserSearch,
+  MapPin,
 } from 'lucide-react';
 import SimboloSegredosPilar from '@/features/geral/segredos-pilar/SimboloSegredosPilar';
 import { EDICOES_ENTRE_MOLAS } from '@/features/geral/entre-molas/edicoes';
@@ -232,11 +233,19 @@ const Sidebar = () => {
 
   // Sub-grupo Tutoriais (dropdown dentro de Geral) — o header "Tutoriais" leva
   // pra página-hub /tutoriais, com botões pra cada um destes.
-  const tutoriaisNavigation = [
+  const tutoriaisNavigation: {
+    name: string;
+    href: string;
+    icon: LucideIcon;
+    /** Documento HTML servido pelo Hub: abre em aba nova, fora do router. */
+    externo?: boolean;
+  }[] = [
     { name: 'Tutorial do Marketing', href: '/tutorial-marketing', icon: ScrollText },
     { name: 'Materiais de Implantação', href: '/materiais-implantacao', icon: Package },
     { name: 'Manual do Sistema', href: '/manual-sistema', icon: BookOpen },
     { name: 'Onboarding do Instrutor', href: '/onboarding-instrutor', icon: GraduationCap },
+    { name: 'Google Meu Negócio', href: '/guia-google-meu-negocio.html', icon: MapPin, externo: true },
+    { name: 'Convênio Empresarial', href: 'https://claude.ai/artifact/TGDB412fanLuD9WiT59tFZ', icon: Handshake, externo: true },
   ];
 
   // Colaboradores section - only for colaboradores and admins
@@ -454,24 +463,39 @@ const Sidebar = () => {
                 </div>
                 <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
                   <div className="mt-0.5 ml-4 pl-2 border-l border-sidebar-border/60 space-y-0.5">
-                    {tutoriaisNavigation.map((item) => (
-                      <NavLink
-                        key={item.name}
-                        to={item.href}
-                        onClick={() => setMobileOpen(false)}
-                        className={({ isActive }) =>
-                          cn(
-                            'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
-                            isActive
-                              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                              : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
-                          )
-                        }
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {item.name}
-                      </NavLink>
-                    ))}
+                    {tutoriaisNavigation.map((item) =>
+                      item.externo ? (
+                        // NavLink não recarregaria a página e cairia numa rota inexistente.
+                        <a
+                          key={item.name}
+                          href={item.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => setMobileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.name}
+                        </a>
+                      ) : (
+                        <NavLink
+                          key={item.name}
+                          to={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={({ isActive }) =>
+                            cn(
+                              'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                              isActive
+                                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                            )
+                          }
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.name}
+                        </NavLink>
+                      ),
+                    )}
                   </div>
                 </CollapsibleContent>
               </Collapsible>
