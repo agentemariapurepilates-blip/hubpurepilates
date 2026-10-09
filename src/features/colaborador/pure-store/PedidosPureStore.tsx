@@ -9,10 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ProdutoPicker } from './ProdutoPicker';
+import { NovoProdutoDialog } from './NovoProdutoDialog';
+import { gruposDe, listarProdutos, type ProdutoInterno } from './produtosStore';
 import {
   calcularResumo,
   formatarReal,
-  produtoPorNome,
   totalDoItem,
   type ItemPedido,
 } from './pedidoPureStore';
@@ -51,7 +52,27 @@ const PedidosPureStore = () => {
   const pedidoId = searchParams.get('pedido');
   const [numeroEmEdicao, setNumeroEmEdicao] = useState<number | null>(null);
   const [carregando, setCarregando] = useState(Boolean(pedidoId));
+  // A lista de produtos vem da aba Produtos (banco), não mais do catálogo do site.
+  const [produtos, setProdutos] = useState<ProdutoInterno[]>([]);
+  // Guarda a linha que pediu o cadastro, para já escolher o produto novo nela.
+  const [cadastrandoNaLinha, setCadastrandoNaLinha] = useState<string | null>(null);
   const resumo = calcularResumo(itens, desconto, frete);
+
+  useEffect(() => {
+    let ativo = true;
+    listarProdutos()
+      .then((lista) => ativo && setProdutos(lista))
+      .catch(() =>
+        toast({
+          title: 'Não foi possível carregar os produtos',
+          description: 'Atualize a página; o pedido continua funcionando com o preço digitado à mão.',
+          variant: 'destructive',
+        }),
+      );
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   // Veio do Gerenciador com ?pedido=<id>: abre o pedido salvo para editar.
   useEffect(() => {
@@ -276,18 +297,34 @@ const PedidosPureStore = () => {
             </div>
 
             {itens.map((item) => {
-              const esgotado = produtoPorNome(item.produto)?.esgotado;
               return (
                 <div key={item.id} className="space-y-2">
                   <div className={`grid items-end gap-3 rounded-lg border p-3 sm:items-center sm:border-0 sm:p-0 ${COLUNAS}`}>
                     <div className="space-y-1.5">
                       <Label className="text-xs sm:hidden">Produto</Label>
-                      <ProdutoPicker
-                        valor={item.produto}
-                        onEscolher={(produto) =>
-                          atualizarItem(item.id, { produto: produto.nome, valorUnitario: produto.preco })
-                        }
-                      />
+                      <div className="flex items-center gap-1.5">
+                        <div className="min-w-0 flex-1">
+                          <ProdutoPicker
+                            valor={item.produto}
+                            produtos={produtos}
+                            onEscolher={(produto) =>
+                              atualizarItem(item.id, { produto: produto.nome, valorUnitario: produto.preco })
+                            }
+                          />
+                        </div>
+                        {/* Produto que ainda não existe na lista: cadastra aqui e já entra na linha. */}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          title="Cadastrar produto novo"
+                          aria-label="Cadastrar produto novo"
+                          onClick={() => setCadastrandoNaLinha(item.id)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">
@@ -342,11 +379,6 @@ const PedidosPureStore = () => {
                     </Button>
                   </div>
 
-                  {esgotado && (
-                    <p className="text-xs text-amber-600 sm:pl-1">
-                      Este produto está marcado como esgotado no site. Confirme com a Pure Store antes de enviar.
-                    </p>
-                  )}
                 </div>
               );
             })}
@@ -436,6 +468,20 @@ const PedidosPureStore = () => {
             </div>
           </CardContent>
         </Card>
+
+        <NovoProdutoDialog
+          aberto={cadastrandoNaLinha !== null}
+          onAbertoChange={(aberto) => !aberto && setCadastrandoNaLinha(null)}
+          grupos={gruposDe(produtos)}
+          onCriado={(produto) => {
+            setProdutos((atuais) => [...atuais, produto]);
+            // Já entra na linha que abriu o cadastro: ninguém precisa procurar de novo.
+            if (cadastrandoNaLinha) {
+              atualizarItem(cadastrandoNaLinha, { produto: produto.nome, valorUnitario: produto.preco });
+            }
+            setCadastrandoNaLinha(null);
+          }}
+        />
       </div>
     </MainLayout>
   );

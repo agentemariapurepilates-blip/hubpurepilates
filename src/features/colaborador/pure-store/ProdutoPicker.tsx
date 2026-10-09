@@ -11,23 +11,24 @@ import {
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { formatarReal, opcoesDeProduto, type OpcaoProduto } from './pedidoPureStore';
+import { formatarReal, type OpcaoProduto } from './pedidoPureStore';
 
 /** Minúsculas e sem acento: "camiseta feminina" acha "Camiseta Feminina Dry Fit - Coração Pilateiro". */
 const normalizar = (texto: string) =>
   texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-const GRUPOS = [...new Set(opcoesDeProduto.map((o) => o.grupo))];
-
 interface ProdutoPickerProps {
   /** Nome do produto já escolhido na linha, ou vazio. */
   valor: string;
+  /** A lista cadastrada na aba Produtos (vem do banco, não mais do site). */
+  produtos: OpcaoProduto[];
   onEscolher: (produto: OpcaoProduto) => void;
 }
 
-/** Busca entre os uniformes e os produtos do catálogo do site, com o preço de cada um. */
-export function ProdutoPicker({ valor, onEscolher }: ProdutoPickerProps) {
+/** Busca na lista de produtos da Pure Store, com o preço de cada um. */
+export function ProdutoPicker({ valor, produtos, onEscolher }: ProdutoPickerProps) {
   const [aberto, setAberto] = useState(false);
+  const grupos = [...new Set(produtos.map((o) => o.grupo))];
 
   return (
     <Popover open={aberto} onOpenChange={setAberto}>
@@ -51,9 +52,9 @@ export function ProdutoPicker({ valor, onEscolher }: ProdutoPickerProps) {
           <CommandInput placeholder="Buscar uniforme ou produto..." />
           <CommandList className="max-h-72">
             <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-            {GRUPOS.map((grupo) => (
+            {grupos.map((grupo) => (
               <CommandGroup key={grupo} heading={grupo}>
-                {opcoesDeProduto
+                {produtos
                   .filter((produto) => produto.grupo === grupo)
                   .map((produto) => (
                     <CommandItem

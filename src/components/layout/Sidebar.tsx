@@ -282,6 +282,7 @@ const Sidebar = () => {
   const pureStoreNavigation = [
     { name: 'Gerador de pedidos', href: '/colaborador/pure-store/pedidos', icon: ShoppingBag },
     { name: 'Gerenciador de pedidos', href: '/colaborador/pure-store/gerenciador', icon: ClipboardList },
+    { name: 'Produtos', href: '/colaborador/pure-store/produtos', icon: Package },
   ];
 
   // Sub-grupo Mídias Sociais (calendários por marca, dentro de Colaboradores)

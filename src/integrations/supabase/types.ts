@@ -777,6 +777,39 @@ export type Database = {
         }
         Relationships: []
       }
+      pure_store_produtos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          criado_por: string | null
+          grupo: string
+          id: string
+          nome: string
+          preco: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          criado_por?: string | null
+          grupo?: string
+          id?: string
+          nome: string
+          preco: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          criado_por?: string | null
+          grupo?: string
+          id?: string
+          nome?: string
+          preco?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

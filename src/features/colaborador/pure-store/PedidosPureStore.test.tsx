@@ -24,6 +24,24 @@ vi.mock('react-router-dom', () => ({
   useSearchParams: () => [rota.busca, vi.fn()],
   useNavigate: () => rota.navegar,
 }));
+// A lista de produtos vem da tabela pure_store_produtos; aqui ela é fixa, para
+// o teste não depender do que estiver cadastrado em produção.
+vi.mock('./produtosStore', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./produtosStore')>()),
+  listarProdutos: async () => [
+    { id: '1', chave: '1', nome: 'Camiseta Manga Curta', preco: 60, grupo: 'Uniformes', ativo: true },
+    { id: '2', chave: '2', nome: 'Camiseta Manga Longa', preco: 65, grupo: 'Uniformes', ativo: true },
+    { id: '3', chave: '3', nome: 'Polo Adm', preco: 70, grupo: 'Uniformes', ativo: true },
+    {
+      id: '4',
+      chave: '4',
+      nome: 'Camiseta Feminina Dry Fit - Coração Pilateiro',
+      preco: 89.9,
+      grupo: 'Camisetas',
+      ativo: true,
+    },
+  ],
+}));
 vi.mock('./pedidosStore', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./pedidosStore')>()),
   buscarPedido: store.buscarPedido,

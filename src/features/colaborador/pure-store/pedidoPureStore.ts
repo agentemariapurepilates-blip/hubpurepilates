@@ -1,18 +1,19 @@
 // Contas e lista de produtos do gerador de pedidos da Pure Store.
 //
-// Duas origens de produto:
-// - Uniformes: não são vendidos na loja do site, então a lista e o preço ficam
-//   aqui (UNIFORMES). Mudou o preço, muda esta lista.
-// - Produtos da loja: vêm do catálogo do site (src/data/pureStoreCatalogo.ts,
-//   gerado por scripts/gerar-catalogo-pure-store.mjs — não editar à mão).
+// A LISTA DE PRODUTOS NÃO MORA MAIS AQUI (mudança de 09/10/2026): ela vive na
+// tabela public.pure_store_produtos e é mantida pelos colaboradores na aba
+// Produtos (ver produtosStore.ts). Antes vinha do catálogo da loja, o mesmo
+// arquivo que o franqueado mostra para o aluno — eram a mesma lista, então
+// mexer numa mexia na outra. Agora são coisas separadas: o catálogo do site
+// continua sendo o B2C, e esta é a lista do pedido interno.
+//
+// Aqui ficam só os tipos e as contas do pedido.
 //
 // Em qualquer um dos dois o preço entra preenchido, mas continua editável na
 // tela: campanha e tabela do franqueado mudam de preço sem o site mudar.
 //
 // O tamanho é digitado pela pessoa: nem o catálogo do site nem os uniformes
 // guardam tamanho disponível no Hub.
-
-import { catalogoProdutos } from '@/data/pureStoreCatalogo';
 
 export interface OpcaoProduto {
   /** Chave única na lista de busca: a url do site, ou "uniforme:<nome>". */
@@ -44,22 +45,6 @@ export interface ResumoPedido {
   frete: number;
   total: number;
 }
-
-export const UNIFORMES: OpcaoProduto[] = [
-  { chave: 'uniforme:camiseta-manga-curta', nome: 'Camiseta Manga Curta', preco: 60, grupo: 'Uniformes' },
-  { chave: 'uniforme:camiseta-manga-longa', nome: 'Camiseta Manga Longa', preco: 65, grupo: 'Uniformes' },
-  { chave: 'uniforme:polo-adm', nome: 'Polo Adm', preco: 70, grupo: 'Uniformes' },
-];
-
-/** Uniformes primeiro, depois a loja em ordem alfabética: é assim que a busca mostra. */
-export const opcoesDeProduto: OpcaoProduto[] = [
-  ...UNIFORMES,
-  ...[...catalogoProdutos]
-    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
-    .map((p) => ({ chave: p.url, nome: p.nome, preco: p.preco, grupo: p.categoria, esgotado: p.esgotado })),
-];
-
-export const produtoPorNome = (nome: string) => opcoesDeProduto.find((p) => p.nome === nome);
 
 /** Centavos, sempre: sem isso 0,1 + 0,2 vira 0,30000000000000004 na soma dos itens. */
 const emCentavos = (valor: number) => Math.round(valor * 100) / 100;

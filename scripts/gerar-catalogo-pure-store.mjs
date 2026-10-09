@@ -38,10 +38,21 @@ const dec = (s) =>
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>');
 
-async function getText(url) {
-  const r = await fetch(url, UA);
-  if (!r.ok) throw new Error(`HTTP ${r.status} em ${url}`);
-  return r.text();
+// Tenta de novo antes de desistir: a loja recusa requisição esporadicamente e
+// uma falha isolada NÃO pode virar produto faltando no catálogo.
+async function getText(url, tentativas = 3) {
+  let ultimoErro;
+  for (let t = 1; t <= tentativas; t += 1) {
+    try {
+      const r = await fetch(url, UA);
+      if (!r.ok) throw new Error(`HTTP ${r.status} em ${url}`);
+      return await r.text();
+    } catch (e) {
+      ultimoErro = e;
+      if (t < tentativas) await new Promise((ok) => setTimeout(ok, 400 * t));
+    }
+  }
+  throw ultimoErro;
 }
 
 // 1) Sitemap → produtos (slug, url, primeira foto)
@@ -137,8 +148,14 @@ async function lerProduto(p, slugCats) {
   };
 }
 
+// POR QUE NÃO ENGOLE ERRO (incidente de 09/10/2026): antes, produto cuja página
+// falhasse virava null e sumia em silêncio. Uma rodada ruim gerou 34 de 76
+// produtos e teria apagado 22 itens do catálogo de todas as unidades sem um
+// aviso sequer. Agora uma falha derruba a geração inteira e o arquivo antigo
+// fica intacto — é melhor não atualizar do que atualizar pela metade.
 async function emPool(itens, n, fn) {
   const out = new Array(itens.length);
+  const falhas = [];
   let i = 0;
   await Promise.all(
     Array.from({ length: n }, async () => {
@@ -147,13 +164,19 @@ async function emPool(itens, n, fn) {
         i += 1;
         try {
           out[idx] = await fn(itens[idx]);
-        } catch {
-          out[idx] = null;
+        } catch (e) {
+          falhas.push(`${itens[idx].url || itens[idx]}: ${e.message}`);
         }
       }
     }),
   );
-  return out.filter(Boolean);
+  if (falhas.length) {
+    throw new Error(
+      `${falhas.length} de ${itens.length} páginas não puderam ser lidas; o catálogo NÃO foi alterado.\n  ` +
+        falhas.join('\n  '),
+    );
+  }
+  return out;
 }
 
 // ---- Execução ----

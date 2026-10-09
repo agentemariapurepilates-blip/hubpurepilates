@@ -2,10 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   calcularResumo,
   formatarReal,
-  opcoesDeProduto,
-  produtoPorNome,
   totalDoItem,
-  UNIFORMES,
   type ItemPedido,
 } from './pedidoPureStore';
 
@@ -64,17 +61,4 @@ describe('contas do pedido', () => {
     expect(formatarReal(259.92).replace(/\u00a0/g, ' ')).toBe('R$ 259,92');
   });
 
-  it('a lista junta os uniformes e o catálogo do site, com preço em todos', () => {
-    expect(opcoesDeProduto.length).toBeGreaterThan(UNIFORMES.length + 10);
-    expect(opcoesDeProduto.every((p) => p.nome && p.preco > 0 && p.grupo)).toBe(true);
-    // Chave repetida faria a busca escolher o produto errado.
-    expect(new Set(opcoesDeProduto.map((p) => p.chave)).size).toBe(opcoesDeProduto.length);
-  });
-
-  it('os uniformes vêm primeiro e com o preço combinado', () => {
-    expect(opcoesDeProduto.slice(0, 3)).toEqual(UNIFORMES);
-    expect(produtoPorNome('Camiseta Manga Curta')?.preco).toBe(60);
-    expect(produtoPorNome('Camiseta Manga Longa')?.preco).toBe(65);
-    expect(produtoPorNome('Polo Adm')?.preco).toBe(70);
-  });
 });

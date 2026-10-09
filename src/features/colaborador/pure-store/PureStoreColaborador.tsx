@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ClipboardList, ShoppingBag } from 'lucide-react';
+import { ClipboardList, Package, ShoppingBag } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -11,6 +11,12 @@ const ATALHOS = [
     icon: ShoppingBag,
     titulo: 'Gerador de pedidos',
     texto: 'Monte o pedido do franqueado com uniformes e produtos da loja, aplique o desconto e veja o total.',
+  },
+  {
+    href: '/colaborador/pure-store/produtos',
+    icon: Package,
+    titulo: 'Produtos',
+    texto: 'A lista de produtos que aparece no pedido. Cadastre aqui o que for novo — vale na hora, para todo mundo.',
   },
   {
     href: '/colaborador/pure-store/gerenciador',

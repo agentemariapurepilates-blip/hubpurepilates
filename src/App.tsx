@@ -63,6 +63,7 @@ const IndicadoresAdministracao = lazy(() => import("./features/colaborador/indic
 const LeadsRH = lazy(() => import("./features/colaborador/leads-rh/LeadsRH"));
 const PureStoreColaborador = lazy(() => import("./features/colaborador/pure-store/PureStoreColaborador"));
 const PedidosPureStore = lazy(() => import("./features/colaborador/pure-store/PedidosPureStore"));
+const ProdutosPureStore = lazy(() => import("./features/colaborador/pure-store/ProdutosPureStore"));
 const GerenciadorPedidosPureStore = lazy(() => import("./features/colaborador/pure-store/GerenciadorPedidos"));
 // PurePedia — base de conhecimento exclusiva dos colaboradores.
 const PurePedia = lazy(() => import("./features/colaborador/purepedia/PurePedia"));
@@ -142,6 +143,7 @@ function App() {
             <Route path="/colaborador/evento" element={<ProtectedRoute requireColaborador><EventoConfirmacao /></ProtectedRoute>} />
             <Route path="/colaborador/pure-store" element={<ProtectedRoute requireColaborador><PureStoreColaborador /></ProtectedRoute>} />
             <Route path="/colaborador/pure-store/pedidos" element={<ProtectedRoute requireColaborador><PedidosPureStore /></ProtectedRoute>} />
+            <Route path="/colaborador/pure-store/produtos" element={<ProtectedRoute requireColaborador><ProdutosPureStore /></ProtectedRoute>} />
             <Route path="/colaborador/pure-store/gerenciador" element={<ProtectedRoute requireColaborador><GerenciadorPedidosPureStore /></ProtectedRoute>} />
             <Route path="/notificacoes" element={<ProtectedRoute><Notificacoes /></ProtectedRoute>} />
             {/* Artes Prontas foi descontinuada â€” tudo agora em Pure Design. */}
