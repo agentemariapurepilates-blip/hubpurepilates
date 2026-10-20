@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, ImagePlus, X, Video } from 'lucide-react';
+import { Loader2, ImagePlus, X, Video, FileText } from 'lucide-react';
 import { Aviso } from '@/features/geral/avisos/Avisos';
 import RichTextEditor from '@/components/ui/rich-text-editor';
+import { PdfRecusado, subirPdf, type PdfEnviado } from './subirPdf';
 
 interface EditAvisoDialogProps {
   aviso: Aviso | null;
@@ -23,14 +24,22 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState('');
-  const [mediaType, setMediaType] = useState<'none' | 'image' | 'video'>('none');
+  const [mediaType, setMediaType] = useState<'none' | 'image' | 'video' | 'pdf'>('none');
+  const [pdf, setPdf] = useState<PdfEnviado | null>(null);
+  const [enviandoPdf, setEnviandoPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({ title: '', content: '' });
 
   useEffect(() => {
     if (aviso) {
       setFormData({ title: aviso.title, content: aviso.content || '' });
-      if (aviso.video_url) {
+      setPdf(aviso.pdf_url ? { url: aviso.pdf_url, nome: aviso.pdf_nome || 'apresentacao.pdf', capa: aviso.image_url } : null);
+      if (aviso.pdf_url) {
+        setMediaType('pdf');
+        setCoverImage(null);
+        setVideoUrl('');
+      } else if (aviso.video_url) {
         setVideoUrl(aviso.video_url);
         setMediaType('video');
         setCoverImage(null);
@@ -74,11 +83,37 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
     }
   };
 
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setEnviandoPdf(true);
+    try {
+      setPdf(await subirPdf(file, user.id));
+      setCoverImage(null);
+      setVideoUrl('');
+      setMediaType('pdf');
+      toast({ title: "Sucesso", description: "Apresentação atualizada!" });
+    } catch (error) {
+      console.error('Error uploading pdf:', error);
+      toast({
+        title: "Erro",
+        description: error instanceof PdfRecusado ? error.message : "Erro ao enviar a apresentação",
+        variant: "destructive",
+      });
+    } finally {
+      setEnviandoPdf(false);
+      if (pdfInputRef.current) pdfInputRef.current.value = '';
+    }
+  };
+
   const removeMedia = () => {
     setCoverImage(null);
     setVideoUrl('');
+    setPdf(null);
     setMediaType('none');
     if (fileInputRef.current) fileInputRef.current.value = '';
+    if (pdfInputRef.current) pdfInputRef.current.value = '';
   };
 
   const getGoogleDriveEmbedUrl = (url: string): string | null => {
@@ -112,8 +147,11 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
         .update({
           title: formData.title,
           content: formData.content || null,
-          image_url: mediaType === 'image' ? coverImage : null,
-          video_url: finalVideoUrl
+          // Com apresentação, a capa do card é o primeiro slide, gerado no upload.
+          image_url: mediaType === 'image' ? coverImage : mediaType === 'pdf' ? pdf?.capa ?? null : null,
+          video_url: finalVideoUrl,
+          pdf_url: mediaType === 'pdf' ? pdf?.url ?? null : null,
+          pdf_nome: mediaType === 'pdf' ? pdf?.nome ?? null : null
         })
         .eq('id', aviso.id);
 
@@ -148,9 +186,17 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
           </div>
 
           <div className="space-y-2">
-            <Label>Capa (Imagem ou Vídeo)</Label>
+            <Label>Capa (Imagem, Vídeo ou Apresentação)</Label>
 
-            {mediaType === 'image' && coverImage ? (
+            {mediaType === 'pdf' && pdf ? (
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                <FileText className="h-8 w-8 shrink-0 text-primary" />
+                <span className="flex-1 truncate text-sm">{pdf.nome}</span>
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={removeMedia}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : mediaType === 'image' && coverImage ? (
               <div className="relative rounded-lg overflow-hidden">
                 <img src={coverImage} alt="Capa" className="w-full h-48 object-cover" />
                 <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8" onClick={removeMedia}>
@@ -204,9 +250,23 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
                   <Video className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground">Vídeo (Google Drive)</p>
                 </div>
+                <div
+                  onClick={() => !enviandoPdf && pdfInputRef.current?.click()}
+                  className="flex-1 border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+                >
+                  {enviandoPdf ? (
+                    <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">Apresentação (PDF)</p>
+                    </>
+                  )}
+                </div>
               </div>
             )}
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            <input ref={pdfInputRef} type="file" accept="application/pdf,.pdf" onChange={handlePdfUpload} className="hidden" />
           </div>
 
           <div className="space-y-2">
@@ -220,7 +280,7 @@ const EditAvisoDialog = ({ aviso, open, onOpenChange, onSuccess }: EditAvisoDial
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={loading || !formData.title}>
+            <Button type="submit" disabled={loading || enviandoPdf || !formData.title}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Salvar
             </Button>

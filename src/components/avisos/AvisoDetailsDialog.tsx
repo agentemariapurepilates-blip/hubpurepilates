@@ -4,6 +4,7 @@ import { Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { Aviso } from '@/features/geral/avisos/Avisos';
+import ApresentacaoPdf from './ApresentacaoPdf';
 
 interface AvisoDetailsDialogProps {
   aviso: Aviso | null;
@@ -21,8 +22,12 @@ const AvisoDetailsDialog = ({ aviso, open, onOpenChange }: AvisoDetailsDialogPro
           <DialogTitle className="text-xl pr-8">{aviso.title}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {aviso.video_url ? (
+        {/* min-w-0: este bloco é filho do grid da janela; sem ele, a apresentação
+            em PDF alarga a coluna sem fim (ver ApresentacaoPdf). */}
+        <div className="min-w-0 space-y-4">
+          {aviso.pdf_url ? (
+            <ApresentacaoPdf url={aviso.pdf_url} nome={aviso.pdf_nome} />
+          ) : aviso.video_url ? (
             <div className="rounded-lg overflow-hidden aspect-video bg-black">
               <iframe
                 src={aviso.video_url}

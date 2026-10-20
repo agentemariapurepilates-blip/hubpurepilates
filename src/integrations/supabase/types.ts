@@ -53,6 +53,8 @@ export type Database = {
           image_url: string | null
           is_active: boolean | null
           partner_name: string | null
+          pdf_nome: string | null
+          pdf_url: string | null
           title: string
           updated_at: string | null
           video_url: string | null
@@ -65,6 +67,8 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean | null
           partner_name?: string | null
+          pdf_nome?: string | null
+          pdf_url?: string | null
           title: string
           updated_at?: string | null
           video_url?: string | null
@@ -77,6 +81,8 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean | null
           partner_name?: string | null
+          pdf_nome?: string | null
+          pdf_url?: string | null
           title?: string
           updated_at?: string | null
           video_url?: string | null

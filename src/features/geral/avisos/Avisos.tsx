@@ -19,6 +19,8 @@ export interface Aviso {
   content: string | null;
   image_url: string | null;
   video_url: string | null;
+  pdf_url: string | null;
+  pdf_nome: string | null;
   partner_name: string | null;
   is_active: boolean;
   created_by: string;
