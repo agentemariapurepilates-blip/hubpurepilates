@@ -1,5 +1,6 @@
 import { Megaphone } from 'lucide-react';
 import NovidadesPureSystemCard from '@/components/avisos/NovidadesPureSystemCard';
+import UpdatesMktCard from '@/components/avisos/UpdatesMktCard';
 
 // Página de PREVIEW (sem login). Registrada só em ambiente de desenvolvimento
 // (ver App.tsx / import.meta.env.DEV) — não existe no build de produção.
@@ -18,6 +19,9 @@ const NovidadesPreview = () => {
           <h1 className="text-xl font-bold sm:text-2xl">Parcerias e Avisos</h1>
         </div>
 
+        <div className="mb-4">
+          <UpdatesMktCard />
+        </div>
         <NovidadesPureSystemCard />
       </div>
     </div>

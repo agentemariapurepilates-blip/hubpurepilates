@@ -11,6 +11,7 @@ import CreateAvisoDialog from '@/components/avisos/CreateAvisoDialog';
 import EditAvisoDialog from '@/components/avisos/EditAvisoDialog';
 import AvisoDetailsDialog from '@/components/avisos/AvisoDetailsDialog';
 import NovidadesPureSystemCard from '@/components/avisos/NovidadesPureSystemCard';
+import UpdatesMktCard from '@/components/avisos/UpdatesMktCard';
 
 export interface Aviso {
   id: string;
@@ -136,11 +137,14 @@ const Avisos = () => {
 
   const canCreate = isColaborador || isAdmin;
 
-  // Card em destaque (client-side, não vem do banco). Some quando a busca não bate com ele.
+  // Cards em destaque (client-side, não vêm do banco). Somem quando a busca não bate com eles.
+  const termo = searchTerm.trim().toLowerCase();
   const featuredHaystack =
     'novidades do pure system updates puresystem reunião apresentação 23 de julho slides rede 2026';
-  const showFeatured =
-    searchTerm.trim() === '' || featuredHaystack.includes(searchTerm.trim().toLowerCase());
+  const showFeatured = termo === '' || featuredHaystack.includes(termo);
+  const updatesMktHaystack =
+    'updates de marketing live apresentação 20 de outubro slides entrada de leads pure pass black friday sem dor vídeo 2026';
+  const showUpdatesMkt = termo === '' || updatesMktHaystack.includes(termo);
 
   return (
     <MainLayout>
@@ -177,7 +181,12 @@ const Avisos = () => {
           </div>
         </div>
 
-        {/* Apresentação em destaque */}
+        {/* Apresentações em destaque */}
+        {showUpdatesMkt && (
+          <div className="mb-4">
+            <UpdatesMktCard />
+          </div>
+        )}
         {showFeatured && (
           <div className="mb-4">
             <NovidadesPureSystemCard />

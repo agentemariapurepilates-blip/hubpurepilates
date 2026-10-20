@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ExternalLink } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -32,12 +33,17 @@ const PresentationSlidesDialog = ({
 }: PresentationSlidesDialogProps) => {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(1);
+  const [maiorSlideVisto, setMaiorSlideVisto] = useState(1);
   const total = slides.length;
 
-  // Contador "atual / total"
+  // Contador "atual / total" e o ponto mais longe que a pessoa chegou
   useEffect(() => {
     if (!api) return;
-    const onSelect = () => setCurrent(api.selectedScrollSnap() + 1);
+    const onSelect = () => {
+      const pos = api.selectedScrollSnap() + 1;
+      setCurrent(pos);
+      setMaiorSlideVisto((maior) => Math.max(maior, pos));
+    };
     onSelect();
     api.on('select', onSelect);
     api.on('reInit', onSelect);
@@ -46,9 +52,12 @@ const PresentationSlidesDialog = ({
     };
   }, [api]);
 
-  // Sempre reabrir no primeiro slide
+  // Sempre reabrir no primeiro slide (e o progresso recomeça)
   useEffect(() => {
-    if (open && api) api.scrollTo(0, true);
+    if (open && api) {
+      api.scrollTo(0, true);
+      setMaiorSlideVisto(1);
+    }
   }, [open, api]);
 
   // Navegação por teclado (← →), mesmo com o foco no botão de fechar
@@ -80,15 +89,29 @@ const PresentationSlidesDialog = ({
         <Carousel setApi={setApi} opts={{ loop: false }} className="w-full">
           <CarouselContent>
             {slides.map((slide, i) => (
-              <CarouselItem key={slide.src}>
-                <div className="overflow-hidden rounded-lg border bg-muted">
-                  <img
-                    src={slide.src}
-                    alt={slide.alt}
-                    loading={i === 0 ? 'eager' : 'lazy'}
-                    draggable={false}
-                    className="h-auto w-full select-none"
-                  />
+              <CarouselItem key={slide.src || slide.alt}>
+                <div className="relative overflow-hidden rounded-lg border bg-muted">
+                  {slide.render ? (
+                    slide.render({ ativo: current === i + 1, maiorSlideVisto })
+                  ) : (
+                    <img
+                      src={slide.src}
+                      alt={slide.alt}
+                      loading={i === 0 ? 'eager' : 'lazy'}
+                      draggable={false}
+                      className="h-auto w-full select-none"
+                    />
+                  )}
+                  {slide.link && (
+                    <a
+                      href={slide.link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-background/90 px-4 py-2 text-xs font-semibold shadow backdrop-blur hover:bg-background sm:text-sm"
+                    >
+                      <ExternalLink className="h-4 w-4 text-primary" /> {slide.link.label}
+                    </a>
+                  )}
                 </div>
               </CarouselItem>
             ))}

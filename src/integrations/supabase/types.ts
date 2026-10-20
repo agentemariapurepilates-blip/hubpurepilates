@@ -83,6 +83,27 @@ export type Database = {
         }
         Relationships: []
       }
+      avisos_videos_assistidos: {
+        Row: {
+          id: number
+          video_id: string
+          user_id: string
+          assistido_em: string
+        }
+        Insert: {
+          id?: number
+          video_id: string
+          user_id: string
+          assistido_em?: string
+        }
+        Update: {
+          id?: number
+          video_id?: string
+          user_id?: string
+          assistido_em?: string
+        }
+        Relationships: []
+      }
       comment_reactions: {
         Row: {
           comment_id: string
