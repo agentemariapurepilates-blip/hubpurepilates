@@ -20,6 +20,7 @@ const CalendarioMarketing = lazy(() => import("./features/geral/marketing/Calend
 const MidiasSociais = lazy(() => import("./features/geral/marketing/MidiasSociais"));
 const QuantoValeDomingo = lazy(() => import("./features/geral/domingos/QuantoValeDomingo"));
 const MateriaisImplantacao = lazy(() => import("./features/geral/artes/MateriaisImplantacao"));
+const PureGpt = lazy(() => import("./features/geral/pure-gpt/PureGpt"));
 const PureDesign = lazy(() => import("./features/geral/artes/PureDesign"));
 const PureStore = lazy(() => import("./features/geral/pure-store/PureStore"));
 const SegredosPilar = lazy(() => import("./features/geral/segredos-pilar/SegredosPilar"));
@@ -159,6 +160,10 @@ function App() {
             <Route path="/tutoriais" element={<ProtectedRoute><Tutoriais /></ProtectedRoute>} />
             <Route path="/onboarding-instrutor" element={<ProtectedRoute><OnboardingInstrutor /></ProtectedRoute>} />
             <Route path="/pure-design" element={<ProtectedRoute><PureDesign /></ProtectedRoute>} />
+            {/* Pure GPT: em teste, só no servidor local — ver Sidebar.tsx. */}
+            {import.meta.env.DEV && (
+              <Route path="/pure-gpt" element={<ProtectedRoute><PureGpt /></ProtectedRoute>} />
+            )}
             <Route path="/pure-design/:id" element={<ProtectedRoute><PureDesignEditor /></ProtectedRoute>} />
             <Route path="/agente-design" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
             <Route path="/agente-design/gerar-foto" element={<ProtectedRoute><GerarFoto /></ProtectedRoute>} />
