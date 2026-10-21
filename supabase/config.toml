@@ -60,3 +60,8 @@ verify_jwt = false
 # toda dentro da function.
 [functions.experimentais-relatorio-mensal]
 verify_jwt = false
+
+# Prancheta como conector do Claude (MCP remoto). O claude.ai chama sem JWT do Supabase; o acesso é pelo
+# código secreto no fim do endereço (PRANCHETA_MCP_SEGREDO), conferido dentro da função.
+[functions.prancheta-mcp]
+verify_jwt = false
