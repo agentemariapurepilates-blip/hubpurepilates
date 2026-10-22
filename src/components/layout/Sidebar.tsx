@@ -26,6 +26,7 @@ import {
   Package,
   ShoppingBag,
   Handshake,
+  DoorOpen,
   BookOpen,
   BookOpenText,
   ScrollText,
@@ -250,6 +251,7 @@ const Sidebar = () => {
     { name: 'Onboarding do Instrutor', href: '/onboarding-instrutor', icon: GraduationCap },
     { name: 'Google Meu Negócio', href: '/guia-google-meu-negocio.html', icon: MapPin, externo: true },
     { name: 'Convênio Empresarial', href: 'https://claude.ai/artifact/TGDB412fanLuD9WiT59tFZ', icon: Handshake, externo: true },
+    { name: 'Comece: Pure Pass e Aula Experimental', href: '/comece-pure-pass', icon: DoorOpen },
   ];
 
   // Colaboradores section - only for colaboradores and admins

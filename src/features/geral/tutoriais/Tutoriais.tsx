@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
-import { ScrollText, Package, BookOpen, GraduationCap, MapPin, Handshake, ArrowRight } from 'lucide-react';
+import { ScrollText, Package, BookOpen, GraduationCap, MapPin, Handshake, DoorOpen, ArrowRight } from 'lucide-react';
 
 // Os mesmos destinos do dropdown "Tutoriais" no menu lateral.
 const TUTORIAIS = [
@@ -45,6 +45,13 @@ const TUTORIAIS = [
     href: 'https://claude.ai/artifact/TGDB412fanLuD9WiT59tFZ',
     icon: Handshake,
     externo: true,
+  },
+  {
+    title: 'Comece: Pure Pass e Aula Experimental',
+    description:
+      'Como o cliente chega, o que o sistema faz sozinho e o que a sua unidade faz em cada etapa: Pure Pass, aula experimental e aula com cobrança R$39,90.',
+    href: '/comece-pure-pass',
+    icon: DoorOpen,
   },
 ];
 

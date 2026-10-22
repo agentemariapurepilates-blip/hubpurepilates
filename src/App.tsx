@@ -31,6 +31,7 @@ const Parcerias = lazy(() => import("./features/geral/parcerias/Parcerias"));
 const ManualSistema = lazy(() => import("./features/geral/manual/ManualSistema"));
 const Tutoriais = lazy(() => import("./features/geral/tutoriais/Tutoriais"));
 const OnboardingInstrutor = lazy(() => import("./features/geral/tutoriais/OnboardingInstrutor"));
+const ManualComece = lazy(() => import("./features/geral/tutoriais/ManualComece"));
 const AutorizarMidiaAdicional = lazy(() => import("./features/geral/midia-adicional/AutorizarMidiaAdicional"));
 const MinhasSolicitacoes = lazy(() => import("./features/geral/midia-adicional/MinhasSolicitacoes"));
 const SolicitarVerbaProfessores = lazy(() => import("./features/geral/verba-professores/SolicitarVerbaProfessores"));
@@ -159,6 +160,7 @@ function App() {
             <Route path="/manual-sistema" element={<ProtectedRoute><ManualSistema /></ProtectedRoute>} />
             <Route path="/tutoriais" element={<ProtectedRoute><Tutoriais /></ProtectedRoute>} />
             <Route path="/onboarding-instrutor" element={<ProtectedRoute><OnboardingInstrutor /></ProtectedRoute>} />
+            <Route path="/comece-pure-pass" element={<ProtectedRoute><ManualComece /></ProtectedRoute>} />
             <Route path="/pure-design" element={<ProtectedRoute><PureDesign /></ProtectedRoute>} />
             {/* Pure GPT: em teste, só no servidor local — ver Sidebar.tsx. */}
             {import.meta.env.DEV && (

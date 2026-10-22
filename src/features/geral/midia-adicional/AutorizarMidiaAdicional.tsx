@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Megaphone, ArrowLeft, AlertTriangle, Check, Info, Image, ExternalLink } from 'lucide-react';
+import { Megaphone, ArrowLeft, ArrowRight, AlertTriangle, Check, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -170,35 +170,41 @@ const SolicitarMidiaAdicional = () => {
           </p>
         </div>
 
-        <Card className="mb-6 overflow-hidden border-primary/30 bg-primary/5">
-          <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-primary/10 p-2.5 shrink-0">
-                <Image className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Antes de preencher, veja os criativos usados nas campanhas
-                </p>
-                <p className="text-sm text-muted-foreground mt-0.5 max-w-xl">
-                  Anúncios reais, mapa de cobertura e o caminho até a aula marcada — no capítulo
-                  "Criativos das Campanhas de Aporte" do Tutorial do Marketing.
-                </p>
+        {/* Fluxo de mídia da campanha de aporte, nas cores do slide (mostarda).
+            Abre em aba nova para não perder o formulário; a âncora leva direto
+            à parte "Unidades com aporte" do manual do Comece. */}
+        <a
+          href="/comece-pure-pass#midia-com-aporte"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group mb-6 block overflow-hidden rounded-2xl bg-[#E0A458] text-[#111] shadow-sm transition-shadow hover:shadow-md"
+        >
+          <div className="flex flex-col gap-5 p-5 sm:p-6 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.3em]">
+                Fluxo de mídia · Unidades com aporte
+              </p>
+              <p className="mt-2 font-mono text-lg font-bold sm:text-xl">
+                purepilates.com.br/<wbr />comece-aqui
+              </p>
+              <p className="mt-1 max-w-md text-sm leading-relaxed text-[#111]/80">
+                Toda campanha de aporte otimiza para aula experimental e leva direto à página da sua unidade: sem busca,
+                sem menu e sem trocar de unidade.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+                <span className="rounded-md bg-[#F4ECDD] px-2 py-1">Mídia da unidade</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+                <span className="rounded-md bg-[#111] px-2 py-1 text-white">/comece-aqui</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+                <span className="rounded-md bg-[#C1002F] px-2 py-1 text-white">Aula experimental</span>
               </div>
             </div>
-            <Button asChild size="lg" className="w-full sm:w-auto shrink-0">
-              <a
-                href="/tutorial-marketing#criativos"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Image className="h-4 w-4 mr-2" />
-                Ver os criativos
-                <ExternalLink className="h-3.5 w-3.5 ml-2" />
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
+            <span className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#111] px-5 py-3 text-sm font-semibold text-white transition-colors group-hover:bg-black">
+              Ver o fluxo de mídia
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </div>
+        </a>
 
         <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
