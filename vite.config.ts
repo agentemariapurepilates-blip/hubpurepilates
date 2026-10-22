@@ -200,6 +200,25 @@ export default defineConfig(({ command, mode }) => {
       // publish/root-web.config -- com 404 de verdade, o Cloudflare não cacheia
       // e um deploy incompleto vira erro isolado em vez de site fora do ar.
       assetsDir: 'app',
+      rollupOptions: {
+        output: {
+          // `.mjs` sai do build como `.js`. O único `.mjs` do Hub é o worker
+          // do pdf.js, que desenha as apresentações em PDF dos avisos — e o IIS
+          // não conhece a extensão: responde 404 com o arquivo no disco. Em
+          // 22/10/2026 os slides não abriam no ar e o upload de PDF travava por
+          // isso. A regra do .mjs no web.config também resolve, mas depende do
+          // servidor; com a extensão .js, que o servidor já entrega, não há
+          // dependência nenhuma. O conteúdo é o mesmo: o navegador decide pelo
+          // tipo da resposta, não pela extensão.
+          //
+          // Este `assetFileNames` substitui o padrão do Vite para os assets,
+          // por isso repete o `app/` do assetsDir acima.
+          assetFileNames: (asset) =>
+            /\.mjs$/.test(asset.name ?? asset.names?.[0] ?? '')
+              ? 'app/[name]-[hash].js'
+              : 'app/[name]-[hash][extname]',
+        },
+      },
     },
     resolve: {
       alias: {
