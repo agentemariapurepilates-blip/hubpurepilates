@@ -1,5 +1,5 @@
 // Apresentação "Updates de Marketing" — live de 20/10/2026 (Entrada de leads + Black Friday).
-// Slides estáticos servidos de /public/avisos/updates-mkt-2026-10-20/slide-NN.jpg
+// Slides estáticos servidos de /public/arquivos/avisos/updates-mkt-2026-10-20/slide-NN.jpg
 // (renderizados a partir de "UPDATES MKT 20-10-2026.pdf"; NN = página do PDF).
 //
 // Depois do slide `video.aposSlide` entra um slide com vídeo, liberado só para
@@ -17,13 +17,13 @@ export const UPDATES_MKT_OUT = {
   subtitle: "Live · 20 de outubro de 2026",
   meeting: "Live Updates",
   date: "2026-10-20",
-  basePath: "/avisos/updates-mkt-2026-10-20",
+  basePath: "/arquivos/avisos/updates-mkt-2026-10-20",
   video: {
     id: "updates-mkt-2026-10-20",
     // "FILME 1 - AMIGAS - 120_H.mov" (ProRes 4K) convertido para MP4 1080p H.264.
     // Vazio = o slide mostra "em breve".
-    src: "/avisos/updates-mkt-2026-10-20/filme-1-amigas.mp4",
-    capa: "/avisos/updates-mkt-2026-10-20/filme-1-amigas-capa.jpg",
+    src: "/arquivos/avisos/updates-mkt-2026-10-20/filme-1-amigas.mp4",
+    capa: "/arquivos/avisos/updates-mkt-2026-10-20/filme-1-amigas-capa.jpg",
     aposSlide: 30,
     limiteVezes: 3,
   },

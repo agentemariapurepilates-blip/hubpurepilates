@@ -4,6 +4,26 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 /**
+ * Uma promessa com prazo: ou ela resolve a tempo, ou vira erro.
+ *
+ * POR QUE EXISTE (22/10/2026): no ar, o worker do pdf.js dava 404 (o IIS não
+ * servia .mjs), e o pdf.js não acusa isso com um erro — ele fica esperando um
+ * worker que nunca responde. O upload de PDF dos avisos esperava a capa, a
+ * capa esperava o worker, e o aviso nunca era criado: o PDF chegava ao storage
+ * e a tela girava para sempre. Com prazo, uma falha do pdf.js vira um erro que
+ * dá para tratar, e nada que dependa dele trava junto.
+ */
+export function comPrazo<T>(promessa: Promise<T>, ms: number, oQue: string): Promise<T> {
+  return new Promise((ok, falhou) => {
+    const relogio = setTimeout(() => falhou(new Error(`${oQue} passou de ${ms / 1000}s`)), ms);
+    promessa.then(
+      (valor) => { clearTimeout(relogio); ok(valor); },
+      (erro) => { clearTimeout(relogio); falhou(erro); },
+    );
+  });
+}
+
+/**
  * Abre um PDF — pela URL pública ou pelos bytes do arquivo que a pessoa acabou
  * de escolher, antes de subir.
  *
@@ -17,7 +37,13 @@ export async function abrirPdf(origem: string | ArrayBuffer): Promise<PDFDocumen
   // falha que aparece não explica nada.
   const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-  return pdfjs.getDocument(typeof origem === 'string' ? origem : { data: origem }).promise;
+  // 45 s cobre baixar um deck grande numa conexão de celular; acima disso, o
+  // mais provável é o worker não ter carregado, e esperar mais não muda nada.
+  return comPrazo(
+    pdfjs.getDocument(typeof origem === 'string' ? origem : { data: origem }).promise,
+    45_000,
+    'abrir o PDF',
+  );
 }
 
 /** Uma página desenhada num canvas, `largura` pixels de largura. */

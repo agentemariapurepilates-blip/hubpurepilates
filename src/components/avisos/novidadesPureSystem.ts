@@ -1,5 +1,5 @@
 // Apresentação "Novidades do Pure System" — reunião Updates de 23/07/2026.
-// Slides estáticos servidos de /public/avisos/novidades-puresystem/slide-NN.png
+// Slides estáticos servidos de /public/arquivos/avisos/novidades-puresystem/slide-NN.png
 // (renderizados a partir de apresentacao-rede-visual-2026.pdf).
 
 import type { ReactNode } from "react";
@@ -11,7 +11,7 @@ export const NOVIDADES_PURESYSTEM = {
   meeting: "Reunião Updates",
   date: "2026-07-23",
   totalSlides: 25,
-  basePath: "/avisos/novidades-puresystem",
+  basePath: "/arquivos/avisos/novidades-puresystem",
 } as const;
 
 export interface SlideEstado {

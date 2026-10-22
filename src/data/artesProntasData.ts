@@ -1,6 +1,6 @@
 // Artes prontas — arquivos finalizados hospedados no próprio Hub (pasta public/artes-prontas).
 // O download é servido direto pelo Hub (mesma origem), sem depender do Google Drive.
-// Para adicionar novas artes: suba o PDF/imagem em public/artes-prontas/ e registre aqui.
+// Para adicionar novas artes: suba o PDF/imagem em public/arquivos/artes-prontas/ e registre aqui.
 
 export interface ArtePronta {
   id: string;
@@ -26,8 +26,8 @@ export const artesProntas: ArtePronta[] = [
     campaign: 'Arte para impressão - Bandeja',
     title: 'Cuidar de você nunca foi tão fácil',
     format: 'Bandeja',
-    thumbnail: '/artes-prontas/bandeja-texto1.png',
-    file: '/artes-prontas/bandeja-texto1.pdf',
+    thumbnail: '/arquivos/artes-prontas/bandeja-texto1.png',
+    file: '/arquivos/artes-prontas/bandeja-texto1.pdf',
     fileType: 'PDF',
     sizeLabel: '1,7 MB',
   },
@@ -36,8 +36,8 @@ export const artesProntas: ArtePronta[] = [
     campaign: 'Arte para impressão - Bandeja',
     title: 'Tem uma Pure Pilates esperando por você',
     format: 'Bandeja',
-    thumbnail: '/artes-prontas/bandeja-texto2.png',
-    file: '/artes-prontas/bandeja-texto2.pdf',
+    thumbnail: '/arquivos/artes-prontas/bandeja-texto2.png',
+    file: '/arquivos/artes-prontas/bandeja-texto2.pdf',
     fileType: 'PDF',
     sizeLabel: '4,8 MB',
   },
@@ -46,8 +46,8 @@ export const artesProntas: ArtePronta[] = [
     campaign: 'Arte para impressão - Bandeja',
     title: 'Movimento que fortalece corpo e mente',
     format: 'Bandeja',
-    thumbnail: '/artes-prontas/bandeja-texto3.png',
-    file: '/artes-prontas/bandeja-texto3.pdf',
+    thumbnail: '/arquivos/artes-prontas/bandeja-texto3.png',
+    file: '/arquivos/artes-prontas/bandeja-texto3.pdf',
     fileType: 'PDF',
     sizeLabel: '1,7 MB',
   },

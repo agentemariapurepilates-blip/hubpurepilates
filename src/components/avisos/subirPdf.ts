@@ -1,7 +1,7 @@
 // O envio da apresentação em PDF do aviso, usado por criar e por editar.
 
 import { supabase } from '@/integrations/supabase/client';
-import { capaDoPdf } from './pdfPaginas';
+import { capaDoPdf, comPrazo } from './pdfPaginas';
 
 /**
  * Apresentação de reunião passa fácil dos 5 MB que a imagem de capa aceita —
@@ -44,9 +44,14 @@ export async function subirPdf(arquivo: File, userId: string): Promise<PdfEnviad
   // A capa é desenhada AQUI, uma vez, a partir do arquivo que já está na mão.
   // Se cada card desenhasse a sua, a lista baixaria o PDF inteiro de cada aviso
   // só para mostrar uma miniatura — no celular, a lista travaria.
+  //
+  // A CAPA É OPCIONAL, E O PRAZO É O QUE GARANTE ISSO. Em 22/10 ela não tinha
+  // prazo, o pdf.js travou no ar, e o aviso inteiro deixou de ser criado por
+  // causa de uma miniatura. O PDF já está salvo neste ponto: em 20 s, com ou
+  // sem capa, quem enviou recebe o aviso.
   let capa: string | null = null;
   try {
-    const imagem = await capaDoPdf(await arquivo.arrayBuffer());
+    const imagem = await comPrazo(capaDoPdf(await arquivo.arrayBuffer()), 20_000, 'gerar a capa');
     const caminhoCapa = `avisos/${userId}/${carimbo}-capa.jpg`;
     const { error: erroCapa } = await supabase.storage
       .from('post-images')
