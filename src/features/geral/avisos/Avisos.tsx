@@ -10,8 +10,6 @@ import AvisoCard from '@/components/avisos/AvisoCard';
 import CreateAvisoDialog from '@/components/avisos/CreateAvisoDialog';
 import EditAvisoDialog from '@/components/avisos/EditAvisoDialog';
 import AvisoDetailsDialog from '@/components/avisos/AvisoDetailsDialog';
-import NovidadesPureSystemCard from '@/components/avisos/NovidadesPureSystemCard';
-import UpdatesMktCard from '@/components/avisos/UpdatesMktCard';
 
 export interface Aviso {
   id: string;
@@ -139,15 +137,6 @@ const Avisos = () => {
 
   const canCreate = isColaborador || isAdmin;
 
-  // Cards em destaque (client-side, não vêm do banco). Somem quando a busca não bate com eles.
-  const termo = searchTerm.trim().toLowerCase();
-  const featuredHaystack =
-    'novidades do pure system updates puresystem reunião apresentação 23 de julho slides rede 2026';
-  const showFeatured = termo === '' || featuredHaystack.includes(termo);
-  const updatesMktHaystack =
-    'updates de marketing live apresentação 20 de outubro slides entrada de leads pure pass black friday sem dor vídeo 2026';
-  const showUpdatesMkt = termo === '' || updatesMktHaystack.includes(termo);
-
   return (
     <MainLayout>
       <div className="max-w-3xl mx-auto px-2 sm:px-4">
@@ -183,18 +172,11 @@ const Avisos = () => {
           </div>
         </div>
 
-        {/* Apresentações em destaque */}
-        {showUpdatesMkt && (
-          <div className="mb-4">
-            <UpdatesMktCard />
-          </div>
-        )}
-        {showFeatured && (
-          <div className="mb-4">
-            <NovidadesPureSystemCard />
-          </div>
-        )}
-
+        {/* Não há mais apresentações fixas no topo (22/10/2026). As duas que havia
+            ("Novidades do Pure System" e "Updates de Marketing") eram cards escritos
+            no código, acima da lista: ficavam sempre em primeiro, fora da ordem por
+            data, e não dava para editar nem excluir pela tela. Apresentação agora é
+            aviso comum, com PDF. */}
         {/* Content */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
