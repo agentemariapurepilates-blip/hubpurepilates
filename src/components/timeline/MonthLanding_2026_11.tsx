@@ -682,7 +682,7 @@ const Resultados = () => (
       kicker="Resultados"
       titulo="Performance"
       destaque="da rede"
-      lead="Evolução de setembro e resultado parcial de outubro (até 20/10)."
+      lead="Evolução de setembro e resultado parcial de outubro (até 22/10)."
       icone={TrendingUp}
     />
 
@@ -695,18 +695,25 @@ const Resultados = () => (
               {m}
             </div>
           ))}
-          {['Aula Experimental', 'Presença Aula Experimental', 'Matrículas', 'PurePass'].map((linha) => (
+          {[
+            ['Aula Experimental', '8.471', '5.625'],
+            ['Presença Aula Experimental', '6.174', '4.179'],
+            ['Matrículas', '1.437', '1.228'],
+            ['PurePass', '70', '47'],
+          ].map(([linha, set, out]) => (
             <div key={linha} className="contents">
               <div className="rounded-lg bg-white/[0.06] px-3 py-3 font-semibold text-white">{linha}</div>
-              <div className="rounded-lg border border-dashed border-white/20 py-3 text-center text-white/40">—</div>
-              <div className="rounded-lg border border-dashed border-white/20 py-3 text-center text-white/40">—</div>
+              <div className="rounded-lg bg-white/[0.04] py-3 text-center font-heading font-bold text-white tabular-nums">{set}</div>
+              <div className="rounded-lg bg-white/[0.04] py-3 text-center font-heading font-bold text-white tabular-nums">{out}</div>
             </div>
           ))}
         </div>
-        <p className="text-xs text-white/50 mt-3">* Resultado parcial, até 20/10. Os valores percentuais entre parênteses correspondem à meta do painel de controle de performance.</p>
-        <div className="mt-5">
-          <Pendente>Números de setembro e outubro, comentário do mês e o gráfico único A–E (Renan).</Pendente>
-        </div>
+        <p className="text-xs text-white/50 mt-3">* Resultado parcial, até 22/10.</p>
+        <p className="text-sm sm:text-base leading-relaxed text-white/80 mt-5 max-w-3xl">
+          Setembro fechou com 8.471 aulas experimentais e 73% de presença, gerando 1.437 matrículas e 70 PurePass.
+          Em outubro, até o dia 22, a presença subiu para 74% e já são 1.228 matrículas: no ritmo atual, o mês tende
+          a fechar com mais matrículas que setembro.
+        </p>
       </Papel>
     </AnimatedSection>
 
@@ -719,9 +726,6 @@ const Resultados = () => (
           explicativo, (2) formulário para adesão da mídia adicional e (3) report único sobre o valor real das
           campanhas incrementais na sua região de atuação.
         </p>
-        <div className="mt-5">
-          <Pendente>Número de unidades com aporte e o print do report.</Pendente>
-        </div>
       </Papel>
     </AnimatedSection>
 
@@ -738,14 +742,17 @@ const Resultados = () => (
         </p>
         <div className="mt-5 grid grid-cols-[1fr_1fr_1fr] gap-2 text-sm">
           <div />
-          {['Setembro', 'Outubro'].map((m) => (
+          {['Setembro', 'Outubro (até 22/10)'].map((m) => (
             <div key={m} className="rounded-lg py-2 text-center font-bold text-white" style={{ background: `${VERMELHO}cc` }}>{m}</div>
           ))}
-          {['Leads', 'Unidades ativas'].map((linha) => (
+          {[
+            ['Leads', '407', '189'],
+            ['Unidades ativas', '14', '13'],
+          ].map(([linha, set, out]) => (
             <div key={linha} className="contents">
               <div className="rounded-lg bg-white/[0.06] px-3 py-3 font-semibold text-white">{linha}</div>
-              <div className="rounded-lg border border-dashed border-white/20 py-3 text-center text-white/40">—</div>
-              <div className="rounded-lg border border-dashed border-white/20 py-3 text-center text-white/40">—</div>
+              <div className="rounded-lg bg-white/[0.04] py-3 text-center font-heading font-bold text-white tabular-nums">{set}</div>
+              <div className="rounded-lg bg-white/[0.04] py-3 text-center font-heading font-bold text-white tabular-nums">{out}</div>
             </div>
           ))}
         </div>
