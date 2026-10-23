@@ -11,6 +11,7 @@ const LANDING_PAGES: Record<string, () => Promise<{ default: ComponentType }>> =
   '2026-08': () => import('./MonthLanding_2026_08'),
   '2026-09': () => import('./MonthLanding_2026_09'),
   '2026-10': () => import('./MonthLanding_2026_10'),
+  '2026-11': () => import('./MonthLanding_2026_11'),
 };
 
 // Pre-resolved lazy components so they are stable across renders
