@@ -53,6 +53,7 @@ import { AssigneeSection } from './detail/AssigneeSection';
 import { linkifyHtml } from './detail/linkifyHtml';
 import { groupsOf, type DemandGroup } from './demandGroups';
 import { flagsFor, useDemandLabels } from './demandLabels';
+import { parseDateOnly, SETOR_GRAVACOES } from './demandHelpers';
 import { LabelSelect } from './LabelSelect';
 
 /** Valor do Select para "Sem grupo" — o Radix não aceita string vazia como valor. */
@@ -299,7 +300,12 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
 
   if (!demand) return null;
 
-  const canEdit = demand.created_by === user?.id || isAdmin;
+  const ehDoCriador = demand.created_by === user?.id || isAdmin;
+  // Em Gravações qualquer colaborador edita a tarefa (data, descrição, prazo,
+  // responsáveis); excluir continua só com quem criou ou admin, igual à RLS.
+  const ehGravacao = demand.to_department === SETOR_GRAVACOES;
+  const canEdit = ehDoCriador || (ehGravacao && isColaborador);
+  const canDelete = ehDoCriador;
   const canChangeStatus = isColaborador || isAdmin;
   const gruposDaArea = groupsOf(groups, demand.to_department);
   const grupoDaDemanda = gruposDaArea.find((g) => g.id === demand.group_id) ?? null;
@@ -370,6 +376,42 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                   {format(new Date(demand.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </span>
               </div>
+
+              {ehGravacao && (
+                <div className="flex items-center gap-3">
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Gravação:</span>
+                  {canEdit ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8">
+                          {demand.recording_date
+                            ? format(parseDateOnly(demand.recording_date), 'dd/MM/yyyy', { locale: ptBR })
+                            : 'Definir data'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={demand.recording_date ? parseDateOnly(demand.recording_date) : undefined}
+                          defaultMonth={demand.recording_date ? parseDateOnly(demand.recording_date) : undefined}
+                          onSelect={async (d) => {
+                            await etiquetas.definirGravacao(demand.id, d ? format(d, 'yyyy-MM-dd') : null);
+                            onUpdate();
+                          }}
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <span className="text-sm">
+                      {demand.recording_date
+                        ? format(parseDateOnly(demand.recording_date), 'dd/MM/yyyy', { locale: ptBR })
+                        : 'Não definida'}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Deadline */}
               <div className="flex items-center gap-3">
@@ -562,14 +604,16 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
                 <Edit className="h-4 w-4" />
                 Editar
               </Button>
-              <Button
-                variant="destructive"
-                className="flex-1 gap-2"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                <Trash2 className="h-4 w-4" />
-                Excluir
-              </Button>
+              {canDelete && (
+                <Button
+                  variant="destructive"
+                  className="flex-1 gap-2"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Excluir
+                </Button>
+              )}
             </div>
           )}
         </DialogContent>

@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +17,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
 import { groupsOf, type DemandGroup } from './demandGroups';
-import { getDeadlineStatus, parseDateOnly, priorityConfig } from './demandHelpers';
+import { getDeadlineStatus, parseDateOnly, priorityConfig, SETOR_GRAVACOES } from './demandHelpers';
 import { BOARD_AREAS } from './DemandBoardSidebar';
 import { flagsFor, useDemandLabels, type LabelKind } from './demandLabels';
 import { LabelSelect } from './LabelSelect';
@@ -47,12 +49,61 @@ const colunasDeEtiqueta = (flags: ReturnType<typeof flagsFor>): LabelKind[] => [
   ...(flags.show_frente ? (['frente'] as const) : []),
 ];
 
-// Tarefa | comentários | pessoa | [status] | [frente] | prioridade | prazo | "+".
+// Tarefa | comentários | pessoa | [status] | [frente] | prioridade | prazo | [gravação] | "+".
 // Inline em vez de classe: o número de colunas muda por setor, e o Tailwind só
-// gera classes que existem escritas no código.
-const gridDaTabela = (etiquetas: LabelKind[]) =>
-  ['minmax(0,1fr)', '52px', '104px', ...etiquetas.map(() => '136px'), '96px', '84px', '40px'].join(' ');
-const larguraMinima = (etiquetas: LabelKind[]) => 600 + etiquetas.length * 136;
+// gera classes que existem escritas no código. A gravação só existe em Gravações.
+const gridDaTabela = (etiquetas: LabelKind[], gravacao: boolean) =>
+  ['minmax(0,1fr)', '52px', '104px', ...etiquetas.map(() => '136px'), '96px', '84px', ...(gravacao ? ['96px'] : []), '40px'].join(' ');
+const larguraMinima = (etiquetas: LabelKind[], gravacao: boolean) => 600 + etiquetas.length * 136 + (gravacao ? 96 : 0);
+
+/** Data de gravação, editável na própria célula: clica, escolhe no calendário, grava. */
+const CelulaGravacao = ({ demand }: { demand: Demand }) => {
+  const api = useDemandLabels();
+  const [aberto, setAberto] = useState(false);
+  const data = demand.recording_date ? parseDateOnly(demand.recording_date) : undefined;
+  return (
+    <div className="border-l" onClick={(e) => e.stopPropagation()}>
+      <Popover open={aberto} onOpenChange={setAberto}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            title="Data de gravação"
+            className={cn(
+              'flex h-full w-full items-center justify-center text-xs tabular-nums transition-colors hover:bg-muted',
+              data ? 'font-medium text-foreground' : 'text-muted-foreground/50',
+            )}
+          >
+            {data ? format(data, 'dd/MM', { locale: ptBR }) : '—'}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="center">
+          <Calendar
+            mode="single"
+            selected={data}
+            defaultMonth={data}
+            locale={ptBR}
+            onSelect={(d) => {
+              setAberto(false);
+              api.definirGravacao(demand.id, d ? format(d, 'yyyy-MM-dd') : null);
+            }}
+          />
+          {data && (
+            <button
+              type="button"
+              onClick={() => {
+                setAberto(false);
+                api.definirGravacao(demand.id, null);
+              }}
+              className="w-full border-t px-3 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              Limpar data
+            </button>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+};
 
 /** Os grupos que vieram de Concluído e Cancelado começam recolhidos: são os que mais acumulam. */
 const comecaRecolhido = (grupo: DemandGroup | null) =>
@@ -63,6 +114,7 @@ const LinhaDemanda = ({
   pausado,
   comentarios,
   etiquetas,
+  gravacao,
   template,
   onClick,
 }: {
@@ -70,6 +122,7 @@ const LinhaDemanda = ({
   pausado: boolean;
   comentarios: number;
   etiquetas: LabelKind[];
+  gravacao: boolean;
   template: string;
   onClick: () => void;
 }) => {
@@ -157,6 +210,8 @@ const LinhaDemanda = ({
         {demand.deadline ? format(parseDateOnly(demand.deadline), 'MMM d', { locale: ptBR }) : '—'}
       </span>
 
+      {gravacao && <CelulaGravacao demand={demand} />}
+
       <span className="border-l" />
     </div>
   );
@@ -169,6 +224,7 @@ const BlocoGrupo = ({
   commentCounts,
   podeExcluir,
   etiquetas,
+  gravacao,
   onDemandClick,
   onAddDemand,
   onRenameGroup,
@@ -181,6 +237,7 @@ const BlocoGrupo = ({
   commentCounts: Record<string, number>;
   podeExcluir: boolean;
   etiquetas: LabelKind[];
+  gravacao: boolean;
   onDemandClick: (demand: Demand) => void;
   onAddDemand: (department: string, groupId: string | null) => void;
   onRenameGroup: (groupId: string, name: string) => Promise<void>;
@@ -190,7 +247,7 @@ const BlocoGrupo = ({
   const [renomeando, setRenomeando] = useState(false);
   const [nome, setNome] = useState(group?.name ?? '');
   const cor = group?.color ?? SEM_GRUPO_COR;
-  const template = gridDaTabela(etiquetas);
+  const template = gridDaTabela(etiquetas, gravacao);
 
   const salvarNome = async () => {
     const novo = nome.trim();
@@ -279,7 +336,7 @@ const BlocoGrupo = ({
 
       {aberto && (
         <div className="overflow-x-auto rounded-md border" style={{ borderLeft: `4px solid ${cor}` }}>
-          <div style={{ minWidth: larguraMinima(etiquetas) }}>
+          <div style={{ minWidth: larguraMinima(etiquetas, gravacao) }}>
             <div className="grid bg-muted/30 text-xs text-muted-foreground" style={{ gridTemplateColumns: template }}>
               <span className="px-3 py-1.5">Tarefa</span>
               <span className="border-l" />
@@ -291,6 +348,7 @@ const BlocoGrupo = ({
               ))}
               <span className="flex items-center justify-center border-l">Prioridade</span>
               <span className="flex items-center justify-center border-l">Prazo</span>
+              {gravacao && <span className="flex items-center justify-center border-l">Gravação</span>}
               <span className="border-l">
                 <BoardColumnsMenu department={department} />
               </span>
@@ -303,6 +361,7 @@ const BlocoGrupo = ({
                 pausado={group?.pauses_deadline ?? false}
                 comentarios={commentCounts[demand.id] ?? 0}
                 etiquetas={etiquetas}
+                gravacao={gravacao}
                 template={template}
                 onClick={() => onDemandClick(demand)}
               />
@@ -348,6 +407,7 @@ const SecaoArea = ({
     department: area,
     commentCounts: props.commentCounts,
     etiquetas,
+    gravacao: area === SETOR_GRAVACOES,
     onDemandClick: props.onDemandClick,
     onAddDemand: props.onAddDemand,
     onRenameGroup: props.onRenameGroup,

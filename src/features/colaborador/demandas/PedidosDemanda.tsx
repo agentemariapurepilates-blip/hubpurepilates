@@ -72,6 +72,8 @@ export interface Demand {
   status_label_id: string | null;
   frente_label_id: string | null;
   deadline: string | null;
+  /** Data da gravação (setor Gravações), 'yyyy-MM-dd'. Diferente do prazo de entrega. */
+  recording_date: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -509,6 +511,16 @@ const PedidosDemanda = () => {
       } catch (error) {
         console.error('Error setting label:', error);
         toast({ title: "Erro", description: "Erro ao salvar a etiqueta", variant: "destructive" });
+      }
+    },
+    definirGravacao: async (demandId: string, data: string | null) => {
+      try {
+        const { error } = await supabase.from('demands').update({ recording_date: data }).eq('id', demandId);
+        if (error) throw error;
+        setDemands(prev => prev.map((d) => (d.id === demandId ? { ...d, recording_date: data } : d)));
+      } catch (error) {
+        console.error('Error setting recording date:', error);
+        toast({ title: "Erro", description: "Erro ao salvar a data de gravação", variant: "destructive" });
       }
     },
     alternar: async (department: string, flag: BoardFlag, value: boolean) => {

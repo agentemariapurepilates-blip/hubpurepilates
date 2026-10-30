@@ -3,6 +3,13 @@ import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 
 // Compartilhado entre a lista e o Kanban, que antes tinham cópias próprias.
 
+/**
+ * O setor de Gravações tem regras próprias: a coluna "Gravação" (data em que o
+ * conteúdo é gravado) e a edição liberada para qualquer colaborador, não só
+ * para quem criou a tarefa — a equipe reorganiza as gravações junta.
+ */
+export const SETOR_GRAVACOES = 'Gravações';
+
 export const priorityConfig = {
   low: { label: 'Baixa', color: 'bg-gray-100 text-gray-700' },
   medium: { label: 'Média', color: 'bg-orange-100 text-orange-700' },

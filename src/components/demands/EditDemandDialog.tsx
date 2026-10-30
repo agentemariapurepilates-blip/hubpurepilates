@@ -40,6 +40,7 @@ interface EditDemandDialogProps {
 import { Colaborador } from '@/hooks/useColaboradores';
 import { demandSectors as sectors } from '@/data/sectors';
 import { groupsOf, type DemandGroup } from './demandGroups';
+import { parseDateOnly, SETOR_GRAVACOES } from './demandHelpers';
 import { flagsFor, useDemandLabels } from './demandLabels';
 import { LabelSelect } from './LabelSelect';
 
@@ -55,6 +56,7 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess, groups }: Edi
   const [toDepartment, setToDepartment] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [deadline, setDeadline] = useState<Date | undefined>();
+  const [gravacao, setGravacao] = useState<Date | undefined>();
   const [selectedAssignees, setSelectedAssignees] = useState<Colaborador[]>([]);
   const etiquetas = useDemandLabels();
   const [statusLabelId, setStatusLabelId] = useState<string | null>(null);
@@ -70,6 +72,7 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess, groups }: Edi
       setToDepartment(demand.to_department);
       setPriority(demand.priority);
       setDeadline(demand.deadline ? new Date(demand.deadline) : undefined);
+      setGravacao(demand.recording_date ? parseDateOnly(demand.recording_date) : undefined);
       setStatusLabelId(demand.status_label_id);
       setFrenteLabelId(demand.frente_label_id);
       
@@ -140,6 +143,7 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess, groups }: Edi
           to_department: toDepartment,
           priority,
           deadline: deadline ? format(deadline, 'yyyy-MM-dd') : null,
+          recording_date: gravacao ? format(gravacao, 'yyyy-MM-dd') : null,
           ...(mudouDeArea
             ? {
                 group_id: grupoNovo?.id ?? null,
@@ -300,6 +304,23 @@ const EditDemandDialog = ({ demand, open, onOpenChange, onSuccess, groups }: Edi
               </Popover>
             </div>
           </div>
+
+          {toDepartment === SETOR_GRAVACOES && (
+            <div className="space-y-2">
+              <Label>Data de gravação</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {gravacao ? format(gravacao, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecione'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={gravacao} onSelect={setGravacao} initialFocus locale={ptBR} />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
 
           {(colunasDoDestino.show_status_labels || colunasDoDestino.show_frente) && (
             <div className="grid grid-cols-2 gap-3">

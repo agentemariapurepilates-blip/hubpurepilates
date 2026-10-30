@@ -428,6 +428,7 @@ export type Database = {
           group_id: string | null
           id: string
           priority: Database["public"]["Enums"]["demand_priority"]
+          recording_date: string | null
           status: Database["public"]["Enums"]["demand_status"]
           status_label_id: string | null
           title: string
@@ -444,6 +445,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           priority?: Database["public"]["Enums"]["demand_priority"]
+          recording_date?: string | null
           status?: Database["public"]["Enums"]["demand_status"]
           status_label_id?: string | null
           title: string
@@ -460,6 +462,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           priority?: Database["public"]["Enums"]["demand_priority"]
+          recording_date?: string | null
           status?: Database["public"]["Enums"]["demand_status"]
           status_label_id?: string | null
           title?: string

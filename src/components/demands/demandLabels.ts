@@ -152,6 +152,8 @@ export interface DemandLabelsApi {
   excluir: (label: DemandLabel) => Promise<void>;
   /** Escolhe (ou limpa, com null) a etiqueta de uma demanda e grava na hora. */
   definir: (demandId: string, kind: LabelKind, labelId: string | null) => Promise<void>;
+  /** Grava (ou limpa, com null) a data de gravação, 'yyyy-MM-dd'. Só o setor Gravações usa. */
+  definirGravacao: (demandId: string, data: string | null) => Promise<void>;
   alternar: (department: string, flag: BoardFlag, value: boolean) => Promise<void>;
 }
 
@@ -165,6 +167,7 @@ const SEM_ETIQUETAS: DemandLabelsApi = {
   atualizar: async () => {},
   excluir: async () => {},
   definir: async () => {},
+  definirGravacao: async () => {},
   alternar: async () => {},
 };
 
