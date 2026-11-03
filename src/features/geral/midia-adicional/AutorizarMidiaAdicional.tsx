@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -164,6 +164,14 @@ const SolicitarMidiaAdicional = () => {
             <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             Campanha Aporte Aula Experimental
           </h1>
+          {/* Primeira linha: para que serve, e para onde ir se o objetivo era outro. */}
+          <p className="text-sm font-medium text-foreground mt-1 max-w-2xl">
+            Campanha de aula experimental para atrair alunos. Quer atrair professores (instrutores)? Peça a{' '}
+            <Link to="/autorizar-verba-professores" className="font-semibold text-primary underline hover:no-underline">
+              Campanha Aporte Recrutamento
+            </Link>
+            .
+          </p>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             Preencha os dados abaixo para solicitar autorização de investimento adicional em campanha de aula
             experimental para sua unidade.
