@@ -1,31 +1,33 @@
 // Matérias da Edição 2 e a página onde cada uma começa.
 // Textos do Canva "Pautas Entre-molas ed2" e do doc do artigo; o Canva é referência
 // de texto e a diagramação segue a Edição 1. A capa e o sumário usam esta lista —
-// mudou a ordem das páginas, muda aqui.
+// mudou a ordem das páginas, muda aqui. Toda seção começa numa página ímpar (à
+// esquerda): seção com número ímpar de páginas fecha com um anúncio ou ganha uma página.
 
 export const MATERIAS = {
   artigo: { pagina: 3, titulo: 'Evoluir faz parte do movimento', secao: 'Artigo' },
-  unidades: { pagina: 12, titulo: 'Atingimos a marca de +500 unidades', secao: 'Unidades' },
   reputacao: { pagina: 13, titulo: 'Reputação', secao: 'Reputação' },
   blackFriday: { pagina: 17, titulo: 'A nova porta de entrada', secao: 'Marketing' },
-  play: { pagina: 24, titulo: 'Excelência na palma da mão', secao: 'Pilates Play' },
-  norte: { pagina: 28, titulo: 'Leve a Pure para novos horizontes.', secao: 'Expansão' },
-  suporte: { pagina: 30, titulo: 'Tem gente nova chegando para somar ao nosso time!', secao: 'Equipe Suporte' },
-  eletromidia: { pagina: 31, titulo: 'Sua eletromídia está ligada? 📺', secao: 'Eletromídia' },
-  move: { pagina: 32, titulo: 'Coleção Move', secao: 'Pure Store' },
-  faculdades: { pagina: 35, titulo: 'Pure Pilates nas faculdades', secao: 'Pure Academy' },
+  play: { pagina: 25, titulo: 'Excelência na palma da mão', secao: 'Pilates Play' },
+  norte: { pagina: 11, titulo: 'Mais de 500 unidades assinadas', secao: 'Expansão' },
+  suporte: { pagina: 31, titulo: 'Tem gente nova chegando para somar ao nosso time!', secao: 'Equipe Suporte' },
+  eletromidia: { pagina: 33, titulo: 'Sua eletromídia está ligada? 📺', secao: 'Eletromídia' },
+  move: { pagina: 35, titulo: 'Coleção Move', secao: 'Pure Store' },
+  faculdades: { pagina: 39, titulo: 'Pure Pilates nas faculdades', secao: 'Pure Academy' },
+  pilar: { pagina: 41, titulo: 'O método R.E.F.O.R.M.E.R.', secao: 'Segredos de Pilar' },
 } as const;
 
 export const ORDEM_DO_SUMARIO = [
   MATERIAS.artigo,
+  MATERIAS.norte,
   MATERIAS.reputacao,
   MATERIAS.blackFriday,
   MATERIAS.play,
-  MATERIAS.norte,
   MATERIAS.suporte,
   MATERIAS.eletromidia,
   MATERIAS.move,
   MATERIAS.faculdades,
+  MATERIAS.pilar,
 ];
 
 export const SUBTITULO_ARTIGO = 'Mudar não é desfazer. Mudar é evoluir.';

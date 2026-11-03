@@ -2,14 +2,34 @@ import { Corpo, Miolo, Pagina, VideoAuto, type Lado } from '../diagramacao';
 import { MATERIAS } from './materias';
 import { Chave, Intertitulo, TituloComFio } from './pecas';
 
-// Pilates Play no app (páginas 24 a 27): texto em duas páginas | vídeo em página inteira | guia
+// Pilates Play no app (páginas 26 a 30): capa | vídeo em página inteira | texto em duas páginas | guia
 // para gestores. Texto exatamente como no Canva.
 
 const VIDEO_PLAY = '/videos/entre-molas/edicao-2/pilates-play-no-app.mp4';
 const P = MATERIAS.play.pagina;
 
+// Capa da matéria: o chamado antes do vídeo. As letras sobem uma a uma ao abrir a página.
+export const PlayCapa = ({ lado }: { lado: Lado }) => (
+  <Pagina lado={lado} numero={P} tom="vinho" semFolio>
+    <div className="absolute inset-x-[64px] top-[84px]">
+      <div className="h-[4px] w-[64px] bg-[#f7ecdc]" />
+      <div className="em-sans mt-[22px] text-[18px] font-semibold">Pilates Play no app</div>
+    </div>
+    <h2 className="em-display absolute inset-x-[64px] top-[250px] text-[178px] font-extrabold uppercase leading-[0.82] tracking-[-0.02em]">
+      {['Tem', 'novidade', 'aqui'].map((p, i) => (
+        <span key={p} className="em-sobe block" style={{ animationDelay: `${1 + i * 0.25}s` }}>
+          {i === 2 ? <span className="text-[#ffd9a8]">{p}</span> : p}
+        </span>
+      ))}
+    </h2>
+    <p className="em-serif em-sobe absolute inset-x-[64px] top-[740px] text-[26px] italic leading-[1.35]" style={{ animationDelay: '2s' }}>
+      Mais de 100 conteúdos exclusivos para os instrutores da rede, agora na palma da mão. Vire a página e veja.
+    </p>
+  </Pagina>
+);
+
 export const Play1 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P}>
+  <Pagina lado={lado} numero={P + 2}>
     <Miolo>
       <TituloComFio tamanho={76}>
         Excelência na <span className="text-[var(--em-vinho)]">palma da mão</span>
@@ -40,7 +60,7 @@ export const Play1 = ({ lado }: { lado: Lado }) => (
 );
 
 export const Play2 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P + 1}>
+  <Pagina lado={lado} numero={P + 3}>
     <Miolo className="!top-[130px]">
       <Intertitulo>O que isso muda na sua unidade?</Intertitulo>
       <Corpo colunas={1} className="mt-[12px]">
@@ -72,7 +92,7 @@ export const Play2 = ({ lado }: { lado: Lado }) => (
 
 // Página inteira com o vídeo; o som liga junto e o botão fica bem no centro.
 export const PlayVideo = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P + 2} tom="escuro" semFolio>
+  <Pagina lado={lado} numero={P + 1} tom="escuro" semFolio>
     <VideoAuto src={VIDEO_PLAY} somAoAbrir somNoCentro className="absolute inset-0" posicao="50% 22%" />
   </Pagina>
 );
@@ -93,7 +113,7 @@ const SEMANAS = [
 // Guia para gestores, na hierarquia da revista: caixa-alta só no título; ações em duas
 // colunas; o ritmo das quatro semanas como uma linha do tempo, sem tarja.
 export const PlayGestor = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P + 3}>
+  <Pagina lado={lado} numero={P + 4}>
     <Miolo>
       <div className="em-sans mb-[10px] text-[15px] font-semibold text-[var(--em-vinho)]">Para gestores</div>
       <TituloComFio tamanho={60}>O que o gestor pode fazer para o Play entrar na rotina?</TituloComFio>

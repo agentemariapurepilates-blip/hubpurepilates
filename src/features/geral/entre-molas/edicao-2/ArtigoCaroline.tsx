@@ -1,81 +1,69 @@
 import { Citacao, Corpo, Foto, Miolo, Pagina, Rotulo, type Lado } from '../diagramacao';
 import molas from '../edicao-1/fotos/abertura-molas.jpg';
-import carolineNoPalco from '../edicao-1/fotos/arquitetura/caroline-lo-duca-serroni.jpg';
 import studio from '../edicao-1/fotos/layout/layout-studio.jpg';
 import caroline from './fotos/caroline-recorte.png';
-import meierRecepcao from './fotos/meier-recepcao.jpg';
 import meierSalao from './fotos/meier-salao.jpg';
 import unidade1 from './fotos/unidade-1.jpg';
-import unidade2 from './fotos/unidade-2.jpg';
-import unidade3 from './fotos/unidade-3.jpg';
-import { CARGO_ARTIGO, MATERIAS, NOME_AUTORA, SUBTITULO_ARTIGO } from './materias';
+import { CARGO_ARTIGO, MATERIAS, NOME_AUTORA } from './materias';
+import { Chave } from './pecas';
 
-// Matéria de capa: o artigo da Caroline (páginas 3 a 11), no molde da carta do Douglas
+// Matéria de capa: o artigo da Caroline (páginas 3 a 10), no molde da carta do Douglas
 // na Edição 1. Texto exatamente como no doc da equipe; a divisão em páginas e as frases
 // em destaque, tiradas do próprio texto, são nossas. Assinatura com o nome da Edição 1.
 // As fotos de unidade não levam legenda com o nome da unidade, a pedido da equipe.
 
 const P = MATERIAS.artigo.pagina;
 
-// 3 — abertura: a Caroline recortada à direita (a mesma da capa), o texto à esquerda
+// 3 — abertura: a única foto da Caroline no artigo (o recorte da capa) e a pergunta
+// que abre o texto, com o maior peso da página
 export const Artigo1 = ({ lado }: { lado: Lado }) => (
   <Pagina lado={lado} numero={P} folioCurto>
     <img
       src={caroline}
       alt={NOME_AUTORA}
       draggable={false}
-      className="absolute bottom-0 left-[300px] w-[560px] max-w-none select-none"
+      className="absolute bottom-0 left-[330px] w-[540px] max-w-none select-none"
     />
-    <div className="absolute left-[64px] top-[96px] w-[340px]">
-      <h2 className="em-display text-[74px] font-extrabold uppercase leading-[0.9] tracking-[-0.01em]">
+    <div className="absolute left-[64px] top-[84px] w-[360px]">
+      <h2 className="em-display text-[46px] font-extrabold uppercase leading-[0.92] tracking-[-0.01em]">
         {MATERIAS.artigo.titulo}
       </h2>
-      <p className="em-serif mt-[24px] w-[270px] text-[20.5px] leading-[1.45] text-[var(--em-tinta)]/85">{SUBTITULO_ARTIGO}</p>
-      <div className="mt-[22px] h-[3px] w-[40px] bg-[var(--em-vinho)]" />
-      <div className="em-sans mt-[12px] w-[250px] text-[15px] font-bold uppercase leading-[1.5] tracking-[0.2em] text-[var(--em-vinho)]">
-        {NOME_AUTORA}
-      </div>
-      <div className="em-sans mt-[6px] w-[250px] text-[12px] font-semibold uppercase leading-[1.5] tracking-[0.14em] text-[var(--em-tinta)]/75">
-        {CARGO_ARTIGO}
-      </div>
+      <div className="mt-[26px] h-[3px] w-[40px] bg-[var(--em-vinho)]" />
+      <p className="em-serif mt-[22px] text-[42px] font-semibold leading-[1.12] text-[var(--em-vinho)]">
+        Quando foi a última vez que você mudou algo que já estava dando certo?
+      </p>
+      <div className="em-sans mt-[34px] w-[250px] text-[16px] font-bold leading-[1.4]">{NOME_AUTORA}</div>
+      <div className="em-sans mt-[4px] w-[250px] text-[14px] leading-[1.45] opacity-75">{CARGO_ARTIGO}</div>
     </div>
   </Pagina>
 );
 
-// 4 — a pergunta: a Caroline no palco, grande, e o começo da conversa
+// 4 — a frase do artigo em página vinho e o começo da conversa, sem foto
 export const Artigo2 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P + 1}>
-    <Foto src={carolineNoPalco} alt={NOME_AUTORA} className="absolute inset-x-0 top-0 h-[640px] w-full" posicao="50% 20%" />
-    <Corpo colunas={1} capitular className="absolute left-[64px] right-[64px] top-[676px] !text-[21px] !leading-[1.5]">
-      <p>Deixa eu te fazer uma pergunta: quando foi a última vez que você mudou algo que já estava dando certo?</p>
-      <p>
-        Pois é. A gente costuma mexer no que está quebrado. No que funciona, a tendência é deixar quieto. Eu sou o contrário.
-        Quando alguma coisa funciona, é aí que eu fico mais curiosa: dá para ficar melhor? Quase sempre dá.
-      </p>
-    </Corpo>
-  </Pagina>
-);
-
-// 5 — a frase do artigo em página vinho
-export const Artigo3 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P + 2} tom="vinho" folioCurto>
-    <div className="absolute left-[64px] right-[64px] top-[84px]">
+  <Pagina lado={lado} numero={P + 1} tom="vinho">
+    <Miolo className="justify-center">
       <div className="mb-[24px] h-[4px] w-[64px] bg-[#f7ecdc]" />
       <p className="em-display text-[96px] font-extrabold uppercase leading-[0.88] tracking-[-0.01em]">
         Mudar não é desfazer.<br /><span className="text-[#ffd9a8]">Mudar é evoluir.</span>
       </p>
-      <p className="em-sans mt-[24px] border-t border-[#f7ecdc]/50 pt-[16px] text-[20px] leading-[1.5]">
-        E quero deixar uma coisa clara logo de cara: mudar não é desfazer. Mudar é evoluir. É pegar tudo o que a gente construiu
-        até aqui e dar o próximo passo.
-      </p>
-    </div>
-    <Foto src={unidade2} alt="Unidade com o layout novo" className="absolute inset-x-0 bottom-0 h-[370px] w-full" posicao="50% 55%" />
+      <Corpo colunas={1} className="mt-[44px] border-t border-[#f7ecdc]/50 pt-[30px] !text-[23px] !leading-[1.55]">
+        <p className="em-sem-recuo">Deixa eu te fazer uma pergunta: quando foi a última vez que você mudou algo que já estava dando certo?</p>
+        <p>
+          Pois é. A gente costuma mexer no que está quebrado. No que funciona, a tendência é deixar quieto. Eu sou o contrário.
+          Quando alguma coisa funciona, é aí que eu fico mais curiosa: dá para ficar melhor? Quase sempre dá.
+        </p>
+        <p>
+          E quero deixar uma coisa clara logo de cara: mudar não é desfazer. Mudar é evoluir. É pegar tudo o que a gente construiu
+          até aqui e dar o próximo passo.
+        </p>
+      </Corpo>
+    </Miolo>
   </Pagina>
 );
 
-// 6 — de onde veio o novo layout
-export const Artigo4 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P + 3}>
+// 5 — de onde veio o novo layout
+export const Artigo3 = ({ lado }: { lado: Lado }) => (
+  <Pagina lado={lado} numero={P + 2}>
     <Foto src={meierSalao} alt="Unidade com o layout novo" className="absolute inset-x-0 top-0 h-[540px] w-full" posicao="50% 58%" />
     <Corpo className="absolute left-[64px] right-[64px] top-[576px]">
       <p className="em-sem-recuo">
@@ -93,9 +81,9 @@ export const Artigo4 = ({ lado }: { lado: Lado }) => (
   </Pagina>
 );
 
-// 7 — a identidade mais leve
-export const Artigo5 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P + 4} folioCurto>
+// 6 — a identidade mais leve
+export const Artigo4 = ({ lado }: { lado: Lado }) => (
+  <Pagina lado={lado} numero={P + 3} folioCurto>
     <div className="absolute left-[64px] right-[64px] top-[76px]">
       <Citacao tamanho={72}>A identidade é a mesma. Ela só ficou mais leve.</Citacao>
       <Corpo colunas={1} className="mt-[26px] !text-[19px] !leading-[1.52]">
@@ -111,14 +99,14 @@ export const Artigo5 = ({ lado }: { lado: Lado }) => (
   </Pagina>
 );
 
-// 8 — não é só estética; o desconforto do novo
-export const Artigo6 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P + 5}>
-    <Miolo>
+// 7 — não é só estética; o desconforto do novo
+export const Artigo5 = ({ lado }: { lado: Lado }) => (
+  <Pagina lado={lado} numero={P + 4}>
+    <Miolo className="!top-[96px]">
       <p className="em-display border-b-2 border-[var(--em-tinta)] pb-[18px] text-[84px] font-extrabold uppercase leading-[0.88] tracking-[-0.01em]">
         Bonito só não basta, <span className="text-[var(--em-vinho)]">tem que funcionar.</span>
       </p>
-      <Corpo className="mt-[22px]">
+      <Corpo colunas={1} className="mt-[26px] !text-[18px]">
         <p className="em-sem-recuo">
           E não é só estética. Sabe quando você entra num lugar e se sente bem antes mesmo de qualquer coisa acontecer? Isso não
           é acaso. Está na recepção, no acessório guardado no lugar certo, no caminho livre entre um aparelho e outro, no conforto
@@ -126,21 +114,23 @@ export const Artigo6 = ({ lado }: { lado: Lado }) => (
           vida de quem trabalha ali e deixar a rotina mais organizada. E como nenhum imóvel é igual ao outro, cada projeto é
           olhado caso a caso, para que o padrão caiba no espaço sem perder a cara da Pure.
         </p>
-        <p>
+      </Corpo>
+      <Chave className="my-[34px]">O desconforto do começo vira repertório lá na frente.</Chave>
+      <Corpo colunas={1} className="!text-[18px]">
+        <p className="em-sem-recuo">
           Eu sei que mudança nem sempre é confortável. O novo traz dúvida, pede treinamento, tira a gente do piloto automático. Às
           vezes dá trabalho e bate insegurança. Faz parte, e está tudo bem. Quem trabalha com formação, como a gente na Pure
           Academy, sabe: o desconforto do começo vira repertório lá na frente. É justamente nesse momento que a gente aprende e
           descobre jeitos melhores de fazer o que faz todo dia.
         </p>
       </Corpo>
-      <Foto src={unidade3} alt="Unidade com o layout novo" className="relative -mx-[64px] mt-[24px] min-h-0 w-[820px] max-w-none flex-1" posicao="50% 50%" />
     </Miolo>
   </Pagina>
 );
 
-// 9 — ajustar a mola: as molas sangradas e a frase-síntese
-export const Artigo7 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P + 6} folioCurto>
+// 8 — ajustar a mola: as molas sangradas e a frase-síntese
+export const Artigo6 = ({ lado }: { lado: Lado }) => (
+  <Pagina lado={lado} numero={P + 5} folioCurto>
     <Foto src={molas} alt="Molas do reformer" className="absolute inset-x-0 top-0 h-[480px] w-full" posicao="96% 50%" />
     <div className="absolute left-[64px] right-[64px] top-[512px]">
       <p className="em-display text-[86px] font-extrabold uppercase leading-[0.88] tracking-[-0.01em]">
@@ -157,11 +147,14 @@ export const Artigo7 = ({ lado }: { lado: Lado }) => (
   </Pagina>
 );
 
-// 10 — a rede, na prática
-export const Artigo8 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P + 7}>
-    <Miolo>
-      <Corpo>
+// 9 — a rede, na prática
+export const Artigo7 = ({ lado }: { lado: Lado }) => (
+  <Pagina lado={lado} numero={P + 6}>
+    <Miolo className="justify-center">
+      <p className="em-display border-b-2 border-[var(--em-tinta)] pb-[18px] text-[76px] font-extrabold uppercase leading-[0.88] tracking-[-0.01em]">
+        Chegou a hora de <span className="text-[var(--em-vinho)]">ajustar a mola.</span>
+      </p>
+      <Corpo colunas={1} className="mt-[30px] !text-[20px] !leading-[1.6]">
         <p className="em-sem-recuo">
           Com a rede é igualzinho. O padrão que trouxe a gente até aqui foi fundamental. A Pure cresceu, as necessidades são outras,
           e chegou a hora de ajustar a mola. E isso vale para tudo: ambientes, comunicação, materiais, ferramentas e o jeito como
@@ -174,10 +167,9 @@ export const Artigo8 = ({ lado }: { lado: Lado }) => (
           planejamento e as características da sua unidade.
         </p>
       </Corpo>
-      <Foto src={meierRecepcao} alt="Recepção de unidade com o layout novo" className="relative -mx-[64px] mt-[26px] min-h-0 w-[820px] max-w-none flex-1" posicao="50% 45%" />
       {/* a tarja acompanha o texto: duas linhas, sangrando só pela esquerda */}
-      <div className="em-tom--vinho -ml-[64px] mt-0 self-start py-[18px] pl-[64px] pr-[34px]">
-        <p className="em-sans text-[18px] italic leading-[1.55]">
+      <div className="em-tom--vinho -ml-[64px] mt-[44px] self-start py-[20px] pl-[64px] pr-[34px]">
+        <p className="em-sans text-[20px] italic leading-[1.55]">
           Entrou numa unidade, sentiu a Pure.
           <br />
           Entrou em outra, sentiu a mesma Pure.
@@ -187,9 +179,9 @@ export const Artigo8 = ({ lado }: { lado: Lado }) => (
   </Pagina>
 );
 
-// 11 — o fecho: o studio, o pedido e o convite
-export const Artigo9 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P + 8} folioCurto>
+// 10 — o fecho: o studio, o pedido e o convite
+export const Artigo8 = ({ lado }: { lado: Lado }) => (
+  <Pagina lado={lado} numero={P + 7} folioCurto>
     <Foto src={studio} alt="Studio Pure Pilates" className="absolute inset-x-0 top-0 h-[400px] w-full" posicao="50% 40%" />
     <Corpo className="absolute left-[64px] right-[64px] top-[428px] !text-[17px]">
       <p className="em-sem-recuo">

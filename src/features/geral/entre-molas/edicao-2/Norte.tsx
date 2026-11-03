@@ -1,32 +1,76 @@
+import { useEffect, useState } from 'react';
 import { Miolo, Pagina, type Lado } from '../diagramacao';
 import { CINZA, Mapa, REGIOES, VERMELHO } from '../edicao-1/Territorio';
 import { MATERIAS } from './materias';
-import { BlocoVinho, TituloComFio } from './pecas';
+import { Chave, TituloComFio } from './pecas';
 
-// Campanha do Norte (páginas 26 e 27). O mapa é o mesmo da Edição 1; textos
-// exatamente como na arte do Canva.
+// Expansão (páginas 12 e 13). A abertura vem logo depois do artigo, numa página da
+// direita: o +500 conta na hora em que a página abre, a arte "Leve a Pure" e o mapa
+// com os aviões de papel indo para os estados ainda sem Pure (o mesmo da Edição 1).
+// A segunda página traz os números e as regiões.
 
 const P = MATERIAS.norte.pagina;
 
-export const Norte1 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P} tom="vinho">
-    <Miolo>
-      <div className="h-[4px] w-[64px] bg-[#f7ecdc]" />
-      <div className="em-sans mt-[22px] text-[15px] font-bold uppercase tracking-[0.3em]">Pure Franchising</div>
-      <h2 className="em-display mt-[22px] text-[220px] font-extrabold uppercase leading-[0.82] tracking-[-0.01em]">Leve a Pure</h2>
-      <p className="em-display mt-[22px] text-[74px] font-bold uppercase leading-[0.92] text-[#ffd9a8]">para novos horizontes.</p>
-      {/* do ponto ao horizonte: a linha pontilhada, o avião e o sol */}
-      <svg viewBox="0 0 690 220" className="mt-auto w-full" aria-hidden="true">
-        <line x1="0" y1="170" x2="690" y2="170" stroke="#f7ecdc" strokeWidth="2.5" />
-        <path d="M480 170 A85 85 0 0 1 650 170 Z" fill="#ffd9a8" />
-        <circle cx="30" cy="200" r="8" fill="#f7ecdc" />
-        <path d="M30 200 C120 170 110 120 240 112 C340 106 330 34 450 34" fill="none" stroke="#f7ecdc" strokeWidth="4" strokeDasharray="1 11" strokeLinecap="round" />
-        <path d="M478 40 L540 8 L516 70 L502 50 Z" fill="#a9293b" stroke="#f7ecdc" strokeWidth="3" strokeLinejoin="round" />
-      </svg>
-      <p className="em-serif mt-[16px] text-[24px]">Todo horizonte começa com um ponto.</p>
-    </Miolo>
-  </Pagina>
-);
+/** Conta de 0 até o número quando a página aparece (espera a virada da folha). */
+const useContagem = (ate: number, duracao = 2200, espera = 900) => {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const t = setTimeout(() => {
+      const inicio = performance.now();
+      const passo = (agora: number) => {
+        const p = Math.min(1, (agora - inicio) / duracao);
+        setN(Math.round(ate * (1 - (1 - p) ** 3)));
+        if (p < 1) raf = requestAnimationFrame(passo);
+      };
+      raf = requestAnimationFrame(passo);
+    }, espera);
+    return () => {
+      clearTimeout(t);
+      cancelAnimationFrame(raf);
+    };
+  }, [ate, duracao, espera]);
+  return n;
+};
+
+export const Norte1 = ({ lado }: { lado: Lado }) => {
+  const n = useContagem(500);
+  return (
+    <Pagina lado={lado} numero={P}>
+      <div className="absolute inset-x-[64px] top-[70px]">
+        <div className="em-sans text-[15px] font-semibold text-[var(--em-vinho)]">Pure Franchising</div>
+        <p className="em-serif mt-[14px] text-[30px] italic leading-none">Já temos mais de</p>
+        <div className="mt-[4px] flex items-end gap-[24px]">
+          <span className="em-display text-[200px] font-extrabold leading-[0.8] tracking-[-0.02em] text-[var(--em-vinho)] tabular-nums">
+            +{n}
+          </span>
+          <span className="em-display pb-[10px] text-[60px] font-extrabold uppercase leading-[0.9]">
+            unidades
+            <br />
+            assinadas.
+          </span>
+        </div>
+      </div>
+
+      {/* a arte "Leve a Pure" à esquerda e o mapa com os aviões à direita */}
+      <div className="absolute left-[64px] top-[360px] w-[250px]">
+        <div className="h-[4px] w-[48px] bg-[var(--em-vinho)]" />
+        <p className="em-display mt-[18px] text-[78px] font-extrabold uppercase leading-[0.84]">Leve a Pure</p>
+        <p className="em-serif mt-[12px] text-[26px] italic leading-[1.2] text-[var(--em-vinho)]">para novos horizontes.</p>
+        <svg viewBox="0 0 250 120" className="mt-[26px] w-full" aria-hidden="true">
+          <line x1="0" y1="96" x2="250" y2="96" stroke="#221613" strokeWidth="2" />
+          <path d="M160 96 A48 48 0 0 1 250 96 Z" fill="#a9293b" />
+          <circle cx="10" cy="112" r="6" fill="#221613" />
+          <path d="M10 112 C60 96 50 60 110 58 C160 56 150 18 200 18" fill="none" stroke="#221613" strokeWidth="3" strokeDasharray="1 9" strokeLinecap="round" />
+        </svg>
+        <p className="em-sans mt-[14px] text-[16px] leading-[1.4] opacity-80">Todo horizonte começa com um ponto.</p>
+      </div>
+      <div className="absolute right-[24px] top-[330px] h-[520px] w-[480px]">
+        <Mapa />
+      </div>
+    </Pagina>
+  );
+};
 
 const NUMEROS = [
   { n: '16', t: 'UFs com Pure', d: '15 estados + DF' },
@@ -36,39 +80,37 @@ const NUMEROS = [
 
 export const Norte2 = ({ lado }: { lado: Lado }) => (
   <Pagina lado={lado} numero={P + 1}>
-    <Miolo>
-      <TituloComFio tamanho={60}>
+    <Miolo className="!top-[96px] justify-between">
+      <TituloComFio tamanho={64}>
         Presente em 16 das 27 UFs.<br />
         <span className="text-[var(--em-vinho)]">O Norte é horizonte.</span>
       </TituloComFio>
-      <div className="relative mt-[10px] min-h-0 flex-1">
-        <div className="absolute inset-0"><Mapa /></div>
-      </div>
-      <div className="mt-[8px] grid grid-cols-3 gap-[20px] border-y border-[var(--em-tinta)]/20 py-[12px]">
+      <div className="grid grid-cols-3 gap-[24px]">
         {NUMEROS.map((x) => (
           <div key={x.t}>
-            <div className="em-display text-[58px] font-extrabold leading-none text-[var(--em-vinho)]">{x.n}</div>
-            <div className="em-display mt-[2px] text-[23px] font-bold uppercase leading-none">{x.t}</div>
-            <div className="em-sans mt-[2px] text-[13px] opacity-70">{x.d}</div>
+            <div className="em-display text-[84px] font-extrabold leading-none text-[var(--em-vinho)]">{x.n}</div>
+            <div className="em-sans mt-[8px] text-[19px] font-bold">{x.t}</div>
+            <div className="em-sans mt-[2px] text-[15px] opacity-70">{x.d}</div>
           </div>
         ))}
       </div>
-      <div className="em-sans mt-[10px] space-y-[4px]">
+      <div>
+      <div className="em-sans text-[15px] font-semibold text-[var(--em-vinho)]">Presença por região</div>
+      <div className="em-sans mt-[18px] space-y-[20px]">
         {REGIOES.map((r) => (
-          <div key={r.nome} className="flex items-center gap-[14px]">
-            <span className="em-display w-[130px] text-[20px] font-bold uppercase leading-none">{r.nome}</span>
-            <span className="flex flex-1 gap-[5px]">
+          <div key={r.nome} className="flex items-center gap-[16px]">
+            <span className="w-[140px] text-[18px] font-semibold">{r.nome}</span>
+            <span className="flex flex-1 gap-[6px]">
               {Array.from({ length: r.total }, (_, i) => (
-                <span key={i} className="h-[13px] w-[13px] rounded-full" style={{ background: i < r.com ? VERMELHO : CINZA }} />
+                <span key={i} className="h-[20px] w-[20px] rounded-full" style={{ background: i < r.com ? VERMELHO : CINZA }} />
               ))}
             </span>
-            <span className="text-[14px] opacity-70">{r.com} de {r.total}</span>
+            <span className="text-[15px] opacity-70">{r.com} de {r.total}</span>
           </div>
         ))}
       </div>
-      <BlocoVinho className="mt-[12px] !py-[12px]">
-        <p className="em-display text-[24px] font-bold uppercase leading-none">Consulte as praças disponíveis · link na bio</p>
-      </BlocoVinho>
+      </div>
+      <Chave className="mb-[40px]">Consulte as praças disponíveis: link na bio.</Chave>
     </Miolo>
   </Pagina>
 );

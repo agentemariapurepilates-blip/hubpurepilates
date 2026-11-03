@@ -1,47 +1,16 @@
 import type { ReactNode } from 'react';
-import { Corpo, Foto, Miolo, Pagina, type Lado } from '../diagramacao';
+import { Corpo, Miolo, Pagina, type Lado } from '../diagramacao';
 import { MATERIAS } from './materias';
 import { Chave, TituloComFio } from './pecas';
 import reclameAqui from './fotos/reclame-aqui.png';
-import logoBranco from './fotos/logo-pure-branco.png';
-import unidade1 from './fotos/unidade-1.jpg';
-import unidade2 from './fotos/unidade-2.jpg';
-import unidade3 from './fotos/unidade-3.jpg';
 
-// + 500 unidades (fotos das unidades com o layout novo) e
-// Reputação (vídeo, os números e o texto). Texto exatamente como no Canva.
+// Reputação (páginas 14 a 17): vídeo, os números e o texto. Texto exatamente como no Canva.
 
 const P = MATERIAS.reputacao.pagina;
 
-// Página-anúncio, em vinho: a marca das 500 unidades em destaque e as fotos das
-// unidades com o layout novo em faixa, como um anúncio de revista.
-export const Unidades = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={MATERIAS.unidades.pagina} tom="vinho">
-    <div className="absolute inset-x-[64px] top-[70px]">
-      <h2 className="em-display font-extrabold uppercase leading-[0.86] tracking-[-0.01em]">
-        <span className="block text-[60px]">Atingimos a marca de</span>
-        <span className="flex items-end gap-[22px]">
-          <span className="text-[210px] leading-[0.8] text-[#ffd9a8]">+500</span>
-          <span className="pb-[8px] text-[76px]">unidades.</span>
-        </span>
-      </h2>
-    </div>
-    {/* as fotos ocupam o resto da página: uma grande sangrada à esquerda, duas empilhadas */}
-    <div className="absolute left-0 right-[64px] top-[330px] grid h-[490px] grid-cols-[1.45fr_1fr] gap-[10px]">
-      <Foto src={unidade1} alt="Unidade com o layout novo" className="relative h-full w-full" posicao="40% 55%" />
-      <div className="grid grid-rows-2 gap-[10px]">
-        <Foto src={unidade2} alt="Unidade com o layout novo" className="relative h-full w-full" posicao="45% 50%" />
-        <Foto src={unidade3} alt="Unidade com o layout novo" className="relative h-full w-full" posicao="50% 50%" />
-      </div>
-    </div>
-    <p className="em-sans absolute left-[64px] top-[846px] text-[15px] italic opacity-85">Imagens de unidades com layout novo.</p>
-    <img src={logoBranco} alt="Pure Pilates" draggable={false} className="absolute right-[64px] top-[838px] w-[130px] select-none" />
-  </Pagina>
-);
-
-// Quadro do vídeo de reputação, que ainda não chegou.
+// Quadro do vídeo de reputação, que ainda não chegou. Fica numa página da direita.
 export const ReputacaoVideo = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P} tom="escuro">
+  <Pagina lado={lado} numero={P} tom="escuro" semFolio>
     <div className="absolute inset-0 flex items-center justify-center">
       <div className="em-display text-[64px] font-extrabold uppercase leading-none opacity-40">Vídeo Reputação</div>
     </div>
@@ -93,9 +62,9 @@ export const ReputacaoTexto = ({ lado }: { lado: Lado }) => (
         className="mt-[34px] w-full select-none bg-white p-[12px] shadow-[0_18px_40px_-18px_rgba(0,0,0,0.45)]"
       />
       <div className="mt-[40px] grid grid-cols-3 gap-[28px]">
-        <Numero valor="28 mi">consumidores cadastrados na plataforma</Numero>
+        <Numero valor="28 mm">consumidores cadastrados na plataforma</Numero>
         <Numero valor="46 mil">reclamações por dia, em média</Numero>
-        <Numero valor="30 mi">acessos por mês, dois terços pesquisando marcas</Numero>
+        <Numero valor="30 mm">acessos por mês, dois terços pesquisando marcas</Numero>
       </div>
     </Miolo>
   </Pagina>

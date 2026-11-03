@@ -2,11 +2,10 @@ import type { ReactNode } from 'react';
 import { Corpo, Foto, Miolo, Pagina, VideoAuto, type Lado } from '../diagramacao';
 import { MATERIAS } from './materias';
 import { TituloComFio } from './pecas';
-import kvFundo from './fotos/bf-kv-fundo.jpg';
-import logoBranco from './fotos/logo-pure-branco.png';
+import kv from './fotos/bf-kv.jpg';
 import gravacao from './fotos/gravacao-campanha.jpg';
 
-// A nova porta de entrada, Black Friday 2026 (páginas 17 a 23). Só o texto vem dos
+// A nova porta de entrada, Black Friday 2026 (páginas 18 a 24). Só o texto vem dos
 // slides do Canva; a diagramação é a da revista.
 
 const P = MATERIAS.blackFriday.pagina;
@@ -14,37 +13,12 @@ const VIDEO_JULIA = '/videos/entre-molas/edicao-2/reels-julia-rabello.mp4';
 const VIDEO_FILME = '/videos/entre-molas/edicao-2/filme-amigas.mp4';
 const VIDEO_JORNADA = '/videos/entre-molas/edicao-2/jornada-comece.mp4';
 
-// Duas barrinhas vermelhas, a marca do KV "Black sem dor".
-const Barras = ({ largura = 60 }: { largura?: number }) => (
-  <span className="inline-flex flex-col gap-[5px] align-middle" style={{ width: largura }}>
-    <span className="h-[6px] w-[78%] rounded-full bg-[#e01e2e]" />
-    <span className="ml-[22%] h-[6px] w-[78%] rounded-full bg-[#e01e2e]" />
-  </span>
-);
-
-// Abre a matéria: a chamada da campanha, o KV "Black sem dor" recriado na vertical
-// (o fundo é um recorte do KV sem os textos; os textos são os dele).
+// Abre a matéria como capa: o KV "Black sem dor" da campanha, inteiro, em página inteira.
 export const Bf1 = ({ lado }: { lado: Lado }) => (
-  <Pagina lado={lado} numero={P} tom="escuro" folioCurto>
-    <div className="absolute inset-0 bg-[#140c0b]" />
-    <img src={kvFundo} alt="" draggable={false} className="absolute left-0 top-[-90px] w-[820px] max-w-none select-none" />
-    <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 via-40% to-[#140c0b] to-[88%]" />
-    <div className="em-sans absolute inset-x-0 top-[62px] text-center text-white">
-      <div className="text-[150px] font-black leading-[0.95] tracking-[-0.02em]">BLACK</div>
-      <div className="mt-[6px] flex items-center justify-center gap-[14px] text-[66px] font-black leading-none">
-        <Barras /> SEM DOR <Barras />
-      </div>
-      <div className="mt-[16px] text-[21px] font-normal tracking-[0.62em]">PURE PILATES</div>
-    </div>
-    <div className="em-sans absolute left-[50px] right-[50px] top-[626px] rounded-[110px] bg-[#151515] py-[24px] text-center text-white">
-      <div className="text-[124px] font-black leading-[1] tracking-[-0.01em] text-[#d3102d]">50% OFF</div>
-      <div className="mt-[4px] text-[25px] leading-none">NO <b>PRIMEIRO MÊS</b> COM PURE PASS</div>
-    </div>
-    <img src={logoBranco} alt="Pure Pilates" draggable={false} className="absolute bottom-[38px] left-[64px] w-[150px] select-none" />
-    <div className="em-sans absolute bottom-[34px] right-[120px] text-right text-[32px] font-extrabold leading-[1.12] text-white">
-      <div>SEM DOR NO CORPO <Barras largura={44} /></div>
-      <div><Barras largura={44} /> SEM DOR NO BOLSO</div>
-    </div>
+  <Pagina lado={lado} numero={P} tom="escuro" semFolio>
+    {/* o KV inteiro, sem cortar: a mesma arte desfocada preenche o que sobra em cima e embaixo */}
+    <img src={kv} alt="" aria-hidden="true" draggable={false} className="absolute inset-0 h-full w-full scale-110 select-none object-cover opacity-70 blur-[24px]" />
+    <img src={kv} alt="Black sem dor: 50% off no primeiro mês com Pure Pass" draggable={false} className="absolute inset-0 h-full w-full select-none object-contain" />
   </Pagina>
 );
 
