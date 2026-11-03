@@ -15,6 +15,9 @@ export const useNavegacao = () => useContext(NavegacaoContext);
 /** Editoria da página (ex.: "Carta do CEO") e a posição dela dentro da matéria: mostra onde a matéria começa e termina. */
 export const EditoriaContext = createContext<{ nome: string; i: number; n: number } | null>(null);
 
+/** Edição que aparece no rodapé das páginas. */
+export const EdicaoContext = createContext('Edição 1');
+
 interface PaginaProps {
   lado: Lado;
   numero?: number;
@@ -30,6 +33,7 @@ interface PaginaProps {
 
 export const Pagina = ({ lado, numero, tom = 'papel', semFolio, folioCurto, className, style, children }: PaginaProps) => {
   const editoria = useContext(EditoriaContext);
+  const edicao = useContext(EdicaoContext);
   return (
   <div
     className={cn('em-page', `em-page--${lado}`, `em-tom--${tom}`, className)}
@@ -61,7 +65,7 @@ export const Pagina = ({ lado, numero, tom = 'papel', semFolio, folioCurto, clas
         {!folioCurto && (
           <>
             <span className="h-px w-[28px] bg-current" />
-            <span>Entre Molas · Edição 1</span>
+            <span>Entre Molas · {edicao}</span>
           </>
         )}
       </div>
@@ -177,8 +181,15 @@ export const VideoAuto = ({
         poster={poster}
         autoPlay
         muted={mudo}
-        loop
         playsInline
+        // o som toca uma vez só: no fim, o vídeo recomeça em laço, mas mudo
+        onEnded={(e) => {
+          const v = e.currentTarget;
+          v.muted = true;
+          setMudo(true);
+          v.currentTime = 0;
+          void v.play();
+        }}
         preload="metadata"
         className={cn('h-full w-full', inteiro ? 'object-contain' : 'object-cover')}
         style={posicao ? { objectPosition: posicao } : undefined}

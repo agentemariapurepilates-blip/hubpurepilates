@@ -13,7 +13,7 @@ const FORA: Record<string, [number, number]> = {
 };
 const SEM_ROTULO = new Set<string>(['DF']);
 
-const REGIOES = [
+export const REGIOES = [
   { nome: 'Norte', com: 0, total: 7 },
   { nome: 'Nordeste', com: 7, total: 9 },
   { nome: 'Centro-Oeste', com: 2, total: 4 },
@@ -46,10 +46,10 @@ const FIM = 0.94; // o mapa fica todo vermelho até aqui; depois apaga e o laço
 const f = (n: number) => n.toFixed(4);
 const LACO = { dur: `${CICLO}s`, repeatCount: 'indefinite' } as const;
 
-const VERMELHO = '#c12030';
-const CINZA = '#d3cdc4';
+export const VERMELHO = '#c12030';
+export const CINZA = '#d3cdc4';
 
-const Mapa = () => (
+export const Mapa = () => (
   <svg viewBox={`-10 -10 1060 ${MAPA_BR_ALTURA + 20}`} className="h-full w-full" role="img" aria-label="Mapa do Brasil: estados com e sem Pure Pilates">
     {Object.entries(ESTADOS_BR).map(([uf, e]) => (
       <path key={uf} d={e.d} fill={COM_PURE.has(uf) ? VERMELHO : CINZA} stroke="#f6f1ea" strokeWidth={2.5} strokeLinejoin="round" />
@@ -107,7 +107,7 @@ const Mapa = () => (
   </svg>
 );
 
-const CARTOES = (
+export const CARTOES = (
   <div className="em-sans grid grid-cols-3 gap-[12px]">
     <div className="rounded-[8px] border border-[#e2dbd1] bg-white px-[18px] py-[16px]">
       <div className="text-[48px] font-bold leading-none text-[#c12030]">16</div>

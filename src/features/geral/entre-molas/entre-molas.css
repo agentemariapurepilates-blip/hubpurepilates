@@ -309,3 +309,37 @@
 @media (prefers-reduced-motion: reduce) {
   .em-seta-cruza { animation: none; opacity: 0.9; transform: translateX(300px); }
 }
+
+/* Barra de progresso do passo a passo em motion (Edição 2, Black Friday) */
+@keyframes em-passo-barra { from { width: 0; } to { width: 100%; } }
+.em-passo-barra { animation: em-passo-barra linear forwards; }
+
+/* Motion da jornada (Edição 2): bolinhas que aparecem e o cursor que vai até o "Buscar". */
+@keyframes em-surge { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
+.em-surge { animation: em-surge 0.45s cubic-bezier(.2,.8,.2,1.2) both; }
+@keyframes em-cursor {
+  0% { opacity: 0; transform: translate(-140px, -90px); }
+  20% { opacity: 1; }
+  60% { transform: translate(0, 0); }
+  70% { transform: translate(0, 0) scale(0.85); }
+  80%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+.em-cursor { animation: em-cursor 2.2s ease-in-out 0.6s both; }
+
+/* O caminho do lead (Edição 2): a seta percorre as etapas e cada uma acende quando ela
+   passa. Ciclo de 6 s: a seta anda até 70%, tudo fica aceso e recomeça. */
+@keyframes em-trilha {
+  0% { width: 0; opacity: 1; }
+  70%, 92% { width: 100%; opacity: 1; }
+  100% { width: 100%; opacity: 0; }
+}
+.em-trilha { animation: em-trilha 6s cubic-bezier(.45,0,.25,1) infinite; }
+@keyframes em-etapa-0 { 0% { opacity: .3; transform: scale(.85); } 4% { opacity: 1; transform: scale(1.18); } 10%, 92% { opacity: 1; transform: scale(1); } 100% { opacity: .3; transform: scale(.85); } }
+@keyframes em-etapa-1 { 0%, 21% { opacity: .3; transform: scale(.85); } 25% { opacity: 1; transform: scale(1.18); } 31%, 92% { opacity: 1; transform: scale(1); } 100% { opacity: .3; transform: scale(.85); } }
+@keyframes em-etapa-2 { 0%, 44% { opacity: .3; transform: scale(.85); } 48% { opacity: 1; transform: scale(1.18); } 54%, 92% { opacity: 1; transform: scale(1); } 100% { opacity: .3; transform: scale(.85); } }
+@keyframes em-etapa-3 { 0%, 67% { opacity: .3; transform: scale(.85); } 71% { opacity: 1; transform: scale(1.18); } 77%, 92% { opacity: 1; transform: scale(1); } 100% { opacity: .3; transform: scale(.85); } }
+.em-etapa { animation-duration: 6s; animation-iteration-count: infinite; animation-timing-function: ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .em-trilha { animation: none; width: 100%; }
+  .em-etapa { animation: none; }
+}
