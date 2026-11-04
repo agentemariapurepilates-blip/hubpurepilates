@@ -39,6 +39,7 @@ type LinkDetail = {
     meta_ad_set_id: string;
     nome: string;
     status: string | null;
+    origem: string;
     dpp_campaigns: { nome: string } | null;
   } | null;
 };
@@ -70,7 +71,7 @@ export default function MidiaAdicionalUnidade() {
         .from('dpp_units' as never)
         .select(
           `id, external_id, nome, cidade, bairro, uf, latitude, longitude, ativa_dashboard,
-           dpp_unit_ad_set_link (ad_set_id, dpp_ad_sets (id, meta_ad_set_id, nome, status, dpp_campaigns (nome)))`,
+           dpp_unit_ad_set_link (ad_set_id, dpp_ad_sets (id, meta_ad_set_id, nome, status, origem, dpp_campaigns (nome)))`,
         )
         .eq('external_id', slug!)
         .maybeSingle();
@@ -80,15 +81,18 @@ export default function MidiaAdicionalUnidade() {
     enabled: !!slug,
   });
 
-  const link = normalizeLink(unit?.dpp_unit_ad_set_link)[0];
-  const adSet = link?.dpp_ad_sets;
+  // A unidade pode ter vários conjuntos; o relatório dela soma todos.
+  const adSets = normalizeLink(unit?.dpp_unit_ad_set_link)
+    .map((l) => l.dpp_ad_sets)
+    .filter((a): a is NonNullable<LinkDetail['dpp_ad_sets']> => !!a);
 
   const unlinkMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (adSetId: string) => {
       const { error } = await supabase
         .from('dpp_unit_ad_set_link' as never)
         .delete()
-        .eq('unit_id', unit!.id);
+        .eq('unit_id', unit!.id)
+        .eq('ad_set_id', adSetId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -182,47 +186,64 @@ export default function MidiaAdicionalUnidade() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <LinkIcon className="h-4 w-4" />
-              Conjunto de anúncio
+              {adSets.length > 1 ? 'Conjuntos de anúncio' : 'Conjunto de anúncio'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {adSet ? (
+            {adSets.length > 0 ? (
               <>
-                <div className="border rounded-md p-3 bg-muted/30">
-                  <div className="font-semibold">{adSet.nome}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Campanha: {adSet.dpp_campaigns?.nome ?? '—'} · Status:{' '}
-                    {adSet.status ?? '—'}
+                {adSets.length > 1 && (
+                  <p className="text-sm text-muted-foreground">
+                    O relatório da unidade soma os {adSets.length} conjuntos.
+                  </p>
+                )}
+                {adSets.map((adSet) => (
+                  <div key={adSet.id} className="border rounded-md p-3 bg-muted/30">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-semibold flex items-center gap-2 flex-wrap">
+                          {adSet.nome}
+                          {adSet.origem === 'calculado' && (
+                            <Badge variant="outline" className="text-[10px]">
+                              Calculado
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {adSet.origem === 'calculado'
+                            ? 'Parte da unidade dentro de um conjunto de várias unidades. Não sincroniza com a Meta.'
+                            : `Campanha: ${adSet.dpp_campaigns?.nome ?? '—'} · Status: ${adSet.status ?? '—'}`}
+                        </div>
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="shrink-0">
+                            <Unlink className="h-4 w-4 mr-1" /> Desvincular
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Desvincular ad set?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              A unidade vai parar de receber novas métricas deste
+                              conjunto. Os dados históricos ficam preservados. Você
+                              pode vincular outro (ou o mesmo) ad set depois.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => unlinkMutation.mutate(adSet.id)}>
+                              Desvincular
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-                    Trocar
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Unlink className="h-4 w-4 mr-1" /> Desvincular
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Desvincular ad set?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          A unidade vai parar de receber novas métricas. Os dados
-                          históricos ficam preservados. Você pode vincular outro
-                          (ou o mesmo) ad set depois.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => unlinkMutation.mutate()}>
-                          Desvincular
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+                  <LinkIcon className="h-4 w-4 mr-1" /> Adicionar conjunto
+                </Button>
               </>
             ) : (
               <>
@@ -274,7 +295,7 @@ export default function MidiaAdicionalUnidade() {
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           unitId={unit.id}
-          currentAdSetId={adSet?.id}
+          currentAdSetIds={adSets.map((a) => a.id)}
         />
       </div>
     </MainLayout>

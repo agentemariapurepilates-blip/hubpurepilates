@@ -84,17 +84,27 @@ export default function DashboardMidiaAdicional() {
     enabled: !!selectedUnit && adSetIds.length > 0,
   });
 
-  const rows = (metrics ?? []).map((r) => ({
-    date: r.date,
-    impressions: Number(r.impressions),
-    clicks: Number(r.clicks),
-    spend: Number(r.spend),
-    results: r.results,
-    reach: Number(r.reach),
-    synced_at: r.synced_at,
-  }));
+  // A unidade pode ter vários ad sets (ex.: o pedido rodou num conjunto próprio e depois numa DCO):
+  // junta tudo num dia só antes de somar e desenhar o gráfico. O alcance do dia vira a soma dos conjuntos.
+  const rows = Object.values(
+    (metrics ?? []).reduce<Record<string, {
+      date: string; impressions: number; clicks: number; spend: number;
+      results: number; reach: number; synced_at: string;
+    }>>((acc, r) => {
+      const d = acc[r.date] ?? (acc[r.date] = {
+        date: r.date, impressions: 0, clicks: 0, spend: 0, results: 0, reach: 0, synced_at: r.synced_at,
+      });
+      d.impressions += Number(r.impressions);
+      d.clicks += Number(r.clicks);
+      d.spend += Number(r.spend);
+      d.results += r.results;
+      d.reach += Number(r.reach);
+      if (r.synced_at > d.synced_at) d.synced_at = r.synced_at;
+      return acc;
+    }, {}),
+  ).sort((a, b) => a.date.localeCompare(b.date));
   const agg = aggregate(rows.map(({ synced_at: _s, ...m }) => m));
-  const lastSync = rows.length ? rows[rows.length - 1].synced_at : undefined;
+  const lastSync = rows.length ? rows.map((r) => r.synced_at).sort().at(-1) : undefined;
   const isYesterdayMode = range.mode === 'absolute_day' && range.from === range.to;
 
   // Usuário sem unidades atribuídas

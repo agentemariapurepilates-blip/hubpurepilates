@@ -175,7 +175,8 @@ export default function MidiaAdicional() {
                   </TableHeader>
                   <TableBody>
                     {filtered.map((u) => {
-                      const ad = normalizeLink(u.dpp_unit_ad_set_link)[0]?.dpp_ad_sets;
+                      const links = normalizeLink(u.dpp_unit_ad_set_link);
+                      const ad = links[0]?.dpp_ad_sets;
                       return (
                         <TableRow
                           key={u.id}
@@ -196,7 +197,12 @@ export default function MidiaAdicional() {
                             <TableCell>{u.uf ?? '—'}</TableCell>
                             <TableCell className="text-sm">
                               {ad?.nome ? (
-                                <span className="text-primary">{ad.nome}</span>
+                                <span className="text-primary">
+                                  {ad.nome}
+                                  {links.length > 1 && (
+                                    <span className="text-muted-foreground"> + {links.length - 1}</span>
+                                  )}
+                                </span>
                               ) : (
                                 <span className="text-muted-foreground">—</span>
                               )}

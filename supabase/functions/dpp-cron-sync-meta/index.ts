@@ -1,5 +1,7 @@
 // Cron: pra cada ad set vinculado a uma unidade, puxa insights diários
 // dos últimos 7 dias (janela rolling) e atualiza dpp_ad_set_daily_metrics.
+// Pula os ad sets com origem 'calculado' (não existem na Meta; as métricas
+// foram calculadas a partir de outro conjunto, ex.: a parte de uma unidade numa DCO).
 // Autentica via Bearer ${CRON_SECRET}.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -42,7 +44,8 @@ Deno.serve(async (req) => {
   try {
     const { data: links, error: linkErr } = await sb
       .from('dpp_unit_ad_set_link')
-      .select('ad_set_id, dpp_ad_sets!inner(meta_ad_set_id, id)');
+      .select('ad_set_id, dpp_ad_sets!inner(meta_ad_set_id, id, origem)')
+      .eq('dpp_ad_sets.origem', 'meta');
     if (linkErr) throw linkErr;
 
     const errors: { ad_set_id: string; message: string }[] = [];

@@ -17,6 +17,7 @@ type AdSetRow = {
   meta_ad_set_id: string;
   nome: string;
   status: string | null;
+  origem: string;
   dpp_campaigns: { nome: string } | null;
   dpp_unit_ad_set_link:
     | { unit_id: string; dpp_units: { nome: string } | null }[]
@@ -27,10 +28,11 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   unitId: string;
-  currentAdSetId?: string;
+  // Conjuntos que a unidade já tem (pode ter vários; vincular adiciona mais um).
+  currentAdSetIds?: string[];
 };
 
-export function AdSetPickerModal({ open, onOpenChange, unitId, currentAdSetId }: Props) {
+export function AdSetPickerModal({ open, onOpenChange, unitId, currentAdSetIds = [] }: Props) {
   const [q, setQ] = useState('');
   const queryClient = useQueryClient();
 
@@ -40,7 +42,7 @@ export function AdSetPickerModal({ open, onOpenChange, unitId, currentAdSetId }:
       const { data, error } = await supabase
         .from('dpp_ad_sets' as never)
         .select(
-          `id, meta_ad_set_id, nome, status, dpp_campaigns (nome),
+          `id, meta_ad_set_id, nome, status, origem, dpp_campaigns (nome),
            dpp_unit_ad_set_link (unit_id, dpp_units (nome))`,
         )
         .order('nome');
@@ -62,7 +64,7 @@ export function AdSetPickerModal({ open, onOpenChange, unitId, currentAdSetId }:
   }, [rows, q]);
 
   const linkMutation = useMutation({
-    mutationFn: async ({ adSetId }: { adSetId: string }) => {
+    mutationFn: async ({ adSetId, calculado }: { adSetId: string; calculado: boolean }) => {
       const { data, error } = await supabase.functions.invoke('dpp-admin-relink-ad-set', {
         body: { unit_id: unitId, ad_set_id: adSetId },
       });
@@ -71,13 +73,20 @@ export function AdSetPickerModal({ open, onOpenChange, unitId, currentAdSetId }:
         throw new Error(String(data.error));
       }
 
+      // Conjunto calculado não existe na Meta: as métricas já estão no banco.
+      if (calculado) return;
+
       // Dispara backfill 180d em background via Edge Function (fire-and-forget)
       void supabase.functions
         .invoke('dpp-admin-backfill', { body: { ad_set_id: adSetId, days: 180 } })
         .catch((e) => console.error('backfill falhou', e));
     },
-    onSuccess: () => {
-      toast.success('Ad set vinculado. Backfill de 180 dias iniciado em background.');
+    onSuccess: (_data, { calculado }) => {
+      toast.success(
+        calculado
+          ? 'Ad set vinculado.'
+          : 'Ad set vinculado. Backfill de 180 dias iniciado em background.',
+      );
       queryClient.invalidateQueries({ queryKey: ['dpp_units'] });
       onOpenChange(false);
     },
@@ -111,7 +120,7 @@ export function AdSetPickerModal({ open, onOpenChange, unitId, currentAdSetId }:
               const link = row.dpp_unit_ad_set_link?.[0];
               const linkedUnitName = link?.dpp_units?.nome;
               const linkedToOther = !!linkedUnitName && link?.unit_id !== unitId;
-              const isCurrent = row.id === currentAdSetId;
+              const isCurrent = currentAdSetIds.includes(row.id);
 
               const handleClick = () => {
                 if (linkedToOther) {
@@ -120,7 +129,7 @@ export function AdSetPickerModal({ open, onOpenChange, unitId, currentAdSetId }:
                   );
                   if (!ok) return;
                 }
-                linkMutation.mutate({ adSetId: row.id });
+                linkMutation.mutate({ adSetId: row.id, calculado: row.origem === 'calculado' });
               };
 
               return (
@@ -144,7 +153,7 @@ export function AdSetPickerModal({ open, onOpenChange, unitId, currentAdSetId }:
                     )}
                     {isCurrent && (
                       <Badge className="text-[10px] bg-primary/10 text-primary hover:bg-primary/10">
-                        Atual
+                        Já vinculado
                       </Badge>
                     )}
                     {linkedToOther && (
