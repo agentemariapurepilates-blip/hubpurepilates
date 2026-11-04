@@ -1,22 +1,32 @@
 import type { ReactNode } from 'react';
-import { Corpo, Miolo, Pagina, type Lado } from '../diagramacao';
+import { Corpo, Miolo, Pagina, VideoAuto, type Lado } from '../diagramacao';
 import { MATERIAS } from './materias';
 import { Chave, TituloComFio } from './pecas';
 import reclameAqui from './fotos/reclame-aqui.png';
+import posterReputacao from './fotos/reputacao-poster.jpg';
 
 // Reputação (páginas 14 a 17): vídeo, os números e o texto. Texto exatamente como no Canva.
 
 const P = MATERIAS.reputacao.pagina;
 
-// Quadro do vídeo de reputação, que ainda não chegou. Fica numa página da direita.
+// Abre a seção: o vídeo Reputação (16:9, editado no repo videos-tutoriais-pure,
+// pasta reputacao) na largura da página, sem cortar, com o título em cima.
+const VIDEO_REPUTACAO = '/videos/entre-molas/edicao-2/reputacao.mp4';
+
 export const ReputacaoVideo = ({ lado }: { lado: Lado }) => (
   <Pagina lado={lado} numero={P} tom="escuro" semFolio>
-    <div className="absolute inset-0 flex items-center justify-center">
-      <div className="em-display text-[64px] font-extrabold uppercase leading-none opacity-40">Vídeo Reputação</div>
+    <div className="absolute inset-x-[64px] top-[120px] text-[#f7ecdc]">
+      <div className="em-sans text-[16px] font-semibold text-[#ffd9a8]">Reputação</div>
+      <h2 className="em-display mt-[10px] text-[76px] font-extrabold uppercase leading-[0.9]">
+        A reputação se <span className="text-[#ffd9a8]">constrói junto</span>
+      </h2>
     </div>
+    <VideoAuto src={VIDEO_REPUTACAO} poster={posterReputacao} somAoAbrir somNoCentro className="absolute inset-x-0 top-[330px] h-[461px]" />
+    <p className="em-serif absolute inset-x-[64px] top-[830px] text-[22px] italic leading-[1.4] text-[#f7ecdc]/85">
+      Neste exato momento, alguém está falando da Pure Pilates.
+    </p>
   </Pagina>
 );
-
 export const ReputacaoNumeros = ({ lado }: { lado: Lado }) => (
   <Pagina lado={lado} numero={P + 1} tom="vinho">
     <div className="absolute bottom-[110px] left-[64px] right-[64px]">
