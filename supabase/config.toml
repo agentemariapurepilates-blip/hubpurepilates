@@ -65,3 +65,9 @@ verify_jwt = false
 # código secreto no fim do endereço (PRANCHETA_MCP_SEGREDO), conferido dentro da função.
 [functions.prancheta-mcp]
 verify_jwt = false
+
+[functions.blog-produzir]
+verify_jwt = false
+
+[functions.blog-conferir-publicados]
+verify_jwt = false

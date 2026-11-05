@@ -89,14 +89,17 @@ const SectionHeader = ({
 );
 
 import logo from '@/assets/logo-pure-pilates.png';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useHasUnitAccess } from '@/features/colaborador/dashboard/hooks/useHasUnitAccess';
 import { ARTIGOS_PUREPEDIA } from '@/features/colaborador/purepedia/artigos';
+import { podeVerMarketing } from '@/features/marketing/equipe';
+import { FERRAMENTAS_MARKETING } from '@/features/marketing/ferramentas';
 
 // Accordion: apenas uma seção aberta por vez. Abrir uma fecha a anterior.
 // Persistido em sessionStorage — sobrevive à navegação e ao reload; reseta ao fechar a aba.
 type SectionKey =
   | 'colaboradores'
+  | 'marketing'
   | 'agentes'
   | 'minha-area'
   | 'admin'
@@ -142,6 +145,7 @@ export const sectionFromPath = (path: string): SectionKey | null => {
   // seção própria. Se o teste ficasse depois, '/inauguracoes' continuaria
   // casando com a lista de colaboradores e a seção errada abriria.
   if (path.startsWith('/inauguracoes')) return 'inauguracoes';
+  if (path.startsWith('/marketing')) return 'marketing';
   if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais', '/colaborador/pure-store', '/leads-rh', '/purepedia'].some((p) => path.startsWith(p))) return 'colaboradores';
   // Antes de '/minha-area': o Hub tem /minha-area/dashboard (Mídia Adicional),
   // que NÃO pertence a esta seção. Por isso o teste é '/dashboard/' com barra.
@@ -152,6 +156,11 @@ export const sectionFromPath = (path: string): SectionKey | null => {
   if (path.startsWith('/admin')) return 'admin';
   return null;
 };
+
+// Onde a lista do menu estava rolada. Fica fora do componente porque cada
+// página monta o seu próprio MainLayout, e com ele um Sidebar novo: sem isto,
+// abrir um item lá embaixo devolvia a lista ao topo na página seguinte.
+let rolagemDoMenu = 0;
 
 const Sidebar = () => {
   const { user, signOut, isAdmin, isColaborador, userType } = useAuth();
@@ -273,6 +282,12 @@ const Sidebar = () => {
   // "Destinatários" continua exclusivo de admin (some da lista, não fica
   // desabilitado) e o rótulo do meio continua variando conforme o alcance de
   // quem olha, exatamente como era na TabsList.
+  // Marketing section - só o time de marketing (features/marketing/equipe.ts).
+  // Itens novos da seção entram aqui, cada um com a sua rota /marketing/...
+  // A lista vem de ferramentas.ts, a mesma da página inicial do Marketing:
+  // ferramenta nova entra lá e aparece aqui e na página.
+  const marketingNavigation = FERRAMENTAS_MARKETING.map((f) => ({ name: f.nome, href: f.href, icon: f.icone }));
+
   const inauguracoesNavigation = [
     { name: 'Nova solicitação', href: '/inauguracoes/nova', icon: PartyPopper },
     {
@@ -356,13 +371,29 @@ const Sidebar = () => {
     { name: 'Usuários', href: '/admin/usuarios', icon: Users },
   ];
 
-  const NavContent = () => (
+  // A lista volta para onde estava ao montar o menu numa página nova.
+  const navRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    if (navRef.current) navRef.current.scrollTop = rolagemDoMenu;
+  }, []);
+
+  // ATENÇÃO: isto é um pedaço de JSX, e não um componente (05/11/2026). Antes era
+  // `const NavContent = () => (...)` usado como <NavContent />: uma função nova a
+  // cada render, então o React jogava a lista inteira fora e montava outra a cada
+  // clique numa seção, e a rolagem voltava para o topo. Não transformar de volta
+  // em componente declarado aqui dentro.
+  const navContent = (
     <>
       <div className="p-4 border-b border-sidebar-border">
         <img src={logo} alt="Pure Pilates" className="h-20 mx-auto" />
       </div>
 
-      <nav className="flex-1 p-4 space-y-0.5 overflow-y-auto" style={{ overflowAnchor: 'none' }}>
+      <nav
+        ref={navRef}
+        onScroll={(e) => { rolagemDoMenu = e.currentTarget.scrollTop; }}
+        className="flex-1 p-4 space-y-0.5 overflow-y-auto"
+        style={{ overflowAnchor: 'none' }}
+      >
         {/* Itens soltos no topo — sem grupo "Geral", sempre visíveis. */}
         <div className="space-y-0.5 pb-1">
           {mainNavigation.map((item) =>
@@ -704,6 +735,47 @@ const Sidebar = () => {
           </Collapsible>
         )}
 
+        {/* Marketing Section — só o time de marketing, nem todo colaborador */}
+        {podeVerMarketing(user?.email) && (
+          <Collapsible open={openSection === 'marketing'} onOpenChange={(o) => setOpenSection(o ? 'marketing' : null)}>
+            {/* O nome da seção abre a página inicial do Marketing, com todas as
+                ferramentas, e deixa a seção aberta no menu. */}
+            <button
+              type="button"
+              className="w-full"
+              onClick={() => {
+                setOpenSection('marketing');
+                setMobileOpen(false);
+                navigate('/marketing');
+              }}
+            >
+              <SectionHeader icon={Megaphone} label="Marketing" open={openSection === 'marketing'} onMouseDown={(e) => e.preventDefault()} />
+            </button>
+            <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+              <div className="space-y-0.5 pb-1">
+                {marketingNavigation.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                      )
+                    }
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </NavLink>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
         {/* Agentes de IA Section — oculto da produção (não estamos usando). */}
         {MOSTRAR_AGENTES_IA && (isColaborador || isAdmin) && (
           <Collapsible open={openSection === 'agentes'} onOpenChange={(o) => setOpenSection(o ? 'agentes' : null)}>
@@ -998,7 +1070,7 @@ const Sidebar = () => {
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
-        <NavContent />
+        {navContent}
       </aside>
     </>
   );

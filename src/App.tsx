@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RotaMarketing } from "@/features/marketing/RotaMarketing";
 
 // PÃ¡ginas lazy-loaded â€” cada uma vira um chunk separado, baixado sÃ³ ao visitar
 // Geral (todo mundo vÃª)
@@ -90,6 +91,11 @@ const SaudeDeMarca = lazy(() => import("./features/colaborador/monitoramento/Sau
 const PureMonitor = lazy(() => import("./features/colaborador/monitoramento/PureMonitor"));
 const GerarCertificados = lazy(() => import("./features/colaborador/academy/GerarCertificados"));
 const GerarContratos = lazy(() => import("./features/colaborador/academy/GerarContratos"));
+
+// Marketing (só o time de marketing — lista em features/marketing/equipe.ts)
+const MarketingInicio = lazy(() => import("./features/marketing/MarketingInicio"));
+const BlogDaPure = lazy(() => import("./features/marketing/blog/BlogDaPure"));
+const BlogArtigo = lazy(() => import("./features/marketing/blog/BlogArtigo"));
 
 // Admin (sÃ³ admin)
 const AdminUsuarios = lazy(() => import("./features/admin/usuarios/AdminUsuarios"));
@@ -211,6 +217,10 @@ function App() {
             </Route>
             {/* Leads RH: dados pessoais de candidatos. Quem entra e decidido
                 na propria tela (aba Autorizados) e garantido pela RLS. */}
+            {/* Marketing: seção própria no menu, só para o time de marketing. */}
+            <Route path="/marketing" element={<ProtectedRoute requireColaborador><RotaMarketing><MarketingInicio /></RotaMarketing></ProtectedRoute>} />
+            <Route path="/marketing/blog" element={<ProtectedRoute requireColaborador><RotaMarketing><BlogDaPure /></RotaMarketing></ProtectedRoute>} />
+            <Route path="/marketing/blog/:id" element={<ProtectedRoute requireColaborador><RotaMarketing><BlogArtigo /></RotaMarketing></ProtectedRoute>} />
             <Route path="/leads-rh" element={<ProtectedRoute requireColaborador><LeadsRH /></ProtectedRoute>} />
             {/* PurePedia: exclusiva de colaborador — o gate e na rota, nao so no menu. */}
             <Route path="/purepedia" element={<ProtectedRoute requireColaborador><PurePedia /></ProtectedRoute>} />

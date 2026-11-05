@@ -110,6 +110,180 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_aprendizados: {
+        Row: {
+          artigo_id: string | null
+          created_at: string
+          criado_por: string | null
+          id: string
+          marca: string | null
+          origem: string
+          texto: string
+        }
+        Insert: {
+          artigo_id?: string | null
+          created_at?: string
+          criado_por?: string | null
+          id?: string
+          marca?: string | null
+          origem?: string
+          texto: string
+        }
+        Update: {
+          artigo_id?: string | null
+          created_at?: string
+          criado_por?: string | null
+          id?: string
+          marca?: string | null
+          origem?: string
+          texto?: string
+        }
+        Relationships: []
+      }
+      blog_artigos: {
+        Row: {
+          agendado_para: string | null
+          avisos_seo: string[]
+          capa_erro: string | null
+          capa_status: string | null
+          capa_tentativas: number
+          categoria: string | null
+          comentario_revisao: string | null
+          conteudo_html: string
+          cena_foto: string | null
+          created_at: string
+          criado_por: string | null
+          data_prevista: string | null
+          enviado_em: string | null
+          enviado_por: string | null
+          erro_geracao: string | null
+          foto_url: string | null
+          id: string
+          marca: string
+          meta_descricao: string
+          observacoes: string | null
+          palavra_chave: string | null
+          publicado_em: string | null
+          publico: string
+          revisado_em: string | null
+          revisado_por: string | null
+          slug: string
+          status: string
+          tags: string[]
+          tamanho: string
+          tema: string
+          tentativas: number
+          titulo: string
+          updated_at: string
+          wp_erro: string | null
+          wp_media_id: number | null
+          wp_post_id: number | null
+          wp_url: string | null
+        }
+        Insert: {
+          agendado_para?: string | null
+          avisos_seo?: string[]
+          capa_erro?: string | null
+          capa_status?: string | null
+          capa_tentativas?: number
+          categoria?: string | null
+          comentario_revisao?: string | null
+          conteudo_html?: string
+          cena_foto?: string | null
+          created_at?: string
+          criado_por?: string | null
+          data_prevista?: string | null
+          enviado_em?: string | null
+          enviado_por?: string | null
+          erro_geracao?: string | null
+          foto_url?: string | null
+          id?: string
+          marca?: string
+          meta_descricao?: string
+          observacoes?: string | null
+          palavra_chave?: string | null
+          publicado_em?: string | null
+          publico?: string
+          revisado_em?: string | null
+          revisado_por?: string | null
+          slug?: string
+          status?: string
+          tags?: string[]
+          tamanho?: string
+          tema: string
+          tentativas?: number
+          titulo?: string
+          updated_at?: string
+          wp_erro?: string | null
+          wp_media_id?: number | null
+          wp_post_id?: number | null
+          wp_url?: string | null
+        }
+        Update: {
+          agendado_para?: string | null
+          avisos_seo?: string[]
+          capa_erro?: string | null
+          capa_status?: string | null
+          capa_tentativas?: number
+          categoria?: string | null
+          comentario_revisao?: string | null
+          conteudo_html?: string
+          cena_foto?: string | null
+          created_at?: string
+          criado_por?: string | null
+          data_prevista?: string | null
+          enviado_em?: string | null
+          enviado_por?: string | null
+          erro_geracao?: string | null
+          foto_url?: string | null
+          id?: string
+          marca?: string
+          meta_descricao?: string
+          observacoes?: string | null
+          palavra_chave?: string | null
+          publicado_em?: string | null
+          publico?: string
+          revisado_em?: string | null
+          revisado_por?: string | null
+          slug?: string
+          status?: string
+          tags?: string[]
+          tamanho?: string
+          tema?: string
+          tentativas?: number
+          titulo?: string
+          updated_at?: string
+          wp_erro?: string | null
+          wp_media_id?: number | null
+          wp_post_id?: number | null
+          wp_url?: string | null
+        }
+        Relationships: []
+      }
+      blog_contextos: {
+        Row: {
+          atualizado_por: string | null
+          chave: string
+          conteudo: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          atualizado_por?: string | null
+          chave: string
+          conteudo?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          atualizado_por?: string | null
+          chave?: string
+          conteudo?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       comment_reactions: {
         Row: {
           comment_id: string

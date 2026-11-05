@@ -34,6 +34,11 @@ describe('sectionFromPath', () => {
     expect(sectionFromPath('/avisos')).toBe(null);
   });
 
+  it('abre a seção Marketing nas rotas dela', () => {
+    expect(sectionFromPath('/marketing')).toBe('marketing');
+    expect(sectionFromPath('/marketing/qualquer-item')).toBe('marketing');
+  });
+
   it('abre a seção Inaugurações em todas as rotas dela', () => {
     // Inaugurações saiu de dentro de Colaboradores e virou seção própria.
     expect(sectionFromPath('/inauguracoes')).toBe('inauguracoes');
