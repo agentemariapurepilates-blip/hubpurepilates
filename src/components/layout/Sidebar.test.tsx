@@ -39,6 +39,10 @@ describe('sectionFromPath', () => {
     expect(sectionFromPath('/marketing/qualquer-item')).toBe('marketing');
   });
 
+  it('a página Marketing local, do franqueado, não abre a seção do time de marketing', () => {
+    expect(sectionFromPath('/marketing-local')).not.toBe('marketing');
+  });
+
   it('abre a seção Inaugurações em todas as rotas dela', () => {
     // Inaugurações saiu de dentro de Colaboradores e virou seção própria.
     expect(sectionFromPath('/inauguracoes')).toBe('inauguracoes');

@@ -145,7 +145,9 @@ export const sectionFromPath = (path: string): SectionKey | null => {
   // seção própria. Se o teste ficasse depois, '/inauguracoes' continuaria
   // casando com a lista de colaboradores e a seção errada abriria.
   if (path.startsWith('/inauguracoes')) return 'inauguracoes';
-  if (path.startsWith('/marketing')) return 'marketing';
+  // '/marketing' exato ou '/marketing/...': a página '/marketing-local' (do
+  // franqueado, item solto do menu) não é da seção do time de marketing.
+  if (path === '/marketing' || path.startsWith('/marketing/')) return 'marketing';
   if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais', '/colaborador/pure-store', '/leads-rh', '/purepedia'].some((p) => path.startsWith(p))) return 'colaboradores';
   // Antes de '/minha-area': o Hub tem /minha-area/dashboard (Mídia Adicional),
   // que NÃO pertence a esta seção. Por isso o teste é '/dashboard/' com barra.
