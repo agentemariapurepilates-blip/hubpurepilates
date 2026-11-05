@@ -17,6 +17,7 @@ describe('sectionFromPath', () => {
   it('os dois pedidos de verba abrem Minha Área, mesmo fora do prefixo /minha-area', () => {
     expect(sectionFromPath('/autorizar-midia-adicional')).toBe('minha-area');
     expect(sectionFromPath('/autorizar-verba-professores')).toBe('minha-area');
+    expect(sectionFromPath('/autorizar-midia-local')).toBe('minha-area');
   });
 
   it('o gerador de pedidos abre Colaboradores, e a aba do franqueado segue fora de seção', () => {

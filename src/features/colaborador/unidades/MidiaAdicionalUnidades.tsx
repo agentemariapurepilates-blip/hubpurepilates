@@ -8,6 +8,8 @@ import { Building2, ArrowLeft, Loader2, Inbox } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { PedidosMidiaLocal } from '@/features/geral/midia-local/PedidosMidiaLocal';
+import { DestinatariosMidiaLocal } from '@/features/geral/midia-local/DestinatariosMidiaLocal';
 import { PedidosVerbaProfessores } from '@/features/geral/verba-professores/PedidosVerbaProfessores';
 import { DestinatariosVerbaProfessores } from '@/features/geral/verba-professores/DestinatariosVerbaProfessores';
 import { AcoesDoPedidoMidia } from './AcoesDoPedidoMidia';
@@ -172,6 +174,15 @@ const MidiaAdicionalUnidades = () => {
             </div>
           )}
           <PedidosVerbaProfessores modo="todos" />
+        </div>
+
+        <div className="mt-6">
+          {isAdmin && (
+            <div className="mb-6">
+              <DestinatariosMidiaLocal />
+            </div>
+          )}
+          <PedidosMidiaLocal modo="todos" />
         </div>
       </div>
     </MainLayout>

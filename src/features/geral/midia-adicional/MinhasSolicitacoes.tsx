@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Inbox, ArrowLeft, Loader2, Plus, FileText, UserPlus } from 'lucide-react';
+import { PedidosMidiaLocal } from '@/features/geral/midia-local/PedidosMidiaLocal';
 import { PedidosVerbaProfessores } from '@/features/geral/verba-professores/PedidosVerbaProfessores';
 import {
   COLUNAS_DO_PEDIDO,
@@ -76,7 +77,7 @@ const MinhasSolicitacoes = () => {
               Minhas solicitações
             </h1>
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-              Histórico dos seus pedidos de Campanha Aporte Aula Experimental e Campanha Aporte Recrutamento.
+              Histórico dos seus pedidos de Campanha Aporte Aula Experimental, Campanha Aporte Recrutamento e Mídia local · TV Globo.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 shrink-0">
@@ -169,6 +170,10 @@ const MinhasSolicitacoes = () => {
 
         <div className="mt-6">
           <PedidosVerbaProfessores modo="meus" />
+        </div>
+
+        <div className="mt-6">
+          <PedidosMidiaLocal modo="meus" />
         </div>
       </div>
     </MainLayout>

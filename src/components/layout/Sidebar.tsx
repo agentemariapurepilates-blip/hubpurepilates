@@ -37,6 +37,7 @@ import {
   ChevronDown,
   Inbox,
   UserPlus,
+  Tv,
   Image as ImageIcon,
   Radar,
   GraduationCap,
@@ -147,7 +148,7 @@ export const sectionFromPath = (path: string): SectionKey | null => {
   if (path.startsWith('/dashboard/')) return 'dashboard';
   // '/autorizar-midia-adicional' e '/autorizar-verba-professores' fazem parte do fluxo
   // da Minha Área, então abre/destaca essa seção mesmo estando fora do prefixo.
-  if (path.startsWith('/minha-area') || path.startsWith('/autorizar-midia-adicional') || path.startsWith('/autorizar-verba-professores')) return 'minha-area';
+  if (path.startsWith('/minha-area') || path.startsWith('/autorizar-midia-adicional') || path.startsWith('/autorizar-verba-professores') || path.startsWith('/autorizar-midia-local')) return 'minha-area';
   if (path.startsWith('/admin')) return 'admin';
   return null;
 };
@@ -229,6 +230,7 @@ const Sidebar = () => {
     // { name: 'Parcerias', href: '/parcerias', icon: Handshake },
     { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
+    { name: 'Marketing local · TV Globo', href: '/marketing-local', icon: Tv },
     { name: 'Pure Design', href: '/pure-design', icon: Paintbrush },
     // Pure GPT: em teste, só no servidor local (npm run dev). O build de produção
     // — que é o que o deploy.sh publica — não traz o link. Para lançar, tirar a
@@ -332,6 +334,7 @@ const Sidebar = () => {
       : []),
     { name: 'Campanha Aporte Aula Experimental', href: '/autorizar-midia-adicional', icon: ImageIcon, disabled: false },
     { name: 'Campanha Aporte Recrutamento', href: '/autorizar-verba-professores', icon: UserPlus, disabled: false },
+    { name: 'Mídia local · TV Globo', href: '/autorizar-midia-local', icon: Tv, disabled: false },
     { name: 'Minhas solicitações', href: '/minha-area/minhas-solicitacoes', icon: Inbox, disabled: false },
   ];
 

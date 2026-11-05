@@ -35,6 +35,8 @@ const ManualComece = lazy(() => import("./features/geral/tutoriais/ManualComece"
 const AutorizarMidiaAdicional = lazy(() => import("./features/geral/midia-adicional/AutorizarMidiaAdicional"));
 const MinhasSolicitacoes = lazy(() => import("./features/geral/midia-adicional/MinhasSolicitacoes"));
 const SolicitarVerbaProfessores = lazy(() => import("./features/geral/verba-professores/SolicitarVerbaProfessores"));
+const SolicitarMidiaLocal = lazy(() => import("./features/geral/midia-local/SolicitarMidiaLocal"));
+const MarketingLocal = lazy(() => import("./features/geral/midia-local/MarketingLocal"));
 const Perfil = lazy(() => import("./features/geral/conta/Perfil"));
 const Notificacoes = lazy(() => import("./features/geral/conta/Notificacoes"));
 const Auth = lazy(() => import("./features/geral/auth/Auth"));
@@ -157,6 +159,8 @@ function App() {
             <Route path="/midia-adicional/unidades" element={<ProtectedRoute><MidiaAdicionalUnidades /></ProtectedRoute>} />
             <Route path="/minha-area/minhas-solicitacoes" element={<ProtectedRoute><MinhasSolicitacoes /></ProtectedRoute>} />
             <Route path="/autorizar-verba-professores" element={<ProtectedRoute><SolicitarVerbaProfessores /></ProtectedRoute>} />
+            <Route path="/autorizar-midia-local" element={<ProtectedRoute><SolicitarMidiaLocal /></ProtectedRoute>} />
+            <Route path="/marketing-local" element={<ProtectedRoute><MarketingLocal /></ProtectedRoute>} />
             <Route path="/manual-sistema" element={<ProtectedRoute><ManualSistema /></ProtectedRoute>} />
             <Route path="/tutoriais" element={<ProtectedRoute><Tutoriais /></ProtectedRoute>} />
             <Route path="/onboarding-instrutor" element={<ProtectedRoute><OnboardingInstrutor /></ProtectedRoute>} />
