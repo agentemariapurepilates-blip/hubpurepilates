@@ -96,6 +96,7 @@ const GerarContratos = lazy(() => import("./features/colaborador/academy/GerarCo
 const MarketingInicio = lazy(() => import("./features/marketing/MarketingInicio"));
 const BlogDaPure = lazy(() => import("./features/marketing/blog/BlogDaPure"));
 const BlogArtigo = lazy(() => import("./features/marketing/blog/BlogArtigo"));
+const PreviewCapa = lazy(() => import("./features/marketing/blog/PreviewCapa"));
 
 // Admin (sÃ³ admin)
 const AdminUsuarios = lazy(() => import("./features/admin/usuarios/AdminUsuarios"));
@@ -257,6 +258,9 @@ function App() {
             {/* Preview SÃ“ EM DEV, sem login â€” sai do build de produÃ§Ã£o automaticamente. */}
             {import.meta.env.DEV && (
               <Route path="/preview/novidades" element={<NovidadesPreview />} />
+            )}
+            {import.meta.env.DEV && (
+              <Route path="/preview/capa-blog" element={<PreviewCapa />} />
             )}
             <Route path="*" element={<NotFound />} />
           </Routes>

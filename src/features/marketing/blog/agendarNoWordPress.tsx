@@ -2,7 +2,7 @@ import { createRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from '@/integrations/supabase/client';
 import { CapaBlog, LARGURA_CAPA, type CapaBlogHandle } from './CapaBlog';
-import { MARCAS, type ArtigoBlog } from './blogTipos';
+import type { ArtigoBlog } from './blogTipos';
 
 // Aprovado vai direto para a agenda do WordPress (pedido de 05/11/2026).
 //
@@ -30,7 +30,6 @@ export async function gerarJpegDaCapa(a: DadosDaCapa): Promise<Blob> {
           ref={ref}
           marca={a.marca}
           titulo={a.titulo || a.tema}
-          etiqueta={a.categoria ?? MARCAS[a.marca]?.nome ?? 'Blog Pure Pilates'}
           fotoUrl={a.foto_url}
           onPronto={() => {
             clearTimeout(limite);
@@ -79,6 +78,14 @@ export async function agendarArtigo(id: string) {
   if (error || !data) throw new Error('não encontrei o artigo');
   const jpeg = await gerarJpegDaCapa(data as DadosDaCapa);
   return chamarAgendar({ id, capa: await paraBase64(jpeg), tipoCapa: 'image/jpeg' });
+}
+
+/** Refaz a capa no modelo atual e troca a imagem de destaque do post no WordPress. */
+export async function atualizarCapaNoWordPress(id: string) {
+  const { data, error } = await supabase.from('blog_artigos').select('marca, titulo, tema, categoria, foto_url').eq('id', id).maybeSingle();
+  if (error || !data) throw new Error('não encontrei o artigo');
+  const jpeg = await gerarJpegDaCapa(data as DadosDaCapa);
+  return chamarAgendar({ id, acao: 'trocar_capa', capa: await paraBase64(jpeg), tipoCapa: 'image/jpeg' });
 }
 
 /** Tira o post da agenda do WordPress e devolve o artigo para edição. */

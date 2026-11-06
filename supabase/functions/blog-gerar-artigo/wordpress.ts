@@ -123,3 +123,17 @@ export async function desagendarPost(id: number) {
 export async function situacaoDoPost(id: number) {
   return wp<{ id: number; status: string; link: string; date_gmt: string }>(`/posts/${id}?context=edit&_fields=id,status,link,date_gmt`)
 }
+
+/** Troca só a imagem de destaque do post, sem mexer em data, status ou texto. */
+export async function trocarCapaDoPost(postId: number, midiaId: number) {
+  return wp<{ id: number; featured_media: number }>(`/posts/${postId}`, { metodo: 'POST', json: { featured_media: midiaId } })
+}
+
+/**
+ * Apaga uma imagem da biblioteca de mídia. O Cloudflare do blog barra DELETE
+ * (405), então vai como POST com X-HTTP-Method-Override, e com corpo (sem
+ * corpo, o servidor responde 411).
+ */
+export async function apagarMidia(id: number) {
+  return wp(`/media/${id}`, { metodo: 'POST', json: { force: true }, cabecalhos: { 'X-HTTP-Method-Override': 'DELETE' } })
+}

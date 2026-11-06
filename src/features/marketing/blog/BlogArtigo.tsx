@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, CalendarClock, ShieldCheck, Check, CheckCircle2, Download, ExternalLink, ImageIcon, Loader2, MessageSquareWarning, RotateCcw, Save, Send, Sparkles, Trash2 } from 'lucide-react';
 import { CapaBlog, type CapaBlogHandle } from './CapaBlog';
-import { agendarArtigo, desagendarArtigo } from './agendarNoWordPress';
+import { agendarArtigo, atualizarCapaNoWordPress, desagendarArtigo } from './agendarNoWordPress';
 import { pedidoDeCorrecao } from './corrigirSeo';
 import { toast } from 'sonner';
 import MainLayout from '@/components/layout/MainLayout';
@@ -227,6 +227,20 @@ const BlogArtigo = () => {
     if (artigo.foto_url) await agendar();
     else toast.info('Ele vai para a agenda do WordPress quando a capa ficar pronta.');
   };
+  // Depois de "Gerar outra foto" num artigo que já está no WordPress, a capa de
+  // lá não muda sozinha: este botão refaz e troca.
+  const atualizarCapa = async () => {
+    setAgendando(true);
+    try {
+      await atualizarCapaNoWordPress(artigo.id);
+      toast.success('Capa atualizada no WordPress.');
+    } catch (e) {
+      toast.error(e instanceof Error ? `Não atualizou: ${e.message}.` : 'Não atualizou.');
+    } finally {
+      setAgendando(false);
+      carregar();
+    }
+  };
   // Agendado que volta para edição sai da agenda do WordPress (vira rascunho lá).
   const desagendar = async () => {
     setAgendando(true);
@@ -372,7 +386,6 @@ const BlogArtigo = () => {
                   ref={capaRef}
                   marca={artigo.marca}
                   titulo={texto.titulo || artigo.tema}
-                  etiqueta={artigo.categoria ?? MARCAS[artigo.marca]?.nome ?? 'Blog Pure Pilates'}
                   fotoUrl={artigo.foto_url}
                   aviso={avisoDaCapa}
                   carregandoFoto={capaEmAndamento}
@@ -519,6 +532,13 @@ const BlogArtigo = () => {
                     Tirar da agenda e editar
                   </Button>
                 </>
+              )}
+
+              {(status === 'agendado' || status === 'publicado') && artigo.wp_post_id && (
+                <Button variant="outline" className="w-full" onClick={atualizarCapa} disabled={agendando || !artigo.foto_url || capaEmAndamento}>
+                  {agendando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ImageIcon className="h-4 w-4 mr-2" />}
+                  Atualizar capa no WordPress
+                </Button>
               )}
             </div>
 

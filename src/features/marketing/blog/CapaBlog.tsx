@@ -9,9 +9,13 @@ import type { Marca } from './blogTipos';
 // numa pétala + título escrito pelo Hub (nunca pela IA, então não sai letra
 // errada). 1408 x 768, o tamanho das capas do blog.
 //
-// Regras da marca: Montserrat em dois pesos (600 e 800), vermelho Pure #C12030
-// e cinza escuro #231F20, no máximo três formas (moldura, contorno e etiqueta),
-// logo branco sobre fundo escuro ou vermelho.
+// Regras da marca: Montserrat (título em 800), vermelho Pure #C12030 e cinza
+// escuro #231F20, duas formas (moldura e contorno), logo branco sobre fundo
+// escuro ou vermelho.
+//
+// SEM ETIQUETA DE CATEGORIA (06/11/2026): a capa tinha uma pílula com a
+// categoria ("SAÚDE E BELEZA"), mas o blog já mostra a categoria sozinho e a
+// pílula saía errada lá. Ficaram só foto, título e logo.
 
 export const LARGURA_CAPA = 1408;
 export const ALTURA_CAPA = 768;
@@ -21,13 +25,13 @@ const GRAFITE = '#231F20';
 const CINZA_CLARO = '#F2F0EF';
 const BRANCO = '#FFFFFF';
 
-const TEMAS: Record<Marca, { fundo: string; titulo: string; etiquetaFundo: string; etiquetaTexto: string; contorno: string; logoBranco: boolean }> = {
+const TEMAS: Record<Marca, { fundo: string; titulo: string; contorno: string; logoBranco: boolean }> = {
   // Studios: cinza claro e vermelho
-  studios: { fundo: CINZA_CLARO, titulo: GRAFITE, etiquetaFundo: VERMELHO, etiquetaTexto: BRANCO, contorno: VERMELHO, logoBranco: false },
+  studios: { fundo: CINZA_CLARO, titulo: GRAFITE, contorno: VERMELHO, logoBranco: false },
   // Academy: vermelho e branco
-  academy: { fundo: VERMELHO, titulo: BRANCO, etiquetaFundo: BRANCO, etiquetaTexto: VERMELHO, contorno: BRANCO, logoBranco: true },
+  academy: { fundo: VERMELHO, titulo: BRANCO, contorno: BRANCO, logoBranco: true },
   // Franchising: preto e vermelho
-  franchising: { fundo: GRAFITE, titulo: BRANCO, etiquetaFundo: VERMELHO, etiquetaTexto: BRANCO, contorno: VERMELHO, logoBranco: true },
+  franchising: { fundo: GRAFITE, titulo: BRANCO, contorno: VERMELHO, logoBranco: true },
 };
 
 // A pétala: três cantos bem redondos e um canto reto (embaixo, à esquerda).
@@ -45,7 +49,6 @@ export interface CapaBlogHandle {
 interface Props {
   marca: Marca;
   titulo: string;
-  etiqueta: string;
   fotoUrl: string | null;
   /** Enquanto a foto não chega, a moldura mostra o que está acontecendo. */
   aviso?: string;
@@ -55,7 +58,7 @@ interface Props {
 }
 
 export const CapaBlog = forwardRef<CapaBlogHandle, Props>(function CapaBlog(
-  { marca, titulo, etiqueta, fotoUrl, aviso, carregandoFoto, onPronto },
+  { marca, titulo, fotoUrl, aviso, carregandoFoto, onPronto },
   ref,
 ) {
   const tema = TEMAS[marca] ?? TEMAS.studios;
@@ -207,21 +210,6 @@ export const CapaBlog = forwardRef<CapaBlogHandle, Props>(function CapaBlog(
           </div>
 
           <div style={{ position: 'absolute', left: 80, top: 72, bottom: 72, width: 600, display: 'flex', flexDirection: 'column' }}>
-            <span
-              style={{
-                alignSelf: 'flex-start',
-                background: tema.etiquetaFundo,
-                color: tema.etiquetaTexto,
-                fontWeight: 600,
-                fontSize: 18,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                padding: '11px 22px 10px',
-                borderRadius: 999,
-              }}
-            >
-              {etiqueta}
-            </span>
             <div ref={areaRef} style={{ flex: 1, display: 'flex', alignItems: 'center', minHeight: 0 }}>
               <h1
                 ref={tituloRef}

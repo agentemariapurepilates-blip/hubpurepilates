@@ -7,6 +7,9 @@
 // (agenda.ts); se o dia já passou, hoje às 17h. O artigo passa a 'agendado' no
 // Hub, com o id e o link do post.
 //
+// Com { acao: 'trocar_capa' }, envia a capa nova e troca só a imagem de destaque
+// do post (agendado ou já publicado), apagando a antiga. Data e texto ficam.
+//
 // Com { acao: 'desagendar' }, devolve o post a rascunho no WordPress e o artigo
 // a 'rascunho' no Hub: é o que acontece quando alguém volta um agendado para edição.
 //
@@ -16,7 +19,16 @@
 import { getCorsHeaders } from '../_shared/cors.ts'
 import { clienteAdmin, usuarioDoTime } from '../blog-gerar-artigo/acesso.ts'
 import { quandoPublicar } from '../blog-gerar-artigo/agenda.ts'
-import { agendarPost, desagendarPost, enviarCapa, idDaCategoria, idsDasTags, temAcessoAoWordPress } from '../blog-gerar-artigo/wordpress.ts'
+import {
+  agendarPost,
+  apagarMidia,
+  desagendarPost,
+  enviarCapa,
+  idDaCategoria,
+  idsDasTags,
+  temAcessoAoWordPress,
+  trocarCapaDoPost,
+} from '../blog-gerar-artigo/wordpress.ts'
 
 const HORA = Deno.env.get('WP_BLOG_HORA') || '09:00'
 // Artigo de dia que já passou sai hoje neste horário (pedido de 05/11/2026).
@@ -41,7 +53,7 @@ Deno.serve(async (req) => {
   try {
     const corpo = await req.json()
     id = String(corpo?.id ?? '')
-    if (corpo?.acao === 'desagendar') acao = 'desagendar'
+    if (corpo?.acao === 'desagendar' || corpo?.acao === 'trocar_capa') acao = corpo.acao
     if (typeof corpo?.capa === 'string' && corpo.capa.length > 100) {
       const bin = atob(corpo.capa)
       capa = new Uint8Array(bin.length)
@@ -63,6 +75,23 @@ Deno.serve(async (req) => {
       return responder({ ok: true })
     } catch (e) {
       return responder({ erro: e instanceof Error ? e.message : 'não consegui tirar da agenda' }, 502)
+    }
+  }
+
+  if (acao === 'trocar_capa') {
+    if (!artigo.wp_post_id) return responder({ erro: 'este artigo ainda não está no WordPress' }, 400)
+    if (!capa) return responder({ erro: 'a capa não chegou' }, 400)
+    try {
+      const extensao = tipoCapa === 'image/png' ? 'png' : 'jpg'
+      const nova = await enviarCapa(capa, tipoCapa, `capa-${artigo.slug || artigo.id}.${extensao}`, artigo.titulo)
+      await trocarCapaDoPost(artigo.wp_post_id, nova)
+      await admin.from('blog_artigos').update({ wp_media_id: nova, wp_erro: null }).eq('id', id)
+      // A antiga só sai depois que a nova já está no post. Se falhar, sobra uma
+      // imagem solta na biblioteca, sem prejuízo para o post.
+      if (artigo.wp_media_id && artigo.wp_media_id !== nova) await apagarMidia(artigo.wp_media_id).catch(() => undefined)
+      return responder({ ok: true, wp_media_id: nova })
+    } catch (e) {
+      return responder({ erro: e instanceof Error ? e.message : 'não consegui trocar a capa' }, 502)
     }
   }
 
