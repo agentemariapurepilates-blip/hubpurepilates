@@ -54,6 +54,7 @@ import { linkifyHtml } from './detail/linkifyHtml';
 import { groupsOf, type DemandGroup } from './demandGroups';
 import { flagsFor, useDemandLabels } from './demandLabels';
 import { parseDateOnly, SETOR_GRAVACOES } from './demandHelpers';
+import { TituloEditavel } from './TituloEditavel';
 import { LabelSelect } from './LabelSelect';
 
 /** Valor do Select para "Sem grupo" — o Radix não aceita string vazia como valor. */
@@ -75,9 +76,11 @@ interface DemandDetailsDialogProps {
   /** Todos os grupos; o seletor mostra os da área da demanda. */
   groups: DemandGroup[];
   onGroupChange: (demandId: string, groupId: string | null) => void;
+  /** Renomear no título (qualquer colaborador). */
+  onRename?: (demandId: string, title: string) => Promise<void>;
 }
 
-const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick, groups, onGroupChange }: DemandDetailsDialogProps) => {
+const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick, groups, onGroupChange, onRename }: DemandDetailsDialogProps) => {
   const { user, isAdmin, isColaborador } = useAuth();
   const { colaboradores } = useColaboradores();
   const etiquetas = useDemandLabels();
@@ -328,7 +331,14 @@ const DemandDetailsDialog = ({ demand, open, onOpenChange, onUpdate, onEditClick
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="p-4 pb-0 shrink-0">
-            <DialogTitle className="text-left line-clamp-2 pr-8">{demand.title}</DialogTitle>
+            <DialogTitle className="text-left line-clamp-2 pr-8">
+              {/* Qualquer colaborador renomeia aqui, não só quem criou (09/11/2026). */}
+              {onRename && canChangeStatus ? (
+                <TituloEditavel titulo={demand.title} onSalvar={(t) => onRename(demand.id, t)} className="-ml-1 text-lg font-semibold" />
+              ) : (
+                demand.title
+              )}
+            </DialogTitle>
             <Button
               variant="ghost"
               size="sm"

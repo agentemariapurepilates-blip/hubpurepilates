@@ -97,6 +97,8 @@ const MarketingInicio = lazy(() => import("./features/marketing/MarketingInicio"
 const BlogDaPure = lazy(() => import("./features/marketing/blog/BlogDaPure"));
 const BlogArtigo = lazy(() => import("./features/marketing/blog/BlogArtigo"));
 const PreviewCapa = lazy(() => import("./features/marketing/blog/PreviewCapa"));
+const ProjetosMarketing = lazy(() => import("./features/marketing/projetos/ProjetosMarketing"));
+const ItemMarketing = lazy(() => import("./features/marketing/projetos/ItemMarketing"));
 
 // Admin (sÃ³ admin)
 const AdminUsuarios = lazy(() => import("./features/admin/usuarios/AdminUsuarios"));
@@ -222,6 +224,8 @@ function App() {
             <Route path="/marketing" element={<ProtectedRoute requireColaborador><RotaMarketing><MarketingInicio /></RotaMarketing></ProtectedRoute>} />
             <Route path="/marketing/blog" element={<ProtectedRoute requireColaborador><RotaMarketing><BlogDaPure /></RotaMarketing></ProtectedRoute>} />
             <Route path="/marketing/blog/:id" element={<ProtectedRoute requireColaborador><RotaMarketing><BlogArtigo /></RotaMarketing></ProtectedRoute>} />
+            <Route path="/marketing/projetos" element={<ProtectedRoute requireColaborador><RotaMarketing><ProjetosMarketing /></RotaMarketing></ProtectedRoute>} />
+            <Route path="/marketing/projetos/:id" element={<ProtectedRoute requireColaborador><RotaMarketing><ItemMarketing /></RotaMarketing></ProtectedRoute>} />
             <Route path="/leads-rh" element={<ProtectedRoute requireColaborador><LeadsRH /></ProtectedRoute>} />
             {/* PurePedia: exclusiva de colaborador — o gate e na rota, nao so no menu. */}
             <Route path="/purepedia" element={<ProtectedRoute requireColaborador><PurePedia /></ProtectedRoute>} />

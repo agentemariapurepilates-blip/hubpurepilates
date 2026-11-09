@@ -29,6 +29,8 @@ function ehFalhaDeChunk(error: Error): boolean {
 
 interface ErrorBoundaryState {
   error: Error | null;
+  /** Em que componente o erro aconteceu (só aparece no ambiente local). */
+  onde?: string;
 }
 
 /**
@@ -53,6 +55,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[ErrorBoundary] erro capturado:', error, info.componentStack);
+    // No ambiente local, mostra também onde quebrou: sem isso, um erro genérico
+    // ("destroy is not a function") não diz qual tela ou componente culpar.
+    if (import.meta.env.DEV) this.setState({ onde: `${error.stack ?? ''}\n\nComponentes:${info.componentStack ?? ''}` });
   }
 
   render() {
@@ -85,6 +90,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               {!deChunk && (
                 <pre className="whitespace-pre-wrap break-words rounded-lg bg-muted p-3 text-xs text-muted-foreground">
                   {error.message || 'Erro desconhecido.'}
+                </pre>
+              )}
+              {import.meta.env.DEV && this.state.onde && (
+                <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-3 text-[11px] text-muted-foreground">
+                  {this.state.onde.split('\n').slice(0, 40).join('\n')}
                 </pre>
               )}
 

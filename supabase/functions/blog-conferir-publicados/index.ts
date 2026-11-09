@@ -5,7 +5,8 @@
 // O pg_cron chama de hora em hora, e só quando há agendado com a hora vencida
 // (migração 20261105240000). Para cada um, pergunta ao WordPress a situação:
 //   'publish' -> 'publicado' no Hub, com a data e o link público;
-//   'future'  -> ainda não saiu (o WP-Cron atrasou): fica para a próxima rodada;
+//   'future'  -> a hora passou e o WP-Cron não soltou o post ("agendamento
+//                perdido", 09/11/2026): o Hub publica pela API, com a mesma data;
 //   outro     -> alguém mexeu no WordPress à mão; o motivo vai para wp_erro.
 //
 // Também aceita um colaborador logado, para o botão "Conferir agora".
@@ -13,7 +14,7 @@
 import { getCorsHeaders } from '../_shared/cors.ts'
 import { ehSegredoDoCron } from '../_shared/modo-relatorio.ts'
 import { clienteAdmin, usuarioDoTime } from '../blog-gerar-artigo/acesso.ts'
-import { situacaoDoPost, temAcessoAoWordPress } from '../blog-gerar-artigo/wordpress.ts'
+import { publicarAgendadoVencido, situacaoDoPost, temAcessoAoWordPress } from '../blog-gerar-artigo/wordpress.ts'
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req)
@@ -42,10 +43,16 @@ Deno.serve(async (req) => {
 
   let publicados = 0
   let aindaNao = 0
+  let destravados = 0
   const problemas: string[] = []
   for (const a of vencidos ?? []) {
     try {
-      const post = await situacaoDoPost(a.wp_post_id)
+      let post = await situacaoDoPost(a.wp_post_id)
+      if (post.status === 'future') {
+        // A hora já passou (o select só traz vencidos) e o WordPress não publicou.
+        post = await publicarAgendadoVencido(a.wp_post_id)
+        if (post.status === 'publish') destravados += 1
+      }
       if (post.status === 'publish') {
         await admin
           .from('blog_artigos')
@@ -63,5 +70,5 @@ Deno.serve(async (req) => {
       problemas.push(e instanceof Error ? e.message : 'falhou')
     }
   }
-  return responder({ conferidos: vencidos?.length ?? 0, publicados, aindaNao, problemas })
+  return responder({ conferidos: vencidos?.length ?? 0, publicados, destravados, aindaNao, problemas })
 })

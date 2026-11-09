@@ -381,6 +381,18 @@ const PedidosDemanda = () => {
     setIsCreateOpen(true);
   };
 
+  // Renomear na linha ou no detalhe: qualquer colaborador (pedido de 09/11/2026).
+  const handleRenameDemand = async (demandId: string, title: string) => {
+    const anterior = demands.find((d) => d.id === demandId)?.title;
+    setDemands(prev => prev.map(d => (d.id === demandId ? { ...d, title } : d)));
+    setSelectedDemand(prev => (prev && prev.id === demandId ? { ...prev, title } : prev));
+    const { error } = await supabase.from('demands').update({ title }).eq('id', demandId);
+    if (error) {
+      setDemands(prev => prev.map(d => (d.id === demandId ? { ...d, title: anterior ?? d.title } : d)));
+      toast({ title: "Erro", description: "Não consegui renomear a demanda.", variant: "destructive" });
+    }
+  };
+
   const handleGroupChange = async (demandId: string, groupId: string | null) => {
     const grupo = groups.find((g) => g.id === groupId) ?? null;
     // Grupo que nasceu de um status leva o status junto: o que ainda lê `status` continua coerente.
@@ -678,6 +690,7 @@ const PedidosDemanda = () => {
                 commentCounts={commentCounts}
                 usedGroupIds={usedGroupIds}
                 onDemandClick={handleDemandClick}
+                onRenameDemand={handleRenameDemand}
                 onAddDemand={abrirNovaDemanda}
                 onCreateGroup={(area) => setGroupDialog({ open: true, area })}
                 onRenameGroup={handleRenameGroup}
@@ -717,6 +730,7 @@ const PedidosDemanda = () => {
           onUpdate={fetchDemands}
           groups={groups}
           onGroupChange={handleGroupChange}
+          onRename={handleRenameDemand}
           onEditClick={() => {
             setDetailsOpen(false);
             setEditOpen(true);

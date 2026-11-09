@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
-import { ChevronDown, ChevronRight, MessageCircle, MoreHorizontal, Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, Maximize2, MessageCircle, MoreHorizontal, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import type { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
 import { groupsOf, type DemandGroup } from './demandGroups';
 import { getDeadlineStatus, parseDateOnly, priorityConfig, SETOR_GRAVACOES } from './demandHelpers';
+import { TituloEditavel } from './TituloEditavel';
 import { BOARD_AREAS } from './DemandBoardSidebar';
 import { flagsFor, useDemandLabels, type LabelKind } from './demandLabels';
 import { LabelSelect } from './LabelSelect';
@@ -34,6 +35,8 @@ interface DemandListViewProps {
   /** Grupos com ao menos uma demanda, considerando todas — não só as filtradas. */
   usedGroupIds: Set<string>;
   onDemandClick: (demand: Demand) => void;
+  /** Renomear direto na linha (qualquer colaborador). */
+  onRenameDemand: (demandId: string, title: string) => Promise<void>;
   onAddDemand: (department: string, groupId: string | null) => void;
   onCreateGroup: (department: string) => void;
   onRenameGroup: (groupId: string, name: string) => Promise<void>;
@@ -117,6 +120,7 @@ const LinhaDemanda = ({
   gravacao,
   template,
   onClick,
+  onRename,
 }: {
   demand: Demand;
   pausado: boolean;
@@ -125,6 +129,7 @@ const LinhaDemanda = ({
   gravacao: boolean;
   template: string;
   onClick: () => void;
+  onRename: (title: string) => void;
 }) => {
   const api = useDemandLabels();
   const prazo = getDeadlineStatus(demand.deadline, pausado);
@@ -140,16 +145,23 @@ const LinhaDemanda = ({
       className="group/linha grid min-h-[38px] cursor-pointer border-t text-sm transition-colors hover:bg-muted/40"
       style={{ gridTemplateColumns: template }}
     >
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick();
-        }}
-        className="flex items-center truncate px-3 py-2 text-left"
-      >
-        <span className="truncate">{demand.title}</span>
-      </button>
+      {/* Clicar no título renomeia (qualquer colaborador); o botão Abrir abre a demanda.
+          O resto da linha continua abrindo, como antes. */}
+      <span className="flex min-w-0 items-center gap-1.5 px-2 py-1.5">
+        <TituloEditavel titulo={demand.title} onSalvar={onRename} />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          className="flex shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-xs font-medium text-muted-foreground opacity-0 transition-opacity hover:border-primary/50 hover:text-primary focus:opacity-100 group-hover/linha:opacity-100 [@media(hover:none)]:opacity-100"
+          title="Abrir"
+        >
+          <Maximize2 className="h-3 w-3" />
+          Abrir
+        </button>
+      </span>
 
       <span className="flex items-center justify-center border-l" title={`${comentarios} comentário(s)`}>
         <span className="relative inline-flex">
@@ -226,6 +238,7 @@ const BlocoGrupo = ({
   etiquetas,
   gravacao,
   onDemandClick,
+  onRenameDemand,
   onAddDemand,
   onRenameGroup,
   onDeleteGroup,
@@ -239,6 +252,7 @@ const BlocoGrupo = ({
   etiquetas: LabelKind[];
   gravacao: boolean;
   onDemandClick: (demand: Demand) => void;
+  onRenameDemand: (demandId: string, title: string) => Promise<void>;
   onAddDemand: (department: string, groupId: string | null) => void;
   onRenameGroup: (groupId: string, name: string) => Promise<void>;
   onDeleteGroup: (group: DemandGroup) => void;
@@ -364,6 +378,7 @@ const BlocoGrupo = ({
                 gravacao={gravacao}
                 template={template}
                 onClick={() => onDemandClick(demand)}
+                onRename={(title) => onRenameDemand(demand.id, title)}
               />
             ))}
 
@@ -409,6 +424,7 @@ const SecaoArea = ({
     etiquetas,
     gravacao: area === SETOR_GRAVACOES,
     onDemandClick: props.onDemandClick,
+    onRenameDemand: props.onRenameDemand,
     onAddDemand: props.onAddDemand,
     onRenameGroup: props.onRenameGroup,
     onDeleteGroup: props.onDeleteGroup,

@@ -124,6 +124,14 @@ export async function situacaoDoPost(id: number) {
   return wp<{ id: number; status: string; link: string; date_gmt: string }>(`/posts/${id}?context=edit&_fields=id,status,link,date_gmt`)
 }
 
+/**
+ * Publica um agendado cuja hora já passou e que o WP-Cron não soltou ("agendamento
+ * perdido"; aconteceu em 09/11/2026). A data marcada (date_gmt) fica a mesma.
+ */
+export async function publicarAgendadoVencido(id: number) {
+  return wp<{ id: number; status: string; link: string; date_gmt: string }>(`/posts/${id}`, { metodo: 'POST', json: { status: 'publish' } })
+}
+
 /** Troca só a imagem de destaque do post, sem mexer em data, status ou texto. */
 export async function trocarCapaDoPost(postId: number, midiaId: number) {
   return wp<{ id: number; featured_media: number }>(`/posts/${postId}`, { metodo: 'POST', json: { featured_media: midiaId } })

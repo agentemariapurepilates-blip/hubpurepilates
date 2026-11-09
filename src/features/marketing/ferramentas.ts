@@ -1,4 +1,4 @@
-import { Newspaper, type LucideIcon } from 'lucide-react';
+import { FolderKanban, Newspaper, type LucideIcon } from 'lucide-react';
 
 // As ferramentas da seção Marketing. É a ÚNICA lista: o menu lateral e a página
 // inicial do Marketing (/marketing) leem daqui, então ferramenta nova entra
@@ -20,5 +20,11 @@ export const FERRAMENTAS_MARKETING: FerramentaMarketing[] = [
     descricao: 'Um artigo por dia, escrito com o Gemini: planejamento do mês, aprovação e agenda no WordPress.',
     href: '/marketing/blog',
     icone: Newspaper,
+  },
+  {
+    nome: 'Projetos',
+    descricao: 'Os projetos do time por frente de trabalho, com os prazos de cada etapa e tarefas com subtarefas.',
+    href: '/marketing/projetos',
+    icone: FolderKanban,
   },
 ];
