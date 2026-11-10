@@ -287,7 +287,7 @@ function Pagina({ id, projetoId }: { id: string; projetoId: string }) {
               <Secao titulo="Descrição">
                 <Descricao item={item} salvar={salvar} />
                 <div className="mt-4">
-                  <Anexos itemId={item.id} />
+                  <Anexos itemId={item.id} equipe={equipe} />
                 </div>
               </Secao>
 
@@ -338,6 +338,7 @@ function Pagina({ id, projetoId }: { id: string; projetoId: string }) {
                       paiDosNovos={item.id}
                       rotuloNovo="Nova subtarefa"
                       contagens={contagens}
+                      semSubtarefas
                     />
                   )}
                   {visao === 'quadro' && <Quadro filhos={filhos} dados={dados} onAbrir={abrir} paiId={item.id} />}

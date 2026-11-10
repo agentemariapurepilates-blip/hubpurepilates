@@ -3,7 +3,10 @@ import logoCreme from './assets/logo-entre-molas-creme.png';
 import { EDICOES_ENTRE_MOLAS } from './edicoes';
 import { CONTEUDO_POR_EDICAO, Palco } from './palco';
 import { PAGINA_A, PAGINA_L } from './Revista';
+import { useAuth } from '@/contexts/AuthContext';
+import QuemViu from '../timeline/QuemViu';
 import { usePublicacaoEntreMolas } from './publicacao';
+import { useVisualizacoesEntreMolas } from './visualizacoes';
 
 // Entre Molas — a estante (rota /entre-molas): todas as edições, com a capa de
 // cada uma. Clicar na capa abre a revista. A mais nova vem primeiro. Edição ainda não publicada: a equipe vê a
@@ -14,6 +17,8 @@ const ESCALA_CAPA = 0.34;
 const Estante = () => {
   const edicoes = [...EDICOES_ENTRE_MOLAS].reverse();
   const pub = usePublicacaoEntreMolas();
+  const { porEdicao } = useVisualizacoesEntreMolas();
+  const { isColaborador, isAdmin } = useAuth();
   return (
     <Palco className="overflow-y-auto">
       <div
@@ -53,32 +58,41 @@ const Estante = () => {
               );
             }
             const emPrevia = !pub.carregando && !pub.estaPublicada(ed.slug);
+            const leitores = porEdicao[ed.slug] || [];
             return (
-              <Link key={ed.slug} to={`/entre-molas/${ed.slug}`} className="group flex flex-col items-center">
-                <div
-                  className="relative overflow-hidden shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)] transition-transform duration-500 ease-out group-hover:-translate-y-2 group-hover:rotate-[-1.5deg]"
-                  style={moldura}
-                >
-                  {/* a própria capa da revista, em miniatura */}
+              <div key={ed.slug} className="flex flex-col items-center">
+                <Link to={`/entre-molas/${ed.slug}`} className="group flex flex-col items-center">
                   <div
-                    className="pointer-events-none absolute left-0 top-0"
-                    style={{ width: PAGINA_L, height: PAGINA_A, transform: `scale(${ESCALA_CAPA})`, transformOrigin: 'top left' }}
-                    aria-hidden="true"
+                    className="relative overflow-hidden shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)] transition-transform duration-500 ease-out group-hover:-translate-y-2 group-hover:rotate-[-1.5deg]"
+                    style={moldura}
                   >
-                    {capa?.('solta')}
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                  {emPrevia && (
-                    <div className="em-sans absolute left-0 top-3 bg-[#f7ecdc] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#a9293b] shadow-md">
-                      Pré-visualização
+                    {/* a própria capa da revista, em miniatura */}
+                    <div
+                      className="pointer-events-none absolute left-0 top-0"
+                      style={{ width: PAGINA_L, height: PAGINA_A, transform: `scale(${ESCALA_CAPA})`, transformOrigin: 'top left' }}
+                      aria-hidden="true"
+                    >
+                      {capa?.('solta')}
                     </div>
-                  )}
-                </div>
-                <div className="em-display mt-6 text-[28px] font-bold uppercase tracking-[0.02em] text-[#f7ecdc]">{ed.nome}</div>
-                <div className="em-sans mt-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/50 transition-colors group-hover:text-white/80">
-                  Abrir revista →
-                </div>
-              </Link>
+                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+                    {emPrevia && (
+                      <div className="em-sans absolute left-0 top-3 bg-[#f7ecdc] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#a9293b] shadow-md">
+                        Pré-visualização
+                      </div>
+                    )}
+                  </div>
+                  <div className="em-display mt-6 text-[28px] font-bold uppercase tracking-[0.02em] text-[#f7ecdc]">{ed.nome}</div>
+                  <div className="em-sans mt-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/50 transition-colors group-hover:text-white/80">
+                    Abrir revista →
+                  </div>
+                </Link>
+                {/* Fora do link: o olhinho abre a lista de quem leu sem abrir a revista. */}
+                {leitores.length > 0 && (
+                  <div className="em-sans mt-2 text-[#f7ecdc]">
+                    <QuemViu mes={ed.nome} pessoas={leitores} podeVerLista={isColaborador || isAdmin} />
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>

@@ -3,7 +3,18 @@ import { Download, File, FileSpreadsheet, FileText, Film, Loader2, Presentation,
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { BUCKET_ANEXOS, db, nomeDeCanal, nomeSeguro, tamanhoLegivel, tipoDoArquivo, type Anexo, type TipoArquivo } from './projetos';
+import {
+  BUCKET_ANEXOS,
+  db,
+  nomeDeCanal,
+  nomeSeguro,
+  primeiroNome,
+  tamanhoLegivel,
+  tipoDoArquivo,
+  type Anexo,
+  type PessoaMarketing,
+  type TipoArquivo,
+} from './projetos';
 
 // Arquivos do item: PDF, Word, Excel, fotos, vídeos... Arrastar e soltar ou clicar
 // para enviar. Ficam no bucket privado marketing-anexos; para ver ou baixar, o
@@ -11,9 +22,9 @@ import { BUCKET_ANEXOS, db, nomeDeCanal, nomeSeguro, tamanhoLegivel, tipoDoArqui
 
 // O limite global de arquivo do Supabase do Hub (09/11/2026). Maior que isso o
 // envio falha; avisamos antes de tentar.
-const LIMITE_MB = 50;
+export const LIMITE_MB = 50;
 
-const ICONE: Record<TipoArquivo, typeof File> = {
+export const ICONE: Record<TipoArquivo, typeof File> = {
   imagem: File,
   video: Film,
   pdf: FileText,
@@ -22,7 +33,7 @@ const ICONE: Record<TipoArquivo, typeof File> = {
   apresentacao: Presentation,
   outro: File,
 };
-const COR: Record<TipoArquivo, string> = {
+export const COR: Record<TipoArquivo, string> = {
   imagem: '#0ea5e9',
   video: '#8b5cf6',
   pdf: '#dc2626',
@@ -32,7 +43,49 @@ const COR: Record<TipoArquivo, string> = {
   outro: '#64748b',
 };
 
-export function Anexos({ itemId }: { itemId: string }) {
+/**
+ * Sobe os arquivos para o item e registra cada um nos anexos. Vindo do chat, leva
+ * o comentário junto (pedido de 09/11/2026: ver quem mandou o quê). Devolve
+ * quantos subiram.
+ */
+export async function subirArquivos(
+  itemId: string,
+  arquivos: FileList | File[],
+  enviadoPor: string | undefined,
+  comentarioId: string | null = null,
+  aoComecar?: (nome: string) => void,
+  aoTerminar?: (nome: string) => void,
+) {
+  let ok = 0;
+  for (const arq of Array.from(arquivos)) {
+    if (arq.size > LIMITE_MB * 1024 * 1024) {
+      toast.error(`"${arq.name}" tem ${tamanhoLegivel(arq.size)}: o limite é ${LIMITE_MB} MB por arquivo.`);
+      continue;
+    }
+    aoComecar?.(arq.name);
+    const caminho = `${itemId}/${Date.now()}-${nomeSeguro(arq.name)}`;
+    const { error } = await db.storage.from(BUCKET_ANEXOS).upload(caminho, arq, { contentType: arq.type || undefined });
+    if (error) {
+      toast.error(`Não consegui enviar "${arq.name}".`);
+    } else {
+      const { error: e2 } = await db.from('marketing_anexos').insert({
+        item_id: itemId,
+        nome: arq.name,
+        caminho,
+        tipo: arq.type || null,
+        tamanho: arq.size,
+        enviado_por: enviadoPor,
+        comentario_id: comentarioId,
+      });
+      if (e2) toast.error(`"${arq.name}" subiu, mas não consegui registrar.`);
+      else ok++;
+    }
+    aoTerminar?.(arq.name);
+  }
+  return ok;
+}
+
+export function Anexos({ itemId, equipe = [] }: { itemId: string; equipe?: PessoaMarketing[] }) {
   const { user } = useAuth();
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [links, setLinks] = useState<Record<string, string>>({});
@@ -46,7 +99,10 @@ export function Anexos({ itemId }: { itemId: string }) {
     const lista = (data ?? []) as Anexo[];
     setAnexos(lista);
     if (lista.length) {
-      const { data: urls } = await db.storage.from(BUCKET_ANEXOS).createSignedUrls(lista.map((a) => a.caminho), 60 * 60);
+      const { data: urls } = await db.storage.from(BUCKET_ANEXOS).createSignedUrls(
+        lista.map((a) => a.caminho),
+        60 * 60,
+      );
       setLinks(Object.fromEntries((urls ?? []).map((u, i) => [lista[i].id, u.signedUrl ?? ''])));
     }
   }, [itemId]);
@@ -63,24 +119,14 @@ export function Anexos({ itemId }: { itemId: string }) {
   }, [itemId, carregar]);
 
   const enviar = async (arquivos: FileList | File[]) => {
-    for (const arq of Array.from(arquivos)) {
-      if (arq.size > LIMITE_MB * 1024 * 1024) {
-        toast.error(`"${arq.name}" tem ${tamanhoLegivel(arq.size)}: o limite é ${LIMITE_MB} MB por arquivo.`);
-        continue;
-      }
-      setEnviando((e) => [...e, arq.name]);
-      const caminho = `${itemId}/${Date.now()}-${nomeSeguro(arq.name)}`;
-      const { error } = await db.storage.from(BUCKET_ANEXOS).upload(caminho, arq, { contentType: arq.type || undefined });
-      if (error) {
-        toast.error(`Não consegui enviar "${arq.name}".`);
-      } else {
-        const { error: e2 } = await db
-          .from('marketing_anexos')
-          .insert({ item_id: itemId, nome: arq.name, caminho, tipo: arq.type || null, tamanho: arq.size, enviado_por: user?.id });
-        if (e2) toast.error(`"${arq.name}" subiu, mas não consegui registrar.`);
-      }
-      setEnviando((e) => e.filter((n) => n !== arq.name));
-    }
+    await subirArquivos(
+      itemId,
+      arquivos,
+      user?.id,
+      null,
+      (n) => setEnviando((e) => [...e, n]),
+      (n) => setEnviando((e) => e.filter((x) => x !== n)),
+    );
     carregar();
   };
 
@@ -126,7 +172,11 @@ export function Anexos({ itemId }: { itemId: string }) {
             const url = links[a.id];
             return (
               <div key={a.id} className="group overflow-hidden rounded-lg border border-border bg-card">
-                <button type="button" onClick={() => (tipo === 'imagem' || tipo === 'video' || tipo === 'pdf' ? setVendo(a) : url && window.open(url, '_blank'))} className="block w-full">
+                <button
+                  type="button"
+                  onClick={() => (tipo === 'imagem' || tipo === 'video' || tipo === 'pdf' ? setVendo(a) : url && window.open(url, '_blank'))}
+                  className="block w-full"
+                >
                   <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
                     {tipo === 'imagem' && url ? (
                       <img src={url} alt={a.nome} className="h-full w-full object-cover" />
@@ -142,14 +192,23 @@ export function Anexos({ itemId }: { itemId: string }) {
                     <p className="truncate text-xs font-medium" title={a.nome}>
                       {a.nome}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">{tamanhoLegivel(a.tamanho)}</p>
+                    <p className="truncate text-[11px] text-muted-foreground" title={a.comentario_id ? 'Enviado num comentário do chat' : undefined}>
+                      {tamanhoLegivel(a.tamanho)}
+                      {equipe.length > 0 && a.enviado_por && <> · {primeiroNome(equipe.find((p) => p.user_id === a.enviado_por))}</>}
+                      {a.comentario_id && <> · no chat</>}
+                    </p>
                   </div>
                   {url && (
                     <a href={url} download={a.nome} target="_blank" rel="noreferrer" className="rounded p-1 hover:bg-muted" title="Baixar">
                       <Download className="h-3.5 w-3.5" />
                     </a>
                   )}
-                  <button type="button" onClick={() => apagar(a)} className="rounded p-1 opacity-0 hover:bg-muted group-hover:opacity-100" title="Excluir">
+                  <button
+                    type="button"
+                    onClick={() => apagar(a)}
+                    className="rounded p-1 opacity-0 hover:bg-muted group-hover:opacity-100"
+                    title="Excluir"
+                  >
                     <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                   </button>
                 </div>
@@ -157,7 +216,10 @@ export function Anexos({ itemId }: { itemId: string }) {
             );
           })}
           {enviando.map((n) => (
-            <div key={n} className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+            <div
+              key={n}
+              className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground"
+            >
               <Loader2 className="h-5 w-5 animate-spin" />
               <span className="max-w-[90%] truncate">{n}</span>
             </div>
@@ -178,9 +240,13 @@ export function Anexos({ itemId }: { itemId: string }) {
             </button>
           </div>
           <div className="flex min-h-0 flex-1 items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
-            {tipoDoArquivo(vendo.nome, vendo.tipo) === 'imagem' && <img src={links[vendo.id]} alt={vendo.nome} className="max-h-full max-w-full object-contain" />}
+            {tipoDoArquivo(vendo.nome, vendo.tipo) === 'imagem' && (
+              <img src={links[vendo.id]} alt={vendo.nome} className="max-h-full max-w-full object-contain" />
+            )}
             {tipoDoArquivo(vendo.nome, vendo.tipo) === 'video' && <video src={links[vendo.id]} controls autoPlay className="max-h-full max-w-full" />}
-            {tipoDoArquivo(vendo.nome, vendo.tipo) === 'pdf' && <iframe src={links[vendo.id]} title={vendo.nome} className="h-full w-full max-w-5xl rounded bg-white" />}
+            {tipoDoArquivo(vendo.nome, vendo.tipo) === 'pdf' && (
+              <iframe src={links[vendo.id]} title={vendo.nome} className="h-full w-full max-w-5xl rounded bg-white" />
+            )}
           </div>
         </div>
       )}

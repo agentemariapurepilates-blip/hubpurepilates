@@ -95,6 +95,8 @@ export interface Anexo {
   tipo: string | null;
   tamanho: number | null;
   enviado_por: string | null;
+  /** Comentário em que o arquivo subiu pelo chat (nulo = enviado direto nos anexos). */
+  comentario_id: string | null;
   created_at: string;
 }
 
@@ -133,12 +135,13 @@ export interface PessoaMarketing {
 // ---------- datas ----------
 
 /** "2026-11-09" no fuso de Brasília, para comparar com as datas. */
-export const hojeEmBrasilia = (agora = new Date()) =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo' }).format(agora);
+export const hojeEmBrasilia = (agora = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo' }).format(agora);
 
 /** Dias entre duas datas "AAAA-MM-DD" (b - a). */
 export const diasEntre = (a: string, b: string) =>
-  Math.round((Date.UTC(+b.slice(0, 4), +b.slice(5, 7) - 1, +b.slice(8, 10)) - Date.UTC(+a.slice(0, 4), +a.slice(5, 7) - 1, +a.slice(8, 10))) / 86_400_000);
+  Math.round(
+    (Date.UTC(+b.slice(0, 4), +b.slice(5, 7) - 1, +b.slice(8, 10)) - Date.UTC(+a.slice(0, 4), +a.slice(5, 7) - 1, +a.slice(8, 10))) / 86_400_000,
+  );
 
 /** Soma dias a uma data "AAAA-MM-DD". */
 export const somarDias = (d: string, n: number) =>
@@ -230,7 +233,12 @@ export const tamanhoLegivel = (b: number | null) =>
 
 /** Nome seguro para o caminho no Storage (sem acento nem espaço). */
 export const nomeSeguro = (nome: string) =>
-  nome.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-').slice(-120);
+  nome
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(-120);
 
 // ---------- equipe ----------
 

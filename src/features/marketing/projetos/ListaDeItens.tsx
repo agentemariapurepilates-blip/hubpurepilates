@@ -8,8 +8,9 @@ import type { DadosDosItens } from './useItens';
 
 // A lista em árvore, como no ClickUp: cada linha com a setinha para abrir as
 // subtarefas, responsáveis, início, vencimento, prioridade e status. Clicar no
-// nome abre a página grande do item. Usada na tela de Projetos (raízes = os
-// projetos) e dentro da página de um item (raízes = as subtarefas dele).
+// nome renomeia; o botão Abrir leva à página grande. Usada na tela de Projetos
+// (raízes = os projetos) e dentro da página do projeto (as linhas já são
+// subtarefas, então sem setinha: subtarefa só existe dentro do projeto).
 
 const COLUNAS = 'grid-cols-[minmax(260px,1fr)_120px_100px_100px_70px_150px_36px]';
 
@@ -20,6 +21,7 @@ export function ListaDeItens({
   paiDosNovos,
   rotuloNovo,
   contagens,
+  semSubtarefas,
 }: {
   raizes: Item[];
   dados: DadosDosItens;
@@ -32,6 +34,8 @@ export function ListaDeItens({
     anexos: Record<string, number>;
     checklist: Record<string, number>;
   };
+  /** As linhas já são subtarefas (página do projeto): sem setinha, sem subtarefa dentro. */
+  semSubtarefas?: boolean;
 }) {
   const [abertos, setAbertos] = useState<Record<string, boolean>>({});
 
@@ -48,7 +52,17 @@ export function ListaDeItens({
       </div>
       <div className="min-w-[880px]">
         {raizes.map((t) => (
-          <Ramo key={t.id} item={t} nivel={0} dados={dados} abertos={abertos} setAbertos={setAbertos} onAbrir={onAbrir} contagens={contagens} />
+          <Ramo
+            key={t.id}
+            item={t}
+            nivel={semSubtarefas ? 1 : 0}
+            dados={dados}
+            abertos={abertos}
+            setAbertos={setAbertos}
+            onAbrir={onAbrir}
+            contagens={contagens}
+            semRecuo={semSubtarefas}
+          />
         ))}
         <NovaLinha rotulo={rotuloNovo} recuo={0} onCriar={(titulo) => dados.criar({ titulo, item_pai_id: paiDosNovos })} />
       </div>
@@ -64,6 +78,7 @@ function Ramo({
   setAbertos,
   onAbrir,
   contagens,
+  semRecuo,
 }: {
   item: Item;
   nivel: number;
@@ -75,6 +90,7 @@ function Ramo({
     anexos: Record<string, number>;
     checklist: Record<string, number>;
   };
+  semRecuo?: boolean;
 }) {
   const { itens, equipe, salvar, criar, excluir } = dados;
   const filhos = itens.filter((x) => x.item_pai_id === item.id);
@@ -94,7 +110,7 @@ function Ramo({
           nivel === 0 ? 'py-2' : 'py-1.5',
         )}
       >
-        <div className="flex min-w-0 items-center gap-1.5" style={{ paddingLeft: nivel * 26 }}>
+        <div className="flex min-w-0 items-center gap-1.5" style={{ paddingLeft: semRecuo ? 0 : nivel * 26 }}>
           {nivel === 0 ? (
             <button
               type="button"
