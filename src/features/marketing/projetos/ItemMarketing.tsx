@@ -206,7 +206,8 @@ function Pagina({ id, projetoId }: { id: string; projetoId: string }) {
               )}
 
               {/* Campos, como no ClickUp */}
-              <div className="mb-6 grid grid-cols-1 gap-x-10 md:grid-cols-2">
+              {/* Colunas pelo espaço real (não pela largura da janela): duas só quando cabem 24rem cada. */}
+              <div className="mb-6 grid grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] gap-x-10">
                 <Campo icone={<CircleDot className="h-4 w-4" />} rotulo="Status">
                   <span className="flex items-center gap-1.5">
                     <PilulaStatus valor={item.status} onMudar={(s) => salvar(item.id, { status: s })} grande />
@@ -232,9 +233,9 @@ function Pagina({ id, projetoId }: { id: string; projetoId: string }) {
                 <Campo icone={<Users className="h-4 w-4" />} rotulo="Responsáveis">
                   <SeletorDePessoas equipe={equipe} valor={item.responsaveis} onMudar={(ids) => salvar(item.id, { responsaveis: ids })}>
                     {item.responsaveis.length ? (
-                      <span className="flex items-center gap-2">
+                      <span className="flex min-w-0 items-center gap-2">
                         <Avatares ids={item.responsaveis} equipe={equipe} max={5} tamanho={26} />
-                        <span className="text-sm">
+                        <span className="truncate text-sm">
                           {item.responsaveis.length === 1
                             ? equipe.find((p) => p.user_id === item.responsaveis[0])?.full_name
                             : `${item.responsaveis.length} pessoas`}
@@ -246,7 +247,7 @@ function Pagina({ id, projetoId }: { id: string; projetoId: string }) {
                   </SeletorDePessoas>
                 </Campo>
                 <Campo icone={<GanttChartSquare className="h-4 w-4" />} rotulo="Datas">
-                  <span className="flex items-center gap-1">
+                  <span className="flex flex-wrap items-center gap-1">
                     <CampoData valor={item.data_inicio} onMudar={(d) => salvar(item.id, { data_inicio: d })} placeholder="Início" semSinal />
                     <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                     <CampoData
@@ -489,12 +490,12 @@ function Titulo({ item, salvar }: { item: Item; salvar: DadosDosItens['salvar'] 
 
 function Campo({ icone, rotulo, children }: { icone: React.ReactNode; rotulo: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[44px] items-center gap-3 py-1">
-      <span className="flex w-44 shrink-0 items-center gap-2.5 text-sm text-muted-foreground">
-        {icone}
+    <div className="flex min-h-[44px] flex-wrap items-center gap-x-3 gap-y-1 py-1">
+      <span className="flex w-40 shrink-0 items-center gap-2.5 whitespace-nowrap text-sm text-muted-foreground">
+        <span className="shrink-0">{icone}</span>
         {rotulo}
       </span>
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-[9rem] flex-1">{children}</div>
     </div>
   );
 }

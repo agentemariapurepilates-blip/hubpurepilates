@@ -42,7 +42,7 @@ export function Avatares({ ids, equipe, max = 3, tamanho = 24 }: { ids: string[]
   const pessoas = ids.map((id) => equipe.find((p) => p.user_id === id)).filter(Boolean) as PessoaMarketing[];
   if (pessoas.length === 0) return null;
   return (
-    <span className="flex -space-x-1.5">
+    <span className="flex shrink-0 -space-x-1.5">
       {pessoas.slice(0, max).map((p) => (
         <Avatarzinho key={p.user_id} pessoa={p} tamanho={tamanho} />
       ))}
@@ -128,7 +128,7 @@ export function PilulaStatus({ valor, onMudar, grande }: { valor: StatusItem; on
           type="button"
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded font-semibold uppercase tracking-wide text-white transition-opacity hover:opacity-90',
+            'inline-flex items-center gap-1.5 whitespace-nowrap rounded font-semibold uppercase tracking-wide text-white transition-opacity hover:opacity-90',
             grande ? 'px-3 py-1.5 text-xs' : 'px-2 py-0.5 text-[10px]',
           )}
           style={{ background: s.cor }}
@@ -197,7 +197,7 @@ export function CampoData({
 }) {
   const sinal = semSinal ? null : sinalDoPrazo(valor, !!concluido);
   return (
-    <label className="relative inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-sm hover:bg-muted" onClick={(e) => e.stopPropagation()}>
+    <label className="relative inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-sm hover:bg-muted" onClick={(e) => e.stopPropagation()}>
       {!valor && <IconeCalendario className="h-3.5 w-3.5 text-muted-foreground" />}
       <span className={cn('tabular-nums', valor ? (sinal ? COR_DO_SINAL[sinal] : '') : 'text-muted-foreground', sinal === 'atrasado' && 'font-medium')}>
         {valor ? dataMedia(valor) : placeholder}
