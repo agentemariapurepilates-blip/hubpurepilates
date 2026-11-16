@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { buildRenderedHTML, pureDesignTemplates } from '@/data/pureDesignTemplates';
+import { buildRenderedHTML, computeRepeatHeights, pureDesignTemplates } from '@/data/pureDesignTemplates';
 import {
   ImagemRecusada,
   conversar,
@@ -52,19 +52,21 @@ function Previa({ p, fotos }: { p: Preenchimento; fotos: string[] }) {
   const valores: Record<string, string> = {};
   modelo.fields.forEach((f) => (valores[f.id] = f.defaultValue));
   Object.assign(valores, valoresDoPreenchimento(p, fotos));
+  const itens = modelo.repeat ? (p.itens?.length ? p.itens : modelo.repeat.initial) : undefined;
+  const altura = modelo.repeat && itens ? computeRepeatHeights(modelo.repeat, itens.length).canvasHeight : modelo.height;
   const escala = LARGURA_PREVIA / modelo.width;
   return (
     <div
       className="overflow-hidden rounded-xl border bg-muted"
-      style={{ width: LARGURA_PREVIA, height: modelo.height * escala }}
+      style={{ width: LARGURA_PREVIA, height: altura * escala }}
     >
       <iframe
         title={`Prévia — ${modelo.name}`}
-        srcDoc={buildRenderedHTML(modelo, valores)}
+        srcDoc={buildRenderedHTML(modelo, valores, undefined, undefined, itens)}
         sandbox=""
         style={{
           width: modelo.width,
-          height: modelo.height,
+          height: altura,
           border: 0,
           transform: `scale(${escala})`,
           transformOrigin: '0 0',
@@ -156,7 +158,10 @@ export default function AssistentePureDesign() {
   const abrirNoEditor = (m: Mensagem) => {
     if (!m.preenchimento) return;
     navigate(`/pure-design/${m.preenchimento.modelo}`, {
-      state: { valores: valoresDoPreenchimento(m.preenchimento, m.fotos ?? []) },
+      state: {
+        valores: valoresDoPreenchimento(m.preenchimento, m.fotos ?? []),
+        itens: m.preenchimento.itens,
+      },
     });
   };
 

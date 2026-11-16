@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pureDesignTemplates } from '@/data/pureDesignTemplates';
-import { catalogoParaOAgente, valoresDoPreenchimento } from './assistenteStore';
+import { catalogoParaOAgente, categoriasParaOAgente, valoresDoPreenchimento } from './assistenteStore';
 
 describe('catálogo que o assistente recebe', () => {
   const catalogo = catalogoParaOAgente();
@@ -36,6 +36,48 @@ describe('modelos coringa', () => {
     expect(t.html).toContain('{{foto1}}');
     expect(t.html).toContain('{{foto2}}');
     expect(t.html).not.toContain('{{foto}}"');
+  });
+});
+
+describe('palavras-chave', () => {
+  it('todo modelo que não é coringa tem palavras-chave', () => {
+    const sem = catalogoParaOAgente().filter((m) => !m.coringa && m.palavrasChave.length === 0).map((m) => m.id);
+    expect(sem).toEqual([]);
+  });
+
+  it('o aviso de feriado leva a lista de datas com as variantes', () => {
+    const feriado = catalogoParaOAgente().find((m) => m.id === 'feriado-aviso');
+    expect(feriado?.lista?.variantes.map((v) => v.id)).toEqual(['fechado', 'aberto']);
+  });
+});
+
+describe('inauguração e feriado', () => {
+  const cat = catalogoParaOAgente();
+  const fotos = (id: string) => cat.find((m) => m.id === id)?.campos.filter((c) => c.tipo === 'foto').length;
+
+  it('inauguração padrão: "Vem aí" sem foto e "A melhor hora" com foto', () => {
+    expect(fotos('inauguracao-vem-ai')).toBe(0);
+    expect(fotos('inauguracao-melhor-hora')).toBe(1);
+    expect(cat.find((m) => m.id === 'inauguracao-vem-ai')?.dica).toMatch(/SEM foto/);
+    expect(cat.find((m) => m.id === 'inauguracao-melhor-hora')?.dica).toMatch(/COM foto/);
+  });
+
+  it('Corpus Christi saiu e o aviso de feriado geral cobre qualquer feriado', () => {
+    expect(cat.some((m) => m.id === 'feriado-corpus-christi')).toBe(false);
+    expect(cat.find((m) => m.id === 'feriado-aviso')?.palavrasChave).toContain('corpus christi');
+  });
+});
+
+describe('categorias', () => {
+  it('toda categoria tem explicação para o agente', () => {
+    const sem = categoriasParaOAgente().filter((c) => !c.descricao).map((c) => c.nome);
+    expect(sem).toEqual([]);
+  });
+
+  it('inauguração tem modelos com foto e sem foto (o agente pergunta)', () => {
+    const inaug = categoriasParaOAgente().find((c) => c.nome === 'Inauguração');
+    expect(inaug?.comFoto).toBeGreaterThan(0);
+    expect(inaug?.semFoto).toBeGreaterThan(0);
   });
 });
 

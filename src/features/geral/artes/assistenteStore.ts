@@ -6,7 +6,7 @@
 // e a pessoa ainda ajusta à mão antes de baixar.
 
 import { supabase } from '@/integrations/supabase/client';
-import { pureDesignTemplates, type PureDesignTemplate } from '@/data/pureDesignTemplates';
+import { CATEGORIAS, pureDesignTemplates, type PureDesignTemplate, type RepeatItem } from '@/data/pureDesignTemplates';
 
 export { lerImagem, ImagemRecusada, type ImagemDaUnidade } from '@/features/geral/pure-gpt/pureGptStore';
 
@@ -17,6 +17,8 @@ export interface Preenchimento {
   textos: Record<string, string>;
   /** campo de foto → número da foto enviada na conversa (a primeira é 0) */
   fotos: Record<string, number>;
+  /** Itens da lista repetível do modelo (ex.: datas do aviso de feriado). */
+  itens?: RepeatItem[];
 }
 
 export interface RespostaDoAssistente {
@@ -35,6 +37,8 @@ export function catalogoParaOAgente(modelos: PureDesignTemplate[] = pureDesignTe
     nome: m.name,
     categoria: m.category,
     coringa: m.coringa === true,
+    palavrasChave: m.palavrasChave ?? [],
+    dica: m.dica,
     campos: m.fields.map((f) => ({
       id: f.id,
       rotulo: f.label,
@@ -43,11 +47,15 @@ export function catalogoParaOAgente(modelos: PureDesignTemplate[] = pureDesignTe
       // Exemplo de foto é uma imagem embutida: não serve de nada para o agente.
       exemplo: f.inputType === 'image' ? undefined : f.defaultValue,
     })),
-    observacao: m.table
-      ? 'tem uma tabela de produtos e preços que a pessoa preenche no editor.'
-      : m.repeat
-        ? `tem uma lista de "${m.repeat.itemLabel}" que a pessoa ajusta no editor.`
-        : undefined,
+    // Lista repetível (ex.: datas do feriado): o agente preenche os itens.
+    lista: m.repeat
+      ? {
+          rotulo: m.repeat.itemLabel,
+          variantes: m.repeat.variants.map((v) => ({ id: v.id, nome: v.label })),
+          exemplo: m.repeat.initial,
+        }
+      : undefined,
+    observacao: m.table ? 'tem uma tabela de produtos e preços que a pessoa preenche no editor.' : undefined,
   }));
 }
 
@@ -63,12 +71,31 @@ export function valoresDoPreenchimento(p: Preenchimento, fotos: string[]): Recor
   return valores;
 }
 
+/**
+ * As categorias como o agente as recebe: o que cada uma cobre e quantos modelos
+ * com e sem foto ela tem. É com isto que ele decide a categoria e o que perguntar.
+ */
+export function categoriasParaOAgente(modelos: PureDesignTemplate[] = pureDesignTemplates) {
+  const nomes = Array.from(new Set(modelos.map((m) => m.category)));
+  return nomes.map((nome) => {
+    const daCategoria = modelos.filter((m) => m.category === nome);
+    const comFoto = daCategoria.filter((m) => m.fields.some((f) => f.inputType === 'image')).length;
+    return {
+      nome,
+      descricao: CATEGORIAS[nome] ?? '',
+      modelos: daCategoria.map((m) => m.id),
+      comFoto,
+      semFoto: daCategoria.length - comFoto,
+    };
+  });
+}
+
 export async function conversar(entrada: {
   mensagens: { autor: 'pessoa' | 'pure'; texto: string }[];
   fotos: number;
 }): Promise<RespostaDoAssistente> {
   const { data, error } = await supabase.functions.invoke('pure-design-agente', {
-    body: { ...entrada, modelos: catalogoParaOAgente() },
+    body: { ...entrada, modelos: catalogoParaOAgente(), categorias: categoriasParaOAgente() },
   });
   if (error) {
     // A function devolve a explicação no corpo; o erro do cliente não a traz.

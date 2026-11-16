@@ -98,6 +98,14 @@ export interface PureDesignTemplate {
    * pedido (ex.: Natal, Black Friday, aula aberta), escrevendo o texto para o tema.
    */
   coringa?: boolean;
+  /**
+   * Palavras que, no pedido, apontam para este modelo (minúsculas, sem acento).
+   * O assistente do Pure Design procura essas palavras e é obrigado a preferir
+   * os modelos que combinam antes de recorrer a um coringa. Ver PALAVRAS_CHAVE.
+   */
+  palavrasChave?: string[];
+  /** Quando usar este modelo, em uma frase para o assistente (ex.: "inauguração sem foto"). */
+  dica?: string;
 }
 
 const sejaInstrutorHTML = (bgUrl: string) => `<!DOCTYPE html>
@@ -262,29 +270,6 @@ const a4InformativoFields: TemplateField[] = [
   { id: 'subtitulo', label: 'Subtítulo', placeholder: '{{subtitulo}}', defaultValue: 'Aviso a todos os colaboradores', maxLength: 60 },
   { id: 'mensagem', label: 'Mensagem', placeholder: '{{mensagem}}', defaultValue: 'Prezados,\n\nInformamos que a unidade estará em horário especial nos próximos dias devido a manutenção programada.\n\nAgradecemos a compreensão de todos.', inputType: 'textarea', maxLength: 600 },
   { id: 'assinatura', label: 'Assinatura', placeholder: '{{assinatura}}', defaultValue: 'Pure Pilates Unidade X', maxLength: 80 },
-];
-
-const feriadoCorpusChristiHTML = (bgUrl: string) => `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Feriado de Corpus Christi</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-</head>
-<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
-<div style="position:relative; width:1080px; height:1350px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
-<div style="position:absolute; left:170px; right:140px; top:700px; text-align:center;">
-<div style="margin-bottom:12px;"><span style="display:inline-block; height:46px; line-height:46px; padding:0 26px; background:#c41230; color:#ffffff; border-radius:999px; font-size:24px; font-weight:600; letter-spacing:1px; white-space:nowrap; box-sizing:border-box; vertical-align:top;">{{data1}}</span></div>
-<div><span style="display:inline-block; height:46px; line-height:46px; padding:0 26px; background:#c41230; color:#ffffff; border-radius:999px; font-size:24px; font-weight:600; letter-spacing:1px; white-space:nowrap; box-sizing:border-box; vertical-align:top;">{{data2}}</span></div>
-</div>
-</div>
-</body>
-</html>`;
-
-const feriadoCorpusChristiFields: TemplateField[] = [
-  { id: 'data1', label: 'Data 1 — status', placeholder: '{{data1}}', defaultValue: '04/06 - FECHADO', maxLength: 30 },
-  { id: 'data2', label: 'Data 2 — status', placeholder: '{{data2}}', defaultValue: '05/06 - ABERTO', maxLength: 30 },
 ];
 
 const comunicadoCopaHTML = (bgUrl: string) => `<!DOCTYPE html>
@@ -946,7 +931,7 @@ const coringaDuasFotosFields: TemplateField[] = [
 export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'inauguracao-vem-ai',
-    name: 'Inauguração — Vem aí uma nova',
+    name: 'Inauguração — Vem aí uma nova (sem foto)',
     category: 'Inauguração',
     thumbnail: '/images/pure-design/inauguracao-vem-ai.png',
     width: 1080,
@@ -956,7 +941,7 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   },
   {
     id: 'inauguracao-melhor-hora',
-    name: 'Inauguração — A melhor hora está chegando',
+    name: 'Inauguração — A melhor hora está chegando (com foto)',
     category: 'Inauguração',
     thumbnail: '/images/pure-design/inauguracao-melhor-hora.png',
     width: 1080,
@@ -1087,16 +1072,6 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     fields: a4InformativoFields,
   },
   {
-    id: 'feriado-corpus-christi',
-    name: 'Feriado — Corpus Christi',
-    category: 'Feriados',
-    thumbnail: '/images/pure-design/feriado-corpus-christi.png',
-    width: 1080,
-    height: 1350,
-    html: feriadoCorpusChristiHTML('/images/pure-design/feriado-corpus-christi.png'),
-    fields: feriadoCorpusChristiFields,
-  },
-  {
     id: 'feriado-aviso',
     name: 'Feriado — Aviso de Horário',
     category: 'Feriados',
@@ -1180,6 +1155,83 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     coringa: true,
   },
 ];
+
+/**
+ * Palavras-chave de cada modelo, para o assistente achar o modelo pronto pelo
+ * que a pessoa escreveu. Sem acento e em minúsculas; vale pedaço de palavra
+ * ("inaugur" pega inauguração, inaugurar, inauguramos).
+ * MODELO NOVO: acrescente aqui as palavras que alguém usaria para pedi-lo.
+ */
+const PALAVRAS_CHAVE: Record<string, string[]> = {
+  // As duas "padrão" de inauguração: qualquer pedido de inauguração/abertura cai nelas.
+  'inauguracao-vem-ai': [
+    'inaugur', 'abertura', 'abrir', 'nova unidade', 'novo estudio', 'estudio novo', 'vem ai', 'em breve', 'chegando',
+  ],
+  'inauguracao-melhor-hora': [
+    'inaugur', 'abertura', 'abrir', 'nova unidade', 'novo estudio', 'estudio novo', 'melhor hora', 'chegando',
+  ],
+  // As específicas: só quando a pessoa usa essas expressões.
+  'inauguracao-ja-tem-data': ['ja tem data', 'data da inauguracao', 'save the date', 'dia da inauguracao'],
+  'inauguracao-primeira-aula': ['primeira aula', 'aula inaugural'],
+  'inauguracao-inauguramos': ['inauguramos', 'inaugurada', 'abrimos', 'ja abriu', 'estamos abertos'],
+  'pure-store-tabela-precos': ['pure store', 'tabela', 'preco', 'produto', 'loja', 'uniforme', 'meia', 'garrafa'],
+  'seja-instrutor': ['instrutor', 'vaga', 'contrat', 'recrut', 'seja instrutor', 'trabalhe', 'professor'],
+  'seja-instrutor-2': ['instrutor', 'vaga', 'contrat', 'recrut', 'seja instrutor', 'trabalhe', 'professor'],
+  'aniversario-instrutor': ['aniversari', 'parabens', 'niver', 'instrutor', 'professor', 'professora', 'instrutora'],
+  'dia-das-maes': ['mae', 'maes', 'dia das maes'],
+  'dia-das-maes-comemorativa': ['mae', 'maes', 'dia das maes'],
+  'dia-das-maes-50-off': ['mae', 'maes', 'dupla', '50%', 'desconto', 'promocao'],
+  'a4-informativo': ['comunicado', 'informativo', 'aviso', 'a4', 'mural', 'impresso', 'recado'],
+  'feriado-aviso': [
+    'feriado', 'corpus christi', 'horario', 'funcionamento', 'fechad', 'aberto', 'recesso', 'emenda', 'ponte',
+    'natal', 'ano novo', 'reveillon', 'carnaval', 'pascoa', 'tiradentes', 'independencia',
+    'proclamacao', 'consciencia negra', 'finados', 'aparecida', 'trabalhador',
+  ],
+  'comunicado-copa': ['copa', 'jogo', 'brasil', 'torcida', 'futebol', 'selecao'],
+  'vale-presente': ['vale presente', 'vale-presente', 'presente', 'gift', 'voucher', 'cartao presente'],
+  'depoimento-claro': ['depoimento', 'avaliacao', 'feedback', 'aluno disse', 'opiniao', 'review'],
+  'depoimento-vermelho': ['depoimento', 'avaliacao', 'feedback', 'aluno disse', 'opiniao', 'review'],
+};
+/**
+ * O que cada CATEGORIA cobre, em linguagem de gente: é assim que o assistente do
+ * Pure Design entende o pedido ("arte para o meu estúdio dia 19/11" → é uma
+ * inauguração?) e decide quando perguntar. CATEGORIA NOVA: escreva aqui quando
+ * ela serve e que palavras/situações levam a ela.
+ */
+export const CATEGORIAS: Record<string, string> = {
+  'Inauguração':
+    'Artes para a abertura de uma unidade/estúdio novo: anunciar que vai abrir (vem aí, em breve), a data da inauguração, a primeira aula e o "inauguramos" depois de abrir. A pessoa pode dizer "abertura do estúdio", "estúdio novo", "nova unidade", "vamos abrir dia tal".',
+  'Feriados':
+    'AVISO de funcionamento no feriado: quais dias a unidade fecha ou abre, horário especial, recesso de fim de ano, emendas. Serve para qualquer feriado (Natal, Ano Novo, Carnaval, Corpus Christi, Consciência Negra…). Se a pessoa quer só DESEJAR um bom feriado / boas festas (mensagem, sem aviso de horário), isso é Coringa.',
+  'Datas Comemorativas':
+    'Homenagens em datas especiais de pessoas da unidade, como o aniversário de um instrutor ou instrutora.',
+  'Dia das mães': 'Artes do Dia das Mães: homenagem às mães e a promoção Dupla Dinâmica (mãe e filha/filho).',
+  'Recrutamento': 'Vagas para instrutor/instrutora de Pilates: "seja instrutor", "estamos contratando", "trabalhe conosco".',
+  'Pure Store': 'Produtos da Pure Store vendidos na unidade: tabela de preços de uniformes, meias, garrafas e acessórios.',
+  'Informativos': 'Comunicado impresso (A4) para mural ou recepção: avisos internos, recados formais, informações gerais.',
+  'Comunicados': 'Comunicados de ocasiões especiais, como dias de jogo da Copa (horário, clima de torcida).',
+  'Vale-presente': 'Vale-presente / cartão-presente de aulas, para presentear alguém.',
+  'Depoimentos': 'Depoimento de aluno ou aluna: frase de quem pratica, com nome (e foto, conforme o modelo).',
+  'Coringa':
+    'Modelos genéricos para QUALQUER assunto que não tem categoria própria (Natal como mensagem, Black Friday, aula aberta, boas-vindas, campanha). Use só quando nenhuma outra categoria servir.',
+};
+
+/** Quando usar cada modelo, para o assistente decidir entre modelos do mesmo tema. */
+const DICAS: Record<string, string> = {
+  'inauguracao-vem-ai':
+    'PADRÃO para qualquer pedido de inauguração/abertura de estúdio SEM foto.',
+  'inauguracao-melhor-hora':
+    'PADRÃO para qualquer pedido de inauguração/abertura de estúdio COM foto do estúdio.',
+  'inauguracao-ja-tem-data': 'Só quando pedirem explicitamente "já tem data"/"save the date".',
+  'inauguracao-primeira-aula': 'Só quando falarem de "primeira aula"/"aula inaugural".',
+  'inauguracao-inauguramos': 'Só depois da inauguração ("inauguramos", "abrimos", "já abriu").',
+  'feriado-aviso':
+    'Modelo GERAL de feriado e horário de funcionamento, para QUALQUER feriado (Natal, Ano Novo, Carnaval, Corpus Christi…). Sem foto. Priorize sempre para aviso de feriado/horário.',
+};
+for (const t of pureDesignTemplates) {
+  t.palavrasChave = PALAVRAS_CHAVE[t.id];
+  t.dica = DICAS[t.id];
+}
 
 // Fica true quando o template demarca o bloco removível do campo (forma + texto)
 // via <!--fld:ID-->...<!--/fld:ID-->. Só nesses campos o editor mostra a lixeira.

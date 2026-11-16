@@ -98,9 +98,14 @@ const PureDesignEditor = () => {
       ? Array.from({ length: template.table.initialRows }, () => ({ item: '', preco: '' }))
       : [],
   );
-  const [repeatItems, setRepeatItems] = useState<RepeatItem[]>(() =>
-    template?.repeat ? template.repeat.initial.map((it) => ({ ...it })) : [],
-  );
+  const [repeatItems, setRepeatItems] = useState<RepeatItem[]>(() => {
+    if (!template?.repeat) return [];
+    // Itens vindos do assistente (ex.: as datas do feriado), se ele preencheu.
+    const doAssistente = (location.state as { itens?: RepeatItem[] } | null)?.itens;
+    const variantes = new Set(template.repeat.variants.map((v) => v.id));
+    const validos = (doAssistente ?? []).filter((it) => it?.text && variantes.has(it.variant));
+    return (validos.length ? validos : template.repeat.initial).map((it) => ({ ...it }));
+  });
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [zoom, setZoom] = useState(0.4);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -321,7 +326,16 @@ const PureDesignEditor = () => {
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => navigate('/pure-design')}
+            onClick={() =>
+              // Veio do assistente: volta para o chat. Veio da galeria: volta para a
+              // lista da categoria do modelo (ex.: Inauguração), onde a pessoa estava.
+              preenchidos
+                ? navigate('/pure-design')
+                : navigate(
+                    `/pure-design?tab=personalizadas&categoria=${encodeURIComponent(template.category)}`,
+                  )
+            }
+            title="Voltar"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>

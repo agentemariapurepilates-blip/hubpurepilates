@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search, FolderOpen, ChevronLeft } from 'lucide-react';
@@ -15,7 +15,16 @@ const normalize = (s: string) =>
  */
 const ArtesPersonalizadas = () => {
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  // A categoria aberta fica no endereço (?categoria=…): assim o "voltar" do editor
+  // devolve a pessoa para a lista em que ela estava, e não para a tela inicial.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCategory = searchParams.get('categoria');
+  const setSelectedCategory = (categoria: string | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (categoria) next.set('categoria', categoria);
+    else next.delete('categoria');
+    setSearchParams(next, { replace: true });
+  };
 
   const filteredTemplates = useMemo(() => {
     const q = normalize(search);
