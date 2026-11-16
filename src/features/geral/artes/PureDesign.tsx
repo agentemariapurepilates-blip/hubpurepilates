@@ -5,6 +5,7 @@ import { Paintbrush, Sparkles, Download, ChevronLeft, ChevronRight } from 'lucid
 import { pureDesignTemplates } from '@/data/pureDesignTemplates';
 import ArtesPersonalizadas from './ArtesPersonalizadas';
 import ArtesProntas from './ArtesProntas';
+import AssistentePureDesign from './AssistentePureDesign';
 
 type Tab = 'personalizadas' | 'prontas';
 
@@ -38,7 +39,17 @@ const PureDesign = () => {
         </div>
 
         {tab === null ? (
-          /* Tela de escolha */
+          <div className="space-y-6">
+          {/* Assistente: pede a arte escrevendo e recebe um modelo já preenchido */}
+          <section className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-bold text-foreground">Peça sua arte</h2>
+            </div>
+            <AssistentePureDesign />
+          </section>
+
+          {/* Tela de escolha */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Artes personalizadas */}
             <button
@@ -113,6 +124,7 @@ const PureDesign = () => {
                 </div>
               </Card>
             </button>
+          </div>
           </div>
         ) : (
           /* Seção escolhida */

@@ -92,6 +92,12 @@ export interface PureDesignTemplate {
   table?: TableConfig;
   /** Presente só em templates com lista dinâmica de pills (Aviso de Feriado). */
   repeat?: RepeatConfig;
+  /**
+   * Modelo "coringa": genérico o bastante para qualquer assunto. O assistente do
+   * Pure Design usa um coringa quando nenhum modelo específico combina com o
+   * pedido (ex.: Natal, Black Friday, aula aberta), escrevendo o texto para o tema.
+   */
+  coringa?: boolean;
 }
 
 const sejaInstrutorHTML = (bgUrl: string) => `<!DOCTYPE html>
@@ -864,6 +870,79 @@ const inauguracaoInauguramosFields: TemplateField[] = [
   { id: 'telefone', label: 'Telefone', placeholder: '{{telefone}}', defaultValue: '11 9999-9999', maxLength: 20 },
 ];
 
+// ── Coringas (16/11/2026) ────────────────────────────────────────────────────
+// Modelos genéricos, desenhados no Canva pelo time ("coringa", 1080x1350): o
+// assistente do Pure Design usa um deles quando nenhum modelo específico combina
+// com o pedido (Natal, Black Friday, aula aberta…). Fundo = página do Canva sem
+// os textos e sem a foto de exemplo; posições e tamanhos tirados do design.
+// O título não quebra linha (vive dentro da pílula): por isso o limite curto.
+
+const coringaTextoHTML = (bgUrl: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coringa — Só texto</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1350px; background:#f2ede6; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif; color:#231F20;">
+<div style="position:absolute; left:79px; top:168px; width:800px; height:144px; display:flex; align-items:center; justify-content:center; font-size:82px; font-weight:700; text-transform:uppercase; white-space:nowrap; line-height:1;">{{titulo}}</div>
+<div style="position:absolute; left:79px; top:411px; width:620px; height:400px; overflow:hidden; font-size:52px; font-weight:400; line-height:1.4; text-align:left; white-space:pre-line;">{{texto}}</div>
+</div>
+</body>
+</html>`;
+
+const coringaTextoFields: TemplateField[] = [
+  { id: 'titulo', label: 'Título (dentro da pílula)', placeholder: '{{titulo}}', defaultValue: 'Novidade', maxLength: 14 },
+  { id: 'texto', label: 'Texto', placeholder: '{{texto}}', defaultValue: 'Escreva aqui o recado para os seus alunos, em poucas linhas.', inputType: 'textarea', maxLength: 110 },
+];
+
+const coringaFotoHTML = (bgUrl: string, photoDefault: string) => `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coringa — Com foto</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
+<div style="position:relative; width:1080px; height:1350px; background:#f2ede6; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif; color:#231F20;">
+<div style="position:absolute; left:112px; top:116px; width:689px; height:124px; display:flex; align-items:center; justify-content:center; font-size:72px; font-weight:700; text-transform:uppercase; white-space:nowrap; line-height:1;">{{titulo}}</div>
+<div style="position:absolute; left:145px; top:308px; width:790px; height:790px; overflow:hidden;">
+<img src="{{foto}}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.src='${photoDefault}'"/>
+</div>
+<div style="position:absolute; left:179px; top:1118px; width:722px; height:200px; overflow:hidden; font-size:44px; font-weight:400; line-height:1.4; text-align:left; white-space:pre-line;">{{texto}}</div>
+</div>
+</body>
+</html>`;
+
+const coringaFotoFields: TemplateField[] = [
+  { id: 'titulo', label: 'Título (dentro da pílula)', placeholder: '{{titulo}}', defaultValue: 'Novidade', maxLength: 14 },
+  { id: 'foto', label: 'Foto', placeholder: '{{foto}}', defaultValue: aniversarioInstrutorPlaceholderPhoto, inputType: 'image' },
+  { id: 'texto', label: 'Texto', placeholder: '{{texto}}', defaultValue: 'Escreva aqui o recado, em até três linhas.', inputType: 'textarea', maxLength: 80 },
+];
+
+// Duas fotos: mesmo fundo e mesma área do coringa com foto, dividida ao meio
+// com 20px de respiro (ainda não há versão desenhada no Canva para duas fotos).
+const coringaDuasFotosHTML = (bgUrl: string, photoDefault: string) =>
+  coringaFotoHTML(bgUrl, photoDefault).replace(
+    /<div style="position:absolute; left:145px; top:308px; width:790px; height:790px; overflow:hidden;">[\s\S]*?<\/div>/,
+    `<div style="position:absolute; left:145px; top:308px; width:385px; height:790px; overflow:hidden;">
+<img src="{{foto1}}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.src='${photoDefault}'"/>
+</div>
+<div style="position:absolute; left:550px; top:308px; width:385px; height:790px; overflow:hidden;">
+<img src="{{foto2}}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.src='${photoDefault}'"/>
+</div>`,
+  ).replace('<title>Coringa — Com foto</title>', '<title>Coringa — Duas fotos</title>');
+
+const coringaDuasFotosFields: TemplateField[] = [
+  { id: 'titulo', label: 'Título (dentro da pílula)', placeholder: '{{titulo}}', defaultValue: 'Novidade', maxLength: 14 },
+  { id: 'foto1', label: 'Foto da esquerda', placeholder: '{{foto1}}', defaultValue: aniversarioInstrutorPlaceholderPhoto, inputType: 'image' },
+  { id: 'foto2', label: 'Foto da direita', placeholder: '{{foto2}}', defaultValue: aniversarioInstrutorPlaceholderPhoto, inputType: 'image' },
+  { id: 'texto', label: 'Texto', placeholder: '{{texto}}', defaultValue: 'Escreva aqui o recado, em até três linhas.', inputType: 'textarea', maxLength: 80 },
+];
+
 export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'inauguracao-vem-ai',
@@ -1067,6 +1146,38 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     height: 1350,
     html: depoimentoVermelhoHTML('/images/pure-design/pure-pilates-logo-trim.png', depoimentoPlaceholderFoto),
     fields: depoimentoVermelhoFields,
+  },  {
+    id: 'coringa-texto',
+    name: 'Coringa — Só texto',
+    category: 'Coringa',
+    thumbnail: '/images/pure-design/coringa-texto-bg.png',
+    width: 1080,
+    height: 1350,
+    html: coringaTextoHTML('/images/pure-design/coringa-texto-bg.png'),
+    fields: coringaTextoFields,
+    coringa: true,
+  },
+  {
+    id: 'coringa-foto',
+    name: 'Coringa — Com foto',
+    category: 'Coringa',
+    thumbnail: '/images/pure-design/coringa-foto-bg.png',
+    width: 1080,
+    height: 1350,
+    html: coringaFotoHTML('/images/pure-design/coringa-foto-bg.png', aniversarioInstrutorPlaceholderPhoto),
+    fields: coringaFotoFields,
+    coringa: true,
+  },
+  {
+    id: 'coringa-duas-fotos',
+    name: 'Coringa — Duas fotos',
+    category: 'Coringa',
+    thumbnail: '/images/pure-design/coringa-foto-bg.png',
+    width: 1080,
+    height: 1350,
+    html: coringaDuasFotosHTML('/images/pure-design/coringa-foto-bg.png', aniversarioInstrutorPlaceholderPhoto),
+    fields: coringaDuasFotosFields,
+    coringa: true,
   },
 ];
 

@@ -243,10 +243,7 @@ const Sidebar = () => {
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
     { name: 'Marketing local · TV Globo', href: '/marketing-local', icon: Tv },
     { name: 'Pure Design', href: '/pure-design', icon: Paintbrush },
-    // Pure GPT: em teste, só no servidor local (npm run dev). O build de produção
-    // — que é o que o deploy.sh publica — não traz o link. Para lançar, tirar a
-    // condição daqui e da rota em App.tsx.
-    ...(import.meta.env.DEV ? [{ name: 'Pure GPT', href: '/pure-gpt', icon: Sparkles }] : []),
+    // O Pure GPT virou o assistente dentro do Pure Design (16/11/2026): /pure-gpt redireciona para lá.
   ];
 
   // Sub-grupo Tutoriais (dropdown dentro de Geral) — o header "Tutoriais" leva

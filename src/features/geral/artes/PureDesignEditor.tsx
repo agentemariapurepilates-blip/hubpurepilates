@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { domToBlob } from 'modern-screenshot';
 import { ArrowLeft, Mail, Trash2, RotateCcw, Plus, Copy, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -80,9 +80,19 @@ const PureDesignEditor = () => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const captureRef = useRef<HTMLDivElement>(null);
 
-  const [values, setValues] = useState<Record<string, string>>(() =>
-    template ? defaultValues(template) : {},
-  );
+  // Quem chega pelo assistente do Pure Design traz os campos já preenchidos.
+  const location = useLocation();
+  const preenchidos = (location.state as { valores?: Record<string, string> } | null)?.valores;
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    if (!template) return {};
+    const base = defaultValues(template);
+    if (preenchidos) {
+      for (const f of template.fields) {
+        if (typeof preenchidos[f.id] === 'string' && preenchidos[f.id]) base[f.id] = preenchidos[f.id];
+      }
+    }
+    return base;
+  });
   const [rows, setRows] = useState<TableRow[]>(() =>
     template?.table
       ? Array.from({ length: template.table.initialRows }, () => ({ item: '', preco: '' }))
