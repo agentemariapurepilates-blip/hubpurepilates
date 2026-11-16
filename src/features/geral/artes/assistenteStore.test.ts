@@ -58,8 +58,8 @@ describe('inauguração e feriado', () => {
   it('inauguração padrão: "Vem aí" sem foto e "A melhor hora" com foto', () => {
     expect(fotos('inauguracao-vem-ai')).toBe(0);
     expect(fotos('inauguracao-melhor-hora')).toBe(1);
-    expect(cat.find((m) => m.id === 'inauguracao-vem-ai')?.dica).toMatch(/SEM foto/);
-    expect(cat.find((m) => m.id === 'inauguracao-melhor-hora')?.dica).toMatch(/COM foto/);
+    expect(cat.find((m) => m.id === 'inauguracao-vem-ai')?.dica).toMatch(/sem foto/);
+    expect(cat.find((m) => m.id === 'inauguracao-melhor-hora')?.dica).toMatch(/com foto/);
   });
 
   it('Corpus Christi saiu e o aviso de feriado geral cobre qualquer feriado', () => {

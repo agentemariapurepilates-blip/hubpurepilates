@@ -1202,7 +1202,7 @@ export const CATEGORIAS: Record<string, string> = {
   'Inauguração':
     'Artes para a abertura de uma unidade/estúdio novo: anunciar que vai abrir (vem aí, em breve), a data da inauguração, a primeira aula e o "inauguramos" depois de abrir. A pessoa pode dizer "abertura do estúdio", "estúdio novo", "nova unidade", "vamos abrir dia tal".',
   'Feriados':
-    'AVISO de funcionamento no feriado: quais dias a unidade fecha ou abre, horário especial, recesso de fim de ano, emendas. Serve para qualquer feriado (Natal, Ano Novo, Carnaval, Corpus Christi, Consciência Negra…). Se a pessoa quer só DESEJAR um bom feriado / boas festas (mensagem, sem aviso de horário), isso é Coringa.',
+    'Artes de feriado. Hoje o modelo disponível é de AVISO de funcionamento (dias que fecha ou abre, horário especial, recesso), e serve para qualquer feriado (Natal, Ano Novo, Carnaval, Corpus Christi, Consciência Negra…).',
   'Datas Comemorativas':
     'Homenagens em datas especiais de pessoas da unidade, como o aniversário de um instrutor ou instrutora.',
   'Dia das mães': 'Artes do Dia das Mães: homenagem às mães e a promoção Dupla Dinâmica (mãe e filha/filho).',
@@ -1213,20 +1213,19 @@ export const CATEGORIAS: Record<string, string> = {
   'Vale-presente': 'Vale-presente / cartão-presente de aulas, para presentear alguém.',
   'Depoimentos': 'Depoimento de aluno ou aluna: frase de quem pratica, com nome (e foto, conforme o modelo).',
   'Coringa':
-    'Modelos genéricos para QUALQUER assunto que não tem categoria própria (Natal como mensagem, Black Friday, aula aberta, boas-vindas, campanha). Use só quando nenhuma outra categoria servir.',
+    'Modelos genéricos, com título e texto livres (só texto, com uma foto ou com duas fotos), que servem para qualquer assunto que as outras categorias não cobrem bem: mensagens, campanhas, boas-vindas, aula aberta, Black Friday, boas festas…',
 };
 
-/** Quando usar cada modelo, para o assistente decidir entre modelos do mesmo tema. */
+/** O que é cada modelo, em uma frase, para o assistente diferenciar modelos do mesmo tema. */
 const DICAS: Record<string, string> = {
   'inauguracao-vem-ai':
-    'PADRÃO para qualquer pedido de inauguração/abertura de estúdio SEM foto.',
+    'O anúncio principal de inauguração, sem foto ("vem aí uma nova Pure"). É o mais usado quando a arte é sem foto.',
   'inauguracao-melhor-hora':
-    'PADRÃO para qualquer pedido de inauguração/abertura de estúdio COM foto do estúdio.',
-  'inauguracao-ja-tem-data': 'Só quando pedirem explicitamente "já tem data"/"save the date".',
-  'inauguracao-primeira-aula': 'Só quando falarem de "primeira aula"/"aula inaugural".',
-  'inauguracao-inauguramos': 'Só depois da inauguração ("inauguramos", "abrimos", "já abriu").',
-  'feriado-aviso':
-    'Modelo GERAL de feriado e horário de funcionamento, para QUALQUER feriado (Natal, Ano Novo, Carnaval, Corpus Christi…). Sem foto. Priorize sempre para aviso de feriado/horário.',
+    'O anúncio principal de inauguração com foto do estúdio. É o mais usado quando a pessoa tem foto.',
+  'inauguracao-ja-tem-data': 'Anuncia que a inauguração já tem data marcada ("save the date").',
+  'inauguracao-primeira-aula': 'Convite para a primeira aula / aula inaugural da unidade nova.',
+  'inauguracao-inauguramos': 'Para depois da inauguração: "inauguramos", "abrimos".',
+  'feriado-aviso': 'Aviso de funcionamento em qualquer feriado, com a lista de datas (fechado/aberto). Sem foto.',
 };
 for (const t of pureDesignTemplates) {
   t.palavrasChave = PALAVRAS_CHAVE[t.id];
