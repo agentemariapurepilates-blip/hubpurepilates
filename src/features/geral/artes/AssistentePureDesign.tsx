@@ -7,9 +7,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Paperclip, PencilLine, Send, Sparkles, X } from 'lucide-react';
+import { Download, Loader2, Paperclip, PencilLine, Send, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { buildRenderedHTML, computeRepeatHeights, pureDesignTemplates } from '@/data/pureDesignTemplates';
@@ -21,6 +22,8 @@ import {
   type ImagemDaUnidade,
   type Preenchimento,
 } from './assistenteStore';
+import { baixarPng, fotosObrigatoriasFaltando } from './exportarPng';
+import { artesProntas, nomeDoDownload, type ArtePronta } from '@/data/artesProntasData';
 
 const EXEMPLOS = [
   'Arte de aniversário para a instrutora Kelly, com a foto dela.',
@@ -34,6 +37,8 @@ interface Mensagem {
   texto?: string;
   imagens?: ImagemDaUnidade[];
   preenchimento?: Preenchimento;
+  /** Arte pronta entregue pelo agente (ex.: a tag do mês). */
+  artePronta?: ArtePronta;
   /** As fotos como estavam neste ponto da conversa (a numeração do agente). */
   fotos?: string[];
   problema?: string;
@@ -45,8 +50,19 @@ const novoId = () => `pd-${++sequencia}`;
 
 const LARGURA_PREVIA = 260;
 
-/** Miniatura da arte preenchida, desenhada pelo mesmo HTML do editor. */
-function Previa({ p, fotos }: { p: Preenchimento; fotos: string[] }) {
+/** Arte preenchida, desenhada pelo mesmo HTML do editor (miniatura no chat ou grande ao ampliar). */
+function Previa({
+  p,
+  fotos,
+  largura = LARGURA_PREVIA,
+  alturaMaxima,
+}: {
+  p: Preenchimento;
+  fotos: string[];
+  largura?: number;
+  /** Ao ampliar: a arte encolhe para caber nesta altura (artes compridas, como listas). */
+  alturaMaxima?: number;
+}) {
   const modelo = pureDesignTemplates.find((t) => t.id === p.modelo);
   if (!modelo) return null;
   const valores: Record<string, string> = {};
@@ -54,15 +70,15 @@ function Previa({ p, fotos }: { p: Preenchimento; fotos: string[] }) {
   Object.assign(valores, valoresDoPreenchimento(p, fotos));
   const itens = modelo.repeat ? (p.itens?.length ? p.itens : modelo.repeat.initial) : undefined;
   const altura = modelo.repeat && itens ? computeRepeatHeights(modelo.repeat, itens.length).canvasHeight : modelo.height;
-  const escala = LARGURA_PREVIA / modelo.width;
+  const escala = Math.min(largura / modelo.width, alturaMaxima ? alturaMaxima / altura : Infinity);
   return (
     <div
       className="overflow-hidden rounded-xl border bg-muted"
-      style={{ width: LARGURA_PREVIA, height: altura * escala }}
+      style={{ width: modelo.width * escala, height: altura * escala }}
     >
       <iframe
         title={`Prévia — ${modelo.name}`}
-        srcDoc={buildRenderedHTML(modelo, valores, undefined, undefined, itens)}
+        srcDoc={buildRenderedHTML(modelo, valores, new Set(p.removidos ?? []), undefined, itens)}
         sandbox=""
         style={{
           width: modelo.width,
@@ -134,11 +150,20 @@ export default function AssistentePureDesign() {
     setGerando(true);
 
     try {
-      const resposta = await conversar({ mensagens: historico, fotos: acervo.length });
+      // A última arte da conversa vai junto: "muda esse texto" ajusta ela, sem refazer o resto.
+      const arteAtual = [...mensagens].reverse().find((m) => m.preenchimento)?.preenchimento;
+      const resposta = await conversar({ mensagens: historico, fotos: acervo.length, arteAtual });
       setMensagens((atuais) =>
         atuais.map((m) =>
           m.id === idResposta
-            ? { ...m, pensando: false, texto: resposta.texto, preenchimento: resposta.preenchimento, fotos: acervo }
+            ? {
+                ...m,
+                pensando: false,
+                texto: resposta.texto,
+                preenchimento: resposta.preenchimento,
+                artePronta: artesProntas.find((a) => a.id === resposta.artePronta),
+                fotos: acervo,
+              }
             : m,
         ),
       );
@@ -155,12 +180,52 @@ export default function AssistentePureDesign() {
     }
   };
 
+  const [baixando, setBaixando] = useState('');
+  // Mensagem cuja arte está aberta grande na tela (clique na miniatura).
+  const [ampliada, setAmpliada] = useState<Mensagem | null>(null);
+  const [prontaAmpliada, setProntaAmpliada] = useState<ArtePronta | null>(null);
+
+  /** Baixa o PNG direto do chat, sem passar pelo editor. */
+  const baixarDireto = async (m: Mensagem) => {
+    const p = m.preenchimento;
+    const modelo = p && pureDesignTemplates.find((t) => t.id === p.modelo);
+    if (!p || !modelo) return;
+    const valores: Record<string, string> = {};
+    modelo.fields.forEach((f) => (valores[f.id] = f.defaultValue));
+    Object.assign(valores, valoresDoPreenchimento(p, m.fotos ?? []));
+    const faltando = fotosObrigatoriasFaltando(modelo, valores);
+    if (faltando.length) {
+      toast({
+        title: 'Falta a foto',
+        description: `Anexe a foto aqui no chat ou abra no editor: ${faltando.join(', ')}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    const itens = modelo.repeat ? (p.itens?.length ? p.itens : modelo.repeat.initial) : undefined;
+    const altura = modelo.repeat && itens ? computeRepeatHeights(modelo.repeat, itens.length).canvasHeight : modelo.height;
+    setBaixando(m.id);
+    try {
+      await baixarPng(
+        buildRenderedHTML(modelo, valores, new Set(p.removidos ?? []), undefined, itens),
+        modelo.width,
+        altura,
+        `${modelo.id}.png`,
+      );
+    } catch {
+      toast({ title: 'Não consegui baixar', description: 'Tente de novo ou abra no editor.', variant: 'destructive' });
+    } finally {
+      setBaixando('');
+    }
+  };
+
   const abrirNoEditor = (m: Mensagem) => {
     if (!m.preenchimento) return;
     navigate(`/pure-design/${m.preenchimento.modelo}`, {
       state: {
         valores: valoresDoPreenchimento(m.preenchimento, m.fotos ?? []),
         itens: m.preenchimento.itens,
+        removidos: m.preenchimento.removidos,
       },
     });
   };
@@ -226,13 +291,49 @@ export default function AssistentePureDesign() {
                       {m.texto}
                     </div>
                   )}
+                  {m.artePronta && (
+                    <div className="mt-2 space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setProntaAmpliada(m.artePronta ?? null)}
+                        className="block cursor-zoom-in overflow-hidden rounded-xl border bg-muted transition-opacity hover:opacity-90"
+                        style={{ width: LARGURA_PREVIA }}
+                        title="Ver grande"
+                      >
+                        <img src={m.artePronta.thumbnail} alt={m.artePronta.title} className="block h-auto w-full" />
+                      </button>
+                      <Button size="sm" asChild>
+                        <a href={m.artePronta.file} download={nomeDoDownload(m.artePronta)}>
+                          <Download className="mr-1.5 h-3.5 w-3.5" />
+                          Baixar {m.artePronta.fileType} · {m.artePronta.sizeLabel}
+                        </a>
+                      </Button>
+                    </div>
+                  )}
                   {m.preenchimento && (
                     <div className="mt-2 space-y-2">
-                      <Previa p={m.preenchimento} fotos={m.fotos ?? []} />
-                      <Button size="sm" onClick={() => abrirNoEditor(m)}>
-                        <PencilLine className="mr-1.5 h-3.5 w-3.5" />
-                        Abrir no editor para ajustar e baixar
-                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => setAmpliada(m)}
+                        className="block cursor-zoom-in rounded-xl transition-opacity hover:opacity-90"
+                        title="Ver grande"
+                      >
+                        <Previa p={m.preenchimento} fotos={m.fotos ?? []} />
+                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => abrirNoEditor(m)}>
+                          <PencilLine className="mr-1.5 h-3.5 w-3.5" />
+                          Abrir no editor
+                        </Button>
+                        <Button size="sm" onClick={() => void baixarDireto(m)} disabled={baixando === m.id}>
+                          {baixando === m.id ? (
+                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Download className="mr-1.5 h-3.5 w-3.5" />
+                          )}
+                          Baixar PNG
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -285,7 +386,11 @@ export default function AssistentePureDesign() {
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              // Enter envia; Shift+Enter quebra a linha. Durante a digitação de acento
+              // (composição do teclado), o Enter é do acento, não do envio.
+              // O Enter do chat fica no chat: não sobe para nada da página em volta.
+              if (e.key === 'Enter') e.stopPropagation();
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 void enviar();
               }
@@ -305,6 +410,63 @@ export default function AssistentePureDesign() {
           </Button>
         </div>
       </div>
+
+      {/* Arte grande na tela, antes de baixar */}
+      <Dialog open={!!ampliada} onOpenChange={(aberto) => !aberto && setAmpliada(null)}>
+        <DialogContent className="w-auto max-w-[95vw] gap-3 p-4">
+          <DialogTitle className="sr-only">Arte ampliada</DialogTitle>
+          {ampliada?.preenchimento && (
+            <>
+              <div className="flex justify-center">
+                <Previa
+                  p={ampliada.preenchimento}
+                  fotos={ampliada.fotos ?? []}
+                  largura={Math.min(620, window.innerWidth * 0.9 - 32)}
+                  alturaMaxima={window.innerHeight * 0.8}
+                />
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => abrirNoEditor(ampliada)}>
+                  <PencilLine className="mr-1.5 h-3.5 w-3.5" />
+                  Abrir no editor
+                </Button>
+                <Button size="sm" onClick={() => void baixarDireto(ampliada)} disabled={baixando === ampliada.id}>
+                  {baixando === ampliada.id ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Baixar PNG
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Arte pronta grande na tela */}
+      <Dialog open={!!prontaAmpliada} onOpenChange={(aberto) => !aberto && setProntaAmpliada(null)}>
+        <DialogContent className="max-w-3xl gap-3 p-4">
+          <DialogTitle className="text-base">{prontaAmpliada?.title}</DialogTitle>
+          {prontaAmpliada && (
+            <>
+              <img
+                src={prontaAmpliada.thumbnail}
+                alt={prontaAmpliada.title}
+                className="mx-auto h-auto max-h-[70vh] w-full rounded-lg object-contain"
+              />
+              <div className="flex justify-center">
+                <Button size="sm" asChild>
+                  <a href={prontaAmpliada.file} download={nomeDoDownload(prontaAmpliada)}>
+                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                    Baixar {prontaAmpliada.fileType} · {prontaAmpliada.sizeLabel}
+                  </a>
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

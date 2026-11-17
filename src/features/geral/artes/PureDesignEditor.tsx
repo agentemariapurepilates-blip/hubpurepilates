@@ -28,11 +28,18 @@ import {
   computeRepeatHeights,
   fieldIsRemovable,
   pureDesignTemplates,
+  cantoDoLogo,
+  posicaoDoLogo,
+  recorteDaFoto,
+  type CantoLogo,
+  type LogoCaixa,
   type PureDesignTemplate,
   type RepeatItem,
   type TableRow,
 } from '@/data/pureDesignTemplates';
 import { getMontserratFontFaceCss } from '@/features/colaborador/academy/montserratEmbed';
+import { listarAssets, type MarcaAsset } from '@/features/colaborador/assets-marca/marcaAssets';
+import { fotosObrigatoriasFaltando } from './exportarPng';
 
 const WEBHOOK_URL = import.meta.env.VITE_PURE_DESIGN_WEBHOOK_URL as string | undefined;
 
@@ -73,8 +80,17 @@ function collectBackgroundImageUrls(root: HTMLElement): string[] {
 const PureDesignEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isColaborador, isAdmin } = useAuth();
+  const doTime = isColaborador || isAdmin;
   const template = pureDesignTemplates.find((t) => t.id === id);
+  // Logos da biblioteca de marca: só o time lista (o banco não deixa franqueado ler).
+  const [logosDaMarca, setLogosDaMarca] = useState<MarcaAsset[]>([]);
+  useEffect(() => {
+    if (!doTime || !template?.fields.some((f) => f.inputType === 'logo')) return;
+    listarAssets()
+      .then((l) => setLogosDaMarca(l.filter((a) => a.ativo && a.tipo === 'logo')))
+      .catch(() => {});
+  }, [doTime, template]);
 
   const previewWrapRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -98,6 +114,10 @@ const PureDesignEditor = () => {
       ? Array.from({ length: template.table.initialRows }, () => ({ item: '', preco: '' }))
       : [],
   );
+  // Sempre o valor mais recente, para os gestos na prévia (arrastar/zoom) não lerem um estado velho.
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
+
   const [repeatItems, setRepeatItems] = useState<RepeatItem[]>(() => {
     if (!template?.repeat) return [];
     // Itens vindos do assistente (ex.: as datas do feriado), se ele preencheu.
@@ -106,7 +126,11 @@ const PureDesignEditor = () => {
     const validos = (doAssistente ?? []).filter((it) => it?.text && variantes.has(it.variant));
     return (validos.length ? validos : template.repeat.initial).map((it) => ({ ...it }));
   });
-  const [removed, setRemoved] = useState<Set<string>>(new Set());
+  // Campos que chegam excluídos do assistente (ex.: fotos da galeria que não serão usadas).
+  const [removed, setRemoved] = useState<Set<string>>(() => {
+    const vindos = (location.state as { removidos?: string[] } | null)?.removidos;
+    return new Set((vindos ?? []).filter((id) => template?.fields.some((f) => f.id === id)));
+  });
   const [zoom, setZoom] = useState(0.4);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailTo, setEmailTo] = useState('');
@@ -167,6 +191,150 @@ const PureDesignEditor = () => {
 
   const handleFieldChange = (fieldId: string, value: string) => {
     setValues((prev) => ({ ...prev, [fieldId]: value }));
+  };
+
+  /** Grava o enquadramento de uma foto (zoom e foco em %). */
+  const ajustarFoto = (campo: string, r: { zoom: number; x: number; y: number }) => {
+    setValues((prev) => ({
+      ...prev,
+      [`${campo}__zoom`]: r.zoom.toFixed(3),
+      [`${campo}__fx`]: r.x.toFixed(2),
+      [`${campo}__fy`]: r.y.toFixed(2),
+    }));
+  };
+
+  /**
+   * Gestos na prévia, como no Canva: arrastar a foto reposiciona; rodinha do
+   * mouse ou pinça no trackpad dá zoom. Durante o gesto, mexe só no <img> da
+   * prévia (fluido); ao soltar, grava no estado, e a arte e o PNG seguem.
+   */
+  const ligarGestosNaPrevia = () => {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    const estilo = doc.createElement('style');
+    estilo.textContent =
+      '[data-foto]{cursor:grab;touch-action:none}[data-foto]:hover{outline:4px dashed rgba(193,32,48,.55);outline-offset:-4px}[data-foto].arrastando{cursor:grabbing}';
+    doc.head.appendChild(estilo);
+
+    estilo.textContent +=
+      '[data-logo]{cursor:move;touch-action:none}[data-logo]:hover{outline:3px dashed rgba(193,32,48,.6);outline-offset:4px}';
+    doc.querySelectorAll<HTMLImageElement>('img[data-logo]').forEach((logo) => {
+      const campo = logo.dataset.logo!;
+      const caixa = template.fields.find((f) => f.id === campo)?.logoCaixa;
+      if (!caixa) return;
+      let p = posicaoDoLogo(campo, caixa, valuesRef.current);
+      let inicio: { px: number; py: number; x: number; y: number } | null = null;
+      const aplicar = () => {
+        logo.style.left = `${p.x}px`;
+        logo.style.top = `${p.y}px`;
+        logo.style.width = `${caixa.largura * p.escala}px`;
+      };
+      const gravar = () =>
+        setValues((prev) => ({
+          ...prev,
+          [`${campo}__x`]: String(Math.round(p.x)),
+          [`${campo}__y`]: String(Math.round(p.y)),
+          [`${campo}__escala`]: p.escala.toFixed(3),
+        }));
+      logo.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        p = posicaoDoLogo(campo, caixa, valuesRef.current);
+        inicio = { px: e.clientX, py: e.clientY, x: p.x, y: p.y };
+        logo.setPointerCapture(e.pointerId);
+      });
+      logo.addEventListener('pointermove', (e) => {
+        if (!inicio) return;
+        p = { ...p, x: inicio.x + (e.clientX - inicio.px), y: inicio.y + (e.clientY - inicio.py) };
+        aplicar();
+      });
+      const soltar = () => {
+        if (!inicio) return;
+        inicio = null;
+        gravar();
+      };
+      logo.addEventListener('pointerup', soltar);
+      logo.addEventListener('pointercancel', soltar);
+      let gravarTamanho: number | undefined;
+      logo.addEventListener(
+        'wheel',
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          // Redimensiona mantendo o centro do logo no lugar.
+          const antes = caixa.largura * p.escala;
+          const escala = Math.min(3, Math.max(0.3, p.escala * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015))));
+          const depois = caixa.largura * escala;
+          p = { x: p.x - (depois - antes) / 2, y: p.y - ((depois - antes) * caixa.proporcao) / 2, escala };
+          aplicar();
+          window.clearTimeout(gravarTamanho);
+          gravarTamanho = window.setTimeout(gravar, 250);
+        },
+        { passive: false },
+      );
+    });
+
+    doc.querySelectorAll<HTMLElement>('[data-foto]').forEach((moldura) => {
+      const campo = moldura.dataset.foto!;
+      const img = moldura.querySelector('img');
+      if (!img) return;
+      let atual = recorteDaFoto(campo, valuesRef.current);
+      const aplicar = () => {
+        img.style.objectPosition = `${atual.x}% ${atual.y}%`;
+        img.style.transformOrigin = `${atual.x}% ${atual.y}%`;
+        img.style.transform = `scale(${atual.zoom})`;
+      };
+      // Quanto a imagem "anda" na moldura para cada 1% de foco: sobra do cover + sobra do zoom.
+      const sobra = () => {
+        const cw = moldura.clientWidth;
+        const ch = moldura.clientHeight;
+        const nw = img.naturalWidth || cw;
+        const nh = img.naturalHeight || ch;
+        const s = Math.max(cw / nw, ch / nh);
+        return {
+          x: Math.max(1, (nw * s - cw) * atual.zoom + (atual.zoom - 1) * cw),
+          y: Math.max(1, (nh * s - ch) * atual.zoom + (atual.zoom - 1) * ch),
+        };
+      };
+      let inicio: { px: number; py: number; x: number; y: number } | null = null;
+      moldura.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        atual = recorteDaFoto(campo, valuesRef.current);
+        inicio = { px: e.clientX, py: e.clientY, x: atual.x, y: atual.y };
+        moldura.setPointerCapture(e.pointerId);
+        moldura.classList.add('arrastando');
+      });
+      moldura.addEventListener('pointermove', (e) => {
+        if (!inicio) return;
+        const o = sobra();
+        atual = {
+          ...atual,
+          x: Math.min(100, Math.max(0, inicio.x - ((e.clientX - inicio.px) / o.x) * 100)),
+          y: Math.min(100, Math.max(0, inicio.y - ((e.clientY - inicio.py) / o.y) * 100)),
+        };
+        aplicar();
+      });
+      const soltar = () => {
+        if (!inicio) return;
+        inicio = null;
+        moldura.classList.remove('arrastando');
+        ajustarFoto(campo, atual);
+      };
+      moldura.addEventListener('pointerup', soltar);
+      moldura.addEventListener('pointercancel', soltar);
+      let gravarZoom: number | undefined;
+      moldura.addEventListener(
+        'wheel',
+        (e) => {
+          e.preventDefault();
+          atual = { ...atual, zoom: Math.min(4, Math.max(1, atual.zoom * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)))) };
+          aplicar();
+          window.clearTimeout(gravarZoom);
+          gravarZoom = window.setTimeout(() => ajustarFoto(campo, atual), 250);
+        },
+        { passive: false },
+      );
+    });
   };
 
   const addRow = () => setRows((prev) => [...prev, { item: '', preco: '' }]);
@@ -262,6 +430,11 @@ const PureDesignEditor = () => {
   };
 
   const handleDownload = async () => {
+    const faltando = fotosObrigatoriasFaltando(template, values);
+    if (faltando.length) {
+      toast.error(`Suba a foto antes de baixar: ${faltando.join(', ')}.`);
+      return;
+    }
     setDownloading(true);
     try {
       const blob = await captureBlob();
@@ -481,6 +654,7 @@ const PureDesignEditor = () => {
               </div>
             )}
             {!template.table && template.fields.map((field) => {
+              // Logo: quem escolhe é o assistente (ou o time). Franqueado não troca.
               const currentValue = values[field.id] ?? '';
               const atLimit = field.maxLength !== undefined && currentValue.length >= field.maxLength;
               const removable = fieldIsRemovable(template, field.id);
@@ -533,12 +707,52 @@ const PureDesignEditor = () => {
                       </span>
                     </button>
                   ) : field.inputType === 'textarea' ? (
-                    <Textarea
-                      value={currentValue}
-                      maxLength={field.maxLength}
-                      onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                      className="resize-y min-h-[80px]"
-                    />
+                    <div className="space-y-1">
+                      <Textarea
+                        id={`campo-${field.id}`}
+                        value={currentValue}
+                        maxLength={field.maxLength}
+                        onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                        className="resize-y min-h-[80px]"
+                      />
+                      <AjusteDoTexto id={field.id} values={values} onChange={handleFieldChange} />
+                    </div>
+                  ) : field.inputType === 'logo' ? (
+                    <div className="space-y-3">
+                    {/* Trocar o logo: só o time (a biblioteca de marca é dele). */}
+                    {doTime && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'padrao', nome: 'Padrão do modelo', url: field.defaultValue },
+                        ...logosDaMarca
+                          .filter((a) => !field.unidadesLogo?.length || field.unidadesLogo.includes(a.unidade))
+                          .map((a) => ({ id: a.id, nome: a.subpasta ? `${a.subpasta} · ${a.nome}` : a.nome, url: a.url })),
+                      ].map((opcao) => (
+                        <button
+                          key={opcao.id}
+                          type="button"
+                          title={opcao.nome}
+                          onClick={() => handleFieldChange(field.id, opcao.url)}
+                          className={`flex h-16 items-center justify-center rounded-md border bg-muted/40 p-2 ${
+                            currentValue === opcao.url ? 'border-primary ring-2 ring-primary/30' : 'border-border'
+                          }`}
+                        >
+                          <img src={opcao.url} alt={opcao.nome} className="max-h-full max-w-full object-contain" />
+                        </button>
+                      ))}
+                    </div>
+                    )}
+                    {field.logoCaixa && (
+                      <AjusteDoLogo
+                        id={field.id}
+                        caixa={field.logoCaixa}
+                        values={values}
+                        largura={template.width}
+                        altura={effHeight}
+                        onChange={(campos) => setValues((prev) => ({ ...prev, ...campos }))}
+                      />
+                    )}
+                    </div>
                   ) : field.inputType === 'image' ? (
                     <div className="space-y-2">
                       {currentValue && (
@@ -555,18 +769,35 @@ const PureDesignEditor = () => {
                           const file = e.target.files?.[0];
                           if (!file) return;
                           const reader = new FileReader();
-                          reader.onload = () =>
+                          reader.onload = () => {
+                            // Foto nova começa centralizada e sem zoom.
                             handleFieldChange(field.id, String(reader.result));
+                            ajustarFoto(field.id, { zoom: 1, x: 50, y: 50 });
+                          };
                           reader.readAsDataURL(file);
                         }}
                       />
+                      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                        <span>Arraste a foto na arte para enquadrar; rodinha ou pinça para zoom.</span>
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground underline"
+                          onClick={() => ajustarFoto(field.id, { zoom: 1, x: 50, y: 50 })}
+                        >
+                          Centralizar
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <Input
-                      value={currentValue}
-                      maxLength={field.maxLength}
-                      onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                    />
+                    <div className="space-y-1">
+                      <Input
+                        id={`campo-${field.id}`}
+                        value={currentValue}
+                        maxLength={field.maxLength}
+                        onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                      />
+                      <AjusteDoTexto id={field.id} values={values} onChange={handleFieldChange} />
+                    </div>
                   )}
                 </div>
               );
@@ -651,6 +882,7 @@ const PureDesignEditor = () => {
             >
               <iframe
                 ref={iframeRef}
+                onLoad={ligarGestosNaPrevia}
                 srcDoc={renderedHTML}
                 title="Pré-visualização"
                 style={{
@@ -721,5 +953,114 @@ const PureDesignEditor = () => {
     </div>
   );
 };
+
+const CANTOS: { id: CantoLogo; nome: string }[] = [
+  { id: 'sup-esq', nome: '↖ Em cima, esquerda' },
+  { id: 'sup-dir', nome: '↗ Em cima, direita' },
+  { id: 'inf-esq', nome: '↙ Embaixo, esquerda' },
+  { id: 'inf-dir', nome: '↘ Embaixo, direita' },
+];
+
+/**
+ * Logo: arrasta-se direto na arte (e a rodinha muda o tamanho). Aqui ficam os
+ * atalhos de canto, o tamanho e o "voltar ao padrão". Vale para todos.
+ */
+function AjusteDoLogo({
+  id,
+  caixa,
+  values,
+  largura,
+  altura,
+  onChange,
+}: {
+  id: string;
+  caixa: LogoCaixa;
+  values: Record<string, string>;
+  largura: number;
+  altura: number;
+  onChange: (campos: Record<string, string>) => void;
+}) {
+  const atual = posicaoDoLogo(id, caixa, values);
+  return (
+    <div className="space-y-2 rounded-md border border-border p-2.5">
+      <p className="text-xs text-muted-foreground">Arraste o logo na arte para posicionar; rodinha ou pinça muda o tamanho.</p>
+      <div className="grid grid-cols-2 gap-1.5">
+        {CANTOS.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => {
+              const p = cantoDoLogo(c.id, caixa, atual.escala, largura, altura);
+              onChange({ [`${id}__x`]: String(Math.round(p.x)), [`${id}__y`]: String(Math.round(p.y)) });
+            }}
+            className="rounded border border-border px-2 py-1 text-xs hover:bg-muted"
+          >
+            {c.nome}
+          </button>
+        ))}
+      </div>
+      <div className="space-y-1">
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Tamanho</span>
+          <span className="tabular-nums">{Math.round(atual.escala * 100)}%</span>
+        </div>
+        <input
+          type="range"
+          min={0.3}
+          max={3}
+          step={0.05}
+          value={atual.escala}
+          onChange={(e) => onChange({ [`${id}__escala`]: e.target.value })}
+          className="w-full accent-[hsl(var(--primary))]"
+        />
+      </div>
+      <button
+        type="button"
+        className="text-xs text-muted-foreground underline"
+        onClick={() => onChange({ [`${id}__x`]: '', [`${id}__y`]: '', [`${id}__escala`]: '' })}
+      >
+        Voltar ao padrão
+      </button>
+    </div>
+  );
+}
+
+/** Negrito (**trecho**) e tamanho do texto de um campo. Vale para todos. */
+function AjusteDoTexto({
+  id,
+  values,
+  onChange,
+}: {
+  id: string;
+  values: Record<string, string>;
+  onChange: (campo: string, valor: string) => void;
+}) {
+  const tam = Math.min(1.4, Math.max(0.7, Number(values[`${id}__tam`] || 1)));
+  const negrito = () => {
+    // Põe ** em volta do trecho selecionado (ou do campo todo, sem seleção).
+    const el = document.getElementById(`campo-${id}`) as HTMLInputElement | HTMLTextAreaElement | null;
+    const texto = values[id] ?? '';
+    const ini = el?.selectionStart ?? 0;
+    const fim = el?.selectionEnd ?? 0;
+    if (fim > ini) onChange(id, `${texto.slice(0, ini)}**${texto.slice(ini, fim)}**${texto.slice(fim)}`);
+    else onChange(id, texto.includes('**') ? texto.replace(/\*\*/g, '') : `**${texto}**`);
+  };
+  const passo = (d: number) => onChange(`${id}__tam`, String(Math.round(Math.min(1.4, Math.max(0.7, tam + d)) * 100) / 100));
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <button type="button" onClick={negrito} className="rounded border border-border px-2 py-0.5 font-bold hover:bg-muted" title="Negrito no trecho selecionado">
+        N
+      </button>
+      <span className="mx-1 h-4 w-px bg-border" />
+      <button type="button" onClick={() => passo(-0.05)} className="rounded border border-border px-2 py-0.5 hover:bg-muted" title="Diminuir texto">
+        A−
+      </button>
+      <span className="w-10 text-center tabular-nums">{Math.round(tam * 100)}%</span>
+      <button type="button" onClick={() => passo(0.05)} className="rounded border border-border px-2 py-0.5 hover:bg-muted" title="Aumentar texto">
+        A+
+      </button>
+    </div>
+  );
+}
 
 export default PureDesignEditor;

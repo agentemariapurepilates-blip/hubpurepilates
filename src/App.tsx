@@ -228,6 +228,7 @@ function App() {
             <Route path="/leads-rh" element={<ProtectedRoute requireColaborador><LeadsRH /></ProtectedRoute>} />
             {/* PurePedia: exclusiva de colaborador — o gate e na rota, nao so no menu. */}
             <Route path="/purepedia" element={<ProtectedRoute requireColaborador><PurePedia /></ProtectedRoute>} />
+            <Route path="/colaborador/assets-marca" element={<Navigate to="/pure-design?tab=assets" replace />} />
             <Route path="/purepedia/playbook-wellhub" element={<ProtectedRoute requireColaborador><PlaybookWellhub /></ProtectedRoute>} />
             <Route path="/purepedia/mensagens-padrao-suporte" element={<ProtectedRoute requireColaborador><MensagensPadraoSuporte /></ProtectedRoute>} />
             <Route path="/purepedia/respostas-rapidas-whatsapp" element={<ProtectedRoute requireColaborador><RespostasRapidasWhatsApp /></ProtectedRoute>} />

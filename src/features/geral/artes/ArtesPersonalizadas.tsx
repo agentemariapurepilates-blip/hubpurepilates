@@ -3,7 +3,12 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search, FolderOpen, ChevronLeft } from 'lucide-react';
-import { pureDesignTemplates } from '@/data/pureDesignTemplates';
+import { ORDEM_DAS_CATEGORIAS, pureDesignTemplates } from '@/data/pureDesignTemplates';
+
+const posicao = (c: string) => {
+  const i = ORDEM_DAS_CATEGORIAS.indexOf(c);
+  return i === -1 ? 99 : i;
+};
 
 const normalize = (s: string) =>
   s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
@@ -44,7 +49,7 @@ const ArtesPersonalizadas = () => {
           map.set(template.category, list);
           return map;
         }, new Map<string, typeof pureDesignTemplates>()),
-      ),
+      ).sort(([a], [b]) => posicao(a) - posicao(b)),
     [],
   );
 
@@ -149,7 +154,9 @@ const ArtesPersonalizadas = () => {
               map.set(template.category, list);
               return map;
             }, new Map<string, typeof pureDesignTemplates>()),
-          ).map(([category, templates]) => (
+          )
+            .sort(([a], [b]) => posicao(a) - posicao(b))
+            .map(([category, templates]) => (
             <section key={category} className="space-y-3">
               <h2 className="text-base font-semibold text-foreground border-b pb-2">
                 {category}

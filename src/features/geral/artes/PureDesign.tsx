@@ -1,26 +1,39 @@
 import { useSearchParams } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/card';
-import { Paintbrush, Sparkles, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Paintbrush, Sparkles, Download, ChevronLeft, ChevronRight, Shapes } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import AssetsMarca from '@/features/colaborador/assets-marca/AssetsMarca';
 import { pureDesignTemplates } from '@/data/pureDesignTemplates';
 import ArtesPersonalizadas from './ArtesPersonalizadas';
 import ArtesProntas from './ArtesProntas';
 import AssistentePureDesign from './AssistentePureDesign';
 
-type Tab = 'personalizadas' | 'prontas';
+type Tab = 'personalizadas' | 'prontas' | 'assets';
 
 const PureDesign = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { isColaborador, isAdmin } = useAuth();
+  // Artes personalizadas, Artes prontas e Assets de marca são só do time: o
+  // franqueado pede pelo chat e recebe ali a arte (modelo preenchido ou arte pronta, como a tag).
+  const doTime = isColaborador || isAdmin;
   const param = searchParams.get('tab');
   const tab: Tab | null =
-    param === 'prontas' ? 'prontas' : param === 'personalizadas' ? 'personalizadas' : null;
+    param === 'prontas' && doTime
+      ? 'prontas'
+      : param === 'personalizadas' && doTime
+        ? 'personalizadas'
+        : param === 'assets' && doTime
+          ? 'assets'
+          : null;
 
   const setTab = (next: Tab | null) => {
     setSearchParams(next ? { tab: next } : {}, { replace: true });
   };
 
   const templatePreview = pureDesignTemplates[0]?.thumbnail;
-  const activeLabel = tab === 'prontas' ? 'Artes prontas' : 'Artes personalizadas';
+  const activeLabel =
+    tab === 'prontas' ? 'Artes prontas' : tab === 'assets' ? 'Assets de marca' : 'Artes personalizadas';
 
   return (
     <MainLayout>
@@ -49,9 +62,11 @@ const PureDesign = () => {
             <AssistentePureDesign />
           </section>
 
-          {/* Tela de escolha */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Artes personalizadas */}
+          {/* Tela de escolha: só para o time */}
+          {doTime && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Artes personalizadas: só para o time */}
+            {doTime && (
             <button
               type="button"
               onClick={() => setTab('personalizadas')}
@@ -92,8 +107,9 @@ const PureDesign = () => {
                 </div>
               </Card>
             </button>
+            )}
 
-            {/* Artes prontas */}
+            {/* Artes prontas: só para o time */}
             <button type="button" onClick={() => setTab('prontas')} className="text-left">
               <Card className="h-44 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group bg-card">
                 <div
@@ -124,7 +140,31 @@ const PureDesign = () => {
                 </div>
               </Card>
             </button>
+
+            {/* Assets de marca: só para o time */}
+            {doTime && (
+              <button type="button" onClick={() => setTab('assets')} className="text-left">
+                <Card className="h-44 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group bg-card">
+                  <div className="relative flex h-full flex-col justify-center gap-2 p-6">
+                    <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Shapes className="h-5 w-5 text-primary" />
+                    </div>
+                    <h2 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+                      Assets de marca
+                    </h2>
+                    <p className="text-sm text-muted-foreground leading-snug">
+                      Logos por unidade de negócio. Só o time vê.
+                    </p>
+                    <span className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-primary group-hover:gap-2 transition-all">
+                      Ver biblioteca
+                      <ChevronRight className="h-4 w-4" />
+                    </span>
+                  </div>
+                </Card>
+              </button>
+            )}
           </div>
+          )}
           </div>
         ) : (
           /* Seção escolhida */
@@ -140,13 +180,15 @@ const PureDesign = () => {
             <div className="flex items-center gap-2">
               {tab === 'prontas' ? (
                 <Download className="h-5 w-5 text-primary" />
+              ) : tab === 'assets' ? (
+                <Shapes className="h-5 w-5 text-primary" />
               ) : (
                 <Sparkles className="h-5 w-5 text-primary" />
               )}
               <h2 className="text-lg font-bold text-foreground">{activeLabel}</h2>
             </div>
 
-            {tab === 'prontas' ? <ArtesProntas /> : <ArtesPersonalizadas />}
+            {tab === 'prontas' ? <ArtesProntas /> : tab === 'assets' ? <AssetsMarca /> : <ArtesPersonalizadas />}
           </div>
         )}
       </div>

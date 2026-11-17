@@ -1,10 +1,185 @@
+import { DICAS_MODELOS_NOVOS, MODELOS_NOVOS, PALAVRAS_MODELOS_NOVOS } from './pureDesignModelosNovos';
+import { DICAS_FERIADOS_2027, FERIADOS_2027, PALAVRAS_FERIADOS_2027 } from './pureDesignFeriados2027';
+
 export interface TemplateField {
   id: string;
   label: string;
   placeholder: string;
   defaultValue: string;
-  inputType?: 'input' | 'textarea' | 'image';
+  inputType?: 'input' | 'textarea' | 'image' | 'logo';
   maxLength?: number;
+  /** Foto obrigatória: o editor não deixa baixar sem ela e o assistente pede antes de gerar. */
+  obrigatoria?: boolean;
+  /**
+   * Só para inputType 'logo': de quais unidades da biblioteca "Assets de marca"
+   * o logo pode vir (ex.: ['Pure Store'] permite o da loja e o da Coleção Move).
+   * O assistente escolhe; no editor, só o time troca o logo.
+   */
+  unidadesLogo?: string[];
+  /**
+   * Só para inputType 'logo': onde o logo fica e de que tamanho, por padrão.
+   * No HTML, o estilo do <img> vem do token {{<id>:estilo}}, calculado a partir
+   * disto e dos ajustes do editor (valores "<id>__canto", "__escala", "__mx", "__my").
+   */
+  logoCaixa?: LogoCaixa;
+}
+
+export interface GaleriaConfig {
+  /** Token no HTML trocado pelas molduras montadas. */
+  token: string;
+  /** Campos de foto da galeria, em ordem (a primeira é a principal). */
+  campos: string[];
+  x: number;
+  y: number;
+  largura: number;
+  altura: number;
+  /** Espaço entre as fotos, em px. */
+  espaco: number;
+  /** Raio dos cantos, em px. */
+  raio: number;
+  /** Imagem da moldura enquanto a pessoa não sobe a foto. */
+  fotoVazia: string;
+}
+
+/**
+ * Monta as molduras da galeria conforme quantas fotos ficaram:
+ * 1 = uma grande; 2 = duas colunas iguais; 3 = uma grande à esquerda e duas
+ * empilhadas à direita (o desenho original do Canva).
+ */
+export function montarGaleria(g: GaleriaConfig, values: Record<string, string>, removed?: ReadonlySet<string>): string {
+  const ativos = g.campos.filter((c) => !removed?.has(c));
+  const { x, y, largura: w, altura: h, espaco: e } = g;
+  let caixas: [number, number, number, number][] = [];
+  if (ativos.length === 1) caixas = [[x, y, w, h]];
+  else if (ativos.length === 2) {
+    const c = (w - e) / 2;
+    caixas = [[x, y, c, h], [x + c + e, y, c, h]];
+  } else if (ativos.length >= 3) {
+    const grande = Math.round(w * 0.6);
+    const lado = w - grande - e;
+    const meia = (h - e) / 2;
+    caixas = [[x, y, grande, h], [x + grande + e, y, lado, meia], [x + grande + e, y + meia + e, lado, meia]];
+  }
+  return ativos
+    .slice(0, caixas.length)
+    .map((campo, i) => {
+      const [l, t, cw, ch] = caixas[i];
+      const src = values[campo] || g.fotoVazia;
+      return `<div data-foto="${campo}" style="position:absolute; left:${l}px; top:${t}px; width:${cw}px; height:${ch}px; border-radius:${g.raio}px; overflow:hidden; box-shadow:0 10px 28px rgba(60,40,20,0.12);"><img src="${src}" style="${estiloDoRecorte(campo, values)}" onerror="this.src='${g.fotoVazia}'"/></div>`;
+    })
+    .join('\n');
+}
+
+/** Enquadramento de uma foto: zoom (>= 1) e ponto de foco em % (0 a 100). */
+export function recorteDaFoto(id: string, values: Record<string, string>) {
+  const num = (v: string | undefined, padrao: number) => (v !== undefined && v !== '' && !Number.isNaN(Number(v)) ? Number(v) : padrao);
+  return {
+    zoom: Math.min(4, Math.max(1, num(values[`${id}__zoom`], 1))),
+    x: Math.min(100, Math.max(0, num(values[`${id}__fx`], 50))),
+    y: Math.min(100, Math.max(0, num(values[`${id}__fy`], 50))),
+  };
+}
+
+/** Estilo do <img> recortado: cobre a moldura, com foco e zoom. */
+export function estiloDoRecorte(id: string, values: Record<string, string>): string {
+  const r = recorteDaFoto(id, values);
+  return (
+    `width:100%; height:100%; object-fit:cover; display:block; object-position:${r.x}% ${r.y}%; ` +
+    `transform:scale(${r.zoom}); transform-origin:${r.x}% ${r.y}%;`
+  );
+}
+
+/**
+ * Troca cada <img src="{{foto}}" style="…"> de campo de foto por uma moldura
+ * (<div> com a caixa e o estilo originais, overflow escondido) e, dentro, a foto
+ * com o enquadramento ajustável. A moldura leva data-foto, que é por onde o
+ * editor deixa arrastar e dar zoom direto na arte.
+ */
+function emoldurarFotos(html: string, template: PureDesignTemplate, values: Record<string, string>): string {
+  for (const f of template.fields) {
+    // Logo: marcado para o editor deixar arrastar e redimensionar na arte.
+    if (f.inputType === 'logo') {
+      html = html.split(`<img src="{{${f.id}}}"`).join(`<img data-logo="${f.id}" src="{{${f.id}}}"`);
+      continue;
+    }
+    if (f.inputType !== 'image') continue;
+    const re = new RegExp(`<img src="\\{\\{${f.id}\\}\\}"([^>]*?)style="([^"]*)"([^>]*)/?>`, 'g');
+    html = html.replace(
+      re,
+      (_m, antes: string, estilo: string, depois: string) =>
+        `<div data-foto="${f.id}" style="${estilo}; overflow:hidden;"><img src="{{${f.id}}}"${antes}style="${estiloDoRecorte(f.id, values)}"${depois}/></div>`,
+    );
+  }
+  return html;
+}
+
+export type CantoLogo = 'sup-esq' | 'sup-dir' | 'inf-esq' | 'inf-dir';
+
+/**
+ * Posição e tamanho padrão do logo no modelo. O logo é livre: no editor ele é
+ * arrastado para qualquer lugar e redimensionado (valores "<id>__x", "__y",
+ * "__escala"); os cantos são só atalhos.
+ */
+export interface LogoCaixa {
+  /** Canto esquerdo e topo do logo, em px da arte. */
+  x: number;
+  y: number;
+  /** Largura do logo com escala 1, em px. */
+  largura: number;
+  /** Altura ÷ largura do arquivo padrão (para calcular os cantos). */
+  proporcao: number;
+  /** Filtro CSS fixo (ex.: deixar o logo branco sobre fundo escuro). */
+  filtro?: string;
+}
+
+const numero = (v: string | undefined, padrao: number) =>
+  v !== undefined && v !== '' && !Number.isNaN(Number(v)) ? Number(v) : padrao;
+
+/** Posição e escala atuais do logo (padrão do modelo + ajustes). */
+export function posicaoDoLogo(id: string, caixa: LogoCaixa, values: Record<string, string>) {
+  return {
+    x: numero(values[`${id}__x`], caixa.x),
+    y: numero(values[`${id}__y`], caixa.y),
+    escala: Math.min(3, Math.max(0.3, numero(values[`${id}__escala`], 1))),
+  };
+}
+
+/** Estilo do <img> do logo: posição livre e tamanho, com os ajustes do editor. */
+export function estiloDoLogo(id: string, caixa: LogoCaixa, values: Record<string, string>): string {
+  const p = posicaoDoLogo(id, caixa, values);
+  return (
+    `position:absolute; left:${Math.round(p.x)}px; top:${Math.round(p.y)}px; width:${Math.round(caixa.largura * p.escala)}px; ` +
+    `height:auto; display:block;${caixa.filtro ? ` filter:${caixa.filtro};` : ''}`
+  );
+}
+
+/** x e y para encostar o logo num canto da arte, com margem. */
+export function cantoDoLogo(
+  canto: CantoLogo,
+  caixa: LogoCaixa,
+  escala: number,
+  largura: number,
+  altura: number,
+  margem = 60,
+): { x: number; y: number } {
+  const w = caixa.largura * escala;
+  const h = w * caixa.proporcao;
+  return {
+    x: canto.endsWith('esq') ? margem : largura - margem - w,
+    y: canto.startsWith('sup') ? margem : altura - margem - h,
+  };
+}
+
+/**
+ * Texto de um campo como entra na arte: **trecho** vira negrito e o ajuste de
+ * tamanho ("<id>__tam", 0,7 a 1,4) escala o texto em relação ao do modelo.
+ */
+export function textoDoCampo(id: string, valor: string, values: Record<string, string>): string {
+  if (!valor) return valor;
+  let t = valor.replace(/\*\*(.+?)\*\*/gs, '<strong style="font-weight:700;">$1</strong>');
+  const tam = Math.min(1.4, Math.max(0.7, numero(values[`${id}__tam`], 1)));
+  if (tam !== 1) t = `<span style="font-size:${tam}em;">${t}</span>`;
+  return t;
 }
 
 /** Uma linha da tabela editável (ex.: Pure Store — produto + preço). */
@@ -99,6 +274,12 @@ export interface PureDesignTemplate {
    */
   coringa?: boolean;
   /**
+   * Galeria de fotos que se reorganiza conforme a quantidade (1 a N): as fotos
+   * excluídas no editor (ou que o assistente não usou) saem e as outras ocupam o
+   * espaço. Ver montarGaleria.
+   */
+  galeria?: GaleriaConfig;
+  /**
    * Palavras que, no pedido, apontam para este modelo (minúsculas, sem acento).
    * O assistente do Pure Design procura essas palavras e é obrigado a preferir
    * os modelos que combinam antes de recorrer a um coringa. Ver PALAVRAS_CHAVE.
@@ -114,7 +295,7 @@ const sejaInstrutorHTML = (bgUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Seja Instrutor</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1440px; background:#e8e8e8; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif;">
@@ -166,7 +347,7 @@ const aniversarioInstrutorHTML = (bgUrl: string, photoDefault: string) => `<!DOC
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aniversário do Instrutor</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1080px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif;">
@@ -197,7 +378,7 @@ const diaDasMaesHTML = (bgUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dia das Mães</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1440px; background:#ffffff; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif;">
@@ -220,7 +401,7 @@ const diaDasMaes50OffHTML = (bgUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dia das Mães - 50% OFF</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1350px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
@@ -247,7 +428,7 @@ const a4InformativoHTML = (bgUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>A4 Informativo</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1410px; height:2000px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
@@ -278,7 +459,7 @@ const comunicadoCopaHTML = (bgUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Comunicado Copa — Clima de Torcida</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1350px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
@@ -299,7 +480,7 @@ const feriadoAvisoHTML = (logoUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aviso de Feriado</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:__CANVAS_H__px; background:linear-gradient(180deg,#ffffff 0%,#f1f1f1 100%); overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
@@ -311,10 +492,14 @@ const feriadoAvisoHTML = (logoUrl: string) => `<!DOCTYPE html>
 <svg width="260" height="260" viewBox="0 0 250 250" style="position:absolute; bottom:120px; right:-110px;"><path d="M 0 0 L 125 0 A 125 125 0 0 1 250 125 L 250 125 A 125 125 0 0 1 125 250 L 0 250 L 0 0 Z" fill="none" stroke="#DB9828" stroke-width="3" opacity="0.25"/></svg>
 
 <!-- Logo -->
-<img src="${logoUrl}" alt="Pure Pilates" style="position:absolute; top:36px; left:50%; transform:translateX(-50%); width:180px; height:auto; display:block;"/>
+<img src="{{logo}}" alt="Pure Pilates" style="{{logo:estilo}}"/>
 
 <!-- AVISO! -->
 <!--fld:aviso--><div style="position:absolute; top:220px; left:0; right:0; text-align:center; font-size:132px; font-weight:800; color:#C12030; letter-spacing:2px; line-height:1;">{{aviso}}</div><!--/fld:aviso-->
+
+<!-- Mensagem opcional (ex.: "Desejamos um ótimo feriado!"), logo abaixo do card -->
+<style>.pd-vazio:empty{display:none !important}</style>
+<!--fld:mensagem--><div class="pd-vazio" style="position:absolute; left:165px; width:750px; top:calc(445px + __CARD_H__px + 44px); text-align:center; font-size:30px; font-weight:500; color:#231F20; line-height:1.4;">{{mensagem}}</div><!--/fld:mensagem-->
 
 <!-- Card (forma-assinatura Pure: 3 cantos arredondados + 1 reto) -->
 <div style="position:absolute; left:165px; top:445px; width:750px; height:__CARD_H__px; box-sizing:border-box; border:7px solid #C12030; border-radius:58px 58px 0 58px; background:rgba(255,255,255,0.55);"></div>
@@ -337,6 +522,7 @@ const feriadoAvisoFields: TemplateField[] = [
   { id: 'aviso', label: 'Chamada (AVISO!)', placeholder: '{{aviso}}', defaultValue: 'AVISO!', inputType: 'input', maxLength: 18 },
   { id: 'titulo', label: 'Título do feriado', placeholder: '{{titulo}}', defaultValue: 'FERIADO REVOLUÇÃO CONSTITUCIONALISTA', inputType: 'input', maxLength: 60 },
   { id: 'subtitulo', label: 'Subtítulo', placeholder: '{{subtitulo}}', defaultValue: 'Confira nosso horário de funcionamento!', inputType: 'input', maxLength: 80 },
+  { id: 'mensagem', label: 'Mensagem de bom feriado (opcional)', placeholder: '{{mensagem}}', defaultValue: '', maxLength: 90 },
 ];
 
 // Um pill de data. {{text}} é o texto (ex.: "09/07 - Fechado"). Duas variantes:
@@ -375,7 +561,7 @@ const valePresenteHTML = (logoUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vale Presente</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,700;1,800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1512px; height:662px; background:#F2ECE3; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
@@ -434,7 +620,7 @@ const depoimentoClaroHTML = (logoUrl: string, photoDefault: string) => `<!DOCTYP
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Depoimento — Card claro</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1350px; background:#f2ede6; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
@@ -460,7 +646,7 @@ const depoimentoClaroHTML = (logoUrl: string, photoDefault: string) => `<!DOCTYP
 
   </div>
 
-  <img src="${logoUrl}" alt="Pure Pilates" style="position:absolute; left:415px; top:1125px; width:249px; height:auto; display:block;"/>
+  <img src="{{logo}}" alt="Pure Pilates" style="{{logo:estilo}}"/>
 
 </div>
 </body>
@@ -482,7 +668,7 @@ const depoimentoVermelhoHTML = (logoUrl: string, photoDefault: string) => `<!DOC
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Depoimento — Fundo vermelho</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1350px; background:#a72537; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
@@ -511,7 +697,7 @@ const depoimentoVermelhoHTML = (logoUrl: string, photoDefault: string) => `<!DOC
   </div>
 
   <!-- Logo em branco: o asset é o colorido, invertido via filtro. -->
-  <img src="${logoUrl}" alt="Pure Pilates" style="position:absolute; left:425px; top:1089px; width:231px; height:auto; display:block; filter:brightness(0) invert(1);"/>
+  <img src="{{logo}}" alt="Pure Pilates" style="{{logo:estilo}}"/>
 
 </div>
 </body>
@@ -586,7 +772,7 @@ const pureStoreHTML = () => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pure Store — Tabela de Preços</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:flex-start; background:#e9e6e1;">
 <div style="position:relative; width:1488px; background:#FBF8F4; font-family:Montserrat, Arial, sans-serif; box-sizing:border-box; overflow:hidden;">
@@ -646,7 +832,7 @@ const inauguracaoVemAiHTML = (bgUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inauguração — Vem aí uma nova Pure Pilates</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1440px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
@@ -692,7 +878,7 @@ const inauguracaoMelhorHoraHTML = (bgUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inauguração — A melhor hora está chegando</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1440px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
@@ -744,7 +930,7 @@ const inauguracaoJaTemDataHTML = (bgUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inauguração — Já tem data</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1440px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif; color:${NOTE_RED};">
@@ -799,7 +985,7 @@ const inauguracaoPrimeiraAulaHTML = (bgUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inauguração — Sua primeira aula</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1440px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif;">
@@ -828,7 +1014,7 @@ const inauguracaoInauguramosHTML = (bgUrl: string) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inauguração — Inauguramos</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
 <div style="position:relative; width:1080px; height:1440px; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, Arial, sans-serif; color:#ffffff; text-align:center;">
@@ -855,80 +1041,138 @@ const inauguracaoInauguramosFields: TemplateField[] = [
   { id: 'telefone', label: 'Telefone', placeholder: '{{telefone}}', defaultValue: '11 9999-9999', maxLength: 20 },
 ];
 
-// ── Coringas (16/11/2026) ────────────────────────────────────────────────────
-// Modelos genéricos, desenhados no Canva pelo time ("coringa", 1080x1350): o
-// assistente do Pure Design usa um deles quando nenhum modelo específico combina
-// com o pedido (Natal, Black Friday, aula aberta…). Fundo = página do Canva sem
-// os textos e sem a foto de exemplo; posições e tamanhos tirados do design.
-// O título não quebra linha (vive dentro da pílula): por isso o limite curto.
+// Coringas: refeitos em HTML em pureDesignModelosNovos.ts (17/11/2026).
 
-const coringaTextoHTML = (bgUrl: string) => `<!DOCTYPE html>
+// ── Pure Store — Coringa (17/11/2026) ────────────────────────────────────────
+// O coringa da Pure Store: vitrine de produtos para qualquer divulgação da loja.
+// Desenhado no Canva ("Pré-Venda", 1080x1440). Fundo = a página sem fotos, sem
+// textos e sem a etiqueta. A etiqueta vermelha é desenhada aqui, opcional: some
+// quando o texto fica vazio e pode ser removida no editor.
+// Três molduras: uma grande à esquerda e duas empilhadas à direita.
+
+/** Moldura vazia: creme com um ícone de foto, até a pessoa subir a imagem. */
+const molduraVaziaFoto =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400' preserveAspectRatio='xMidYMid slice'>
+      <rect width='400' height='400' fill='#ece4d6'/>
+      <g fill='none' stroke='#b9a98f' stroke-width='10' stroke-linejoin='round'>
+        <rect x='130' y='150' width='140' height='100' rx='14'/>
+        <circle cx='200' cy='200' r='26'/>
+      </g>
+    </svg>`,
+  );
+
+const pureStoreCoringaHTML = (bgUrl: string) => `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Coringa — Só texto</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<title>Pure Store — Coringa</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
-<div style="position:relative; width:1080px; height:1350px; background:#f2ede6; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif; color:#231F20;">
-<div style="position:absolute; left:79px; top:168px; width:800px; height:144px; display:flex; align-items:center; justify-content:center; font-size:82px; font-weight:700; text-transform:uppercase; white-space:nowrap; line-height:1;">{{titulo}}</div>
-<div style="position:absolute; left:79px; top:411px; width:620px; height:400px; overflow:hidden; font-size:52px; font-weight:400; line-height:1.4; text-align:left; white-space:pre-line;">{{texto}}</div>
+<div style="position:relative; width:1080px; height:1440px; background:#f7f2e6; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif;">
+<style>.pd-selo:empty{display:none !important}</style>
+<!--fld:selo--><div style="position:absolute; left:62px; top:72px; height:72px; display:flex; align-items:center;"><span class="pd-selo" style="display:inline-block; min-width:271px; box-sizing:border-box; padding:0 40px; height:72px; line-height:72px; text-align:center; border-radius:36px; background:#b3263a; color:#ffffff; font-size:23px; font-weight:300; letter-spacing:3px; text-transform:uppercase; white-space:nowrap;">{{selo}}</span></div><!--/fld:selo-->
+{{galeria}}
+<img src="{{logo}}" alt="" style="{{logo:estilo}}"/>
+<div style="position:absolute; left:74px; top:994px; width:900px; font-size:60px; font-weight:300; color:#a22b3b; line-height:1.15; white-space:pre-line;">{{titulo}}</div>
+<div style="position:absolute; left:74px; top:1156px; width:900px; font-size:31px; font-weight:300; color:#a22b3b; line-height:1.4; white-space:pre-line;">{{texto}}</div>
 </div>
 </body>
 </html>`;
 
-const coringaTextoFields: TemplateField[] = [
-  { id: 'titulo', label: 'Título (dentro da pílula)', placeholder: '{{titulo}}', defaultValue: 'Novidade', maxLength: 14 },
-  { id: 'texto', label: 'Texto', placeholder: '{{texto}}', defaultValue: 'Escreva aqui o recado para os seus alunos, em poucas linhas.', inputType: 'textarea', maxLength: 110 },
+const pureStoreCoringaFields: TemplateField[] = [
+  { id: 'selo', label: 'Etiqueta (opcional: deixe vazio ou remova)', placeholder: '{{selo}}', defaultValue: 'Novidade', maxLength: 18 },
+  {
+    id: 'logo',
+    label: 'Logo',
+    placeholder: '{{logo}}',
+    defaultValue: '/images/pure-design/pure-store-logo.png',
+    inputType: 'logo',
+    unidadesLogo: ['Pure Store'],
+    logoCaixa: { x: 826, y: 66, largura: 192, proporcao: 0.437 },
+  },
+  { id: 'foto1', label: 'Foto grande (esquerda)', placeholder: '{{foto1}}', defaultValue: molduraVaziaFoto, inputType: 'image' },
+  { id: 'foto2', label: 'Foto de cima (direita)', placeholder: '{{foto2}}', defaultValue: molduraVaziaFoto, inputType: 'image' },
+  { id: 'foto3', label: 'Foto de baixo (direita)', placeholder: '{{foto3}}', defaultValue: molduraVaziaFoto, inputType: 'image' },
+  { id: 'titulo', label: 'Título', placeholder: '{{titulo}}', defaultValue: 'Peças que encantam\nno primeiro olhar.', inputType: 'textarea', maxLength: 50 },
+  { id: 'texto', label: 'Texto', placeholder: '{{texto}}', defaultValue: 'Escolha seus novos favoritos e descubra as novidades\nque podem fazer parte da sua arara.', inputType: 'textarea', maxLength: 120 },
 ];
 
-const coringaFotoHTML = (bgUrl: string, photoDefault: string) => `<!DOCTYPE html>
+// ── Pure Store — Foto de fundo (17/11/2026) ──────────────────────────────────
+// A foto ocupa a arte inteira (obrigatória, enquadrável por arraste/zoom) e um
+// cartão creme embaixo traz chamada, título, texto, um filete e um botão. A
+// etiqueta do alto é opcional (some quando vazia). Referência: arte "A MOVE está
+// quase chegando" do time.
+const pureStoreFotoFundoHTML = (photoDefault: string) => `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Coringa — Com foto</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<title>Pure Store — Foto de fundo</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f0f0f0;">
-<div style="position:relative; width:1080px; height:1350px; background:#f2ede6; background-image:url('${bgUrl}'); background-size:cover; background-position:center; overflow:hidden; font-family:Montserrat, sans-serif; color:#231F20;">
-<div style="position:absolute; left:112px; top:116px; width:689px; height:124px; display:flex; align-items:center; justify-content:center; font-size:72px; font-weight:700; text-transform:uppercase; white-space:nowrap; line-height:1;">{{titulo}}</div>
-<div style="position:absolute; left:145px; top:308px; width:790px; height:790px; overflow:hidden;">
-<img src="{{foto}}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.src='${photoDefault}'"/>
+<div style="position:relative; width:1080px; height:1440px; background:#e9dccb; overflow:hidden; font-family:Montserrat, sans-serif;">
+<img src="{{fundo}}" style="position:absolute; left:0; top:0; width:1080px; height:1440px; object-fit:cover; display:block;" onerror="this.src='${photoDefault}'"/>
+<style>.pd-vazio:empty{display:none !important}</style>
+<!--fld:selo--><div style="position:absolute; left:80px; top:80px;"><span class="pd-vazio" style="display:inline-block; min-width:233px; box-sizing:border-box; padding:0 32px; height:56px; line-height:56px; text-align:center; border-radius:28px; background:#a7253a; color:#f7efe3; font-size:21px; font-weight:300; letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">{{selo}}</span></div><!--/fld:selo-->
+<div style="position:absolute; left:80px; top:846px; width:920px; height:424px; box-sizing:border-box; padding:44px 56px 0; border-radius:36px; background:#f8f3e8; color:#a7253a;">
+<!--fld:chamada--><div class="pd-vazio" style="font-size:25px; font-weight:200; line-height:1.3; margin-bottom:22px;">{{chamada}}</div><!--/fld:chamada-->
+<div style="font-size:50px; font-weight:300; line-height:1.12; letter-spacing:0.3px;">{{titulo}}</div>
+<div style="margin-top:20px; font-size:25px; font-weight:300; line-height:1.5; color:#bb6474; max-width:680px; white-space:pre-line;">{{texto}}</div>
+<div style="position:absolute; left:56px; right:56px; top:270px; height:2px; background:#a7253a; opacity:.85;"></div>
+<!--fld:botao--><div style="position:absolute; left:56px; top:298px;"><span class="pd-vazio" style="display:inline-block; box-sizing:border-box; padding:0 38px; height:60px; line-height:60px; border-radius:30px; background:#a7253a; color:#f7efe3; font-size:20px; font-weight:300; letter-spacing:5px; text-transform:uppercase; white-space:nowrap;">{{botao}}</span></div><!--/fld:botao-->
 </div>
-<div style="position:absolute; left:179px; top:1118px; width:722px; height:200px; overflow:hidden; font-size:44px; font-weight:400; line-height:1.4; text-align:left; white-space:pre-line;">{{texto}}</div>
 </div>
 </body>
 </html>`;
 
-const coringaFotoFields: TemplateField[] = [
-  { id: 'titulo', label: 'Título (dentro da pílula)', placeholder: '{{titulo}}', defaultValue: 'Novidade', maxLength: 14 },
-  { id: 'foto', label: 'Foto', placeholder: '{{foto}}', defaultValue: aniversarioInstrutorPlaceholderPhoto, inputType: 'image' },
-  { id: 'texto', label: 'Texto', placeholder: '{{texto}}', defaultValue: 'Escreva aqui o recado, em até três linhas.', inputType: 'textarea', maxLength: 80 },
+const pureStoreFotoFundoFields: TemplateField[] = [
+  { id: 'fundo', label: 'Foto de fundo (obrigatória)', placeholder: '{{fundo}}', defaultValue: molduraVaziaFoto, inputType: 'image', obrigatoria: true },
+  { id: 'selo', label: 'Etiqueta do alto (opcional)', placeholder: '{{selo}}', defaultValue: 'Pré-venda', maxLength: 18 },
+  { id: 'chamada', label: 'Chamada pequena (opcional)', placeholder: '{{chamada}}', defaultValue: '(últimos dias)', maxLength: 30 },
+  { id: 'titulo', label: 'Título', placeholder: '{{titulo}}', defaultValue: 'A MOVE está quase chegando.', maxLength: 32 },
+  { id: 'texto', label: 'Texto', placeholder: '{{texto}}', defaultValue: 'Últimos dias para garantir seus favoritos e preparar\nsua unidade para receber a nova coleção.', inputType: 'textarea', maxLength: 110 },
+  { id: 'botao', label: 'Botão (opcional)', placeholder: '{{botao}}', defaultValue: 'Garanta já seus pedidos', maxLength: 28 },
 ];
 
-// Duas fotos: mesmo fundo e mesma área do coringa com foto, dividida ao meio
-// com 20px de respiro (ainda não há versão desenhada no Canva para duas fotos).
-const coringaDuasFotosHTML = (bgUrl: string, photoDefault: string) =>
-  coringaFotoHTML(bgUrl, photoDefault).replace(
-    /<div style="position:absolute; left:145px; top:308px; width:790px; height:790px; overflow:hidden;">[\s\S]*?<\/div>/,
-    `<div style="position:absolute; left:145px; top:308px; width:385px; height:790px; overflow:hidden;">
-<img src="{{foto1}}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.src='${photoDefault}'"/>
-</div>
-<div style="position:absolute; left:550px; top:308px; width:385px; height:790px; overflow:hidden;">
-<img src="{{foto2}}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.src='${photoDefault}'"/>
-</div>`,
-  ).replace('<title>Coringa — Com foto</title>', '<title>Coringa — Duas fotos</title>');
+// Logos soltos dos modelos da Pure Pilates: viram campo de logo (arrastável).
+const logoFeriadoAviso: TemplateField = {
+  id: 'logo',
+  label: 'Logo',
+  placeholder: '{{logo}}',
+  defaultValue: '/images/pure-design/pure-pilates-logo.png',
+  inputType: 'logo',
+  unidadesLogo: ['Pure Pilates'],
+  logoCaixa: { x: 450, y: 36, largura: 180, proporcao: 1 },
+};
 
-const coringaDuasFotosFields: TemplateField[] = [
-  { id: 'titulo', label: 'Título (dentro da pílula)', placeholder: '{{titulo}}', defaultValue: 'Novidade', maxLength: 14 },
-  { id: 'foto1', label: 'Foto da esquerda', placeholder: '{{foto1}}', defaultValue: aniversarioInstrutorPlaceholderPhoto, inputType: 'image' },
-  { id: 'foto2', label: 'Foto da direita', placeholder: '{{foto2}}', defaultValue: aniversarioInstrutorPlaceholderPhoto, inputType: 'image' },
-  { id: 'texto', label: 'Texto', placeholder: '{{texto}}', defaultValue: 'Escreva aqui o recado, em até três linhas.', inputType: 'textarea', maxLength: 80 },
-];
+const logoDepoimentoClaro: TemplateField = {
+  id: 'logo',
+  label: 'Logo',
+  placeholder: '{{logo}}',
+  defaultValue: '/images/pure-design/pure-pilates-logo-trim.png',
+  inputType: 'logo',
+  unidadesLogo: ['Pure Pilates'],
+  logoCaixa: { x: 415, y: 1125, largura: 249, proporcao: 0.414 },
+};
+
+const logoDepoimentoVermelho: TemplateField = {
+  id: 'logo',
+  label: 'Logo',
+  placeholder: '{{logo}}',
+  defaultValue: '/images/pure-design/pure-pilates-logo-trim.png',
+  inputType: 'logo',
+  unidadesLogo: ['Pure Pilates'],
+  logoCaixa: { x: 425, y: 1089, largura: 231, proporcao: 0.414, filtro: 'brightness(0) invert(1)' },
+};
 
 export const pureDesignTemplates: PureDesignTemplate[] = [
+  ...MODELOS_NOVOS,
+  ...FERIADOS_2027,
   {
     id: 'inauguracao-vem-ai',
     name: 'Inauguração — Vem aí uma nova (sem foto)',
@@ -980,6 +1224,37 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
     fields: inauguracaoInauguramosFields,
   },
   {
+    id: 'pure-store-foto-fundo',
+    name: 'Pure Store — Foto de fundo',
+    category: 'Pure Store',
+    thumbnail: '/images/pure-design/pure-store-coringa-bg.png',
+    width: 1080,
+    height: 1440,
+    html: pureStoreFotoFundoHTML(molduraVaziaFoto),
+    fields: pureStoreFotoFundoFields,
+  },
+  {
+    id: 'pure-store-coringa',
+    name: 'Pure Store — Coringa (1 a 3 fotos)',
+    category: 'Pure Store',
+    thumbnail: '/images/pure-design/pure-store-coringa-bg.png',
+    width: 1080,
+    height: 1440,
+    html: pureStoreCoringaHTML('/images/pure-design/pure-store-coringa-bg.png'),
+    fields: pureStoreCoringaFields,
+    galeria: {
+      token: '{{galeria}}',
+      campos: ['foto1', 'foto2', 'foto3'],
+      x: 72,
+      y: 172,
+      largura: 936,
+      altura: 754,
+      espaco: 19,
+      raio: 24,
+      fotoVazia: molduraVaziaFoto,
+    },
+  },
+  {
     id: 'pure-store-tabela-precos',
     name: 'Pure Store — Tabela de Preços',
     category: 'Pure Store',
@@ -1004,7 +1279,7 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'seja-instrutor',
     name: 'Seja Instrutor',
-    category: 'Recrutamento',
+    category: 'Equipe',
     thumbnail: '/images/pure-design/seja-instrutor-bg-v4.png',
     width: 1080,
     height: 1440,
@@ -1014,7 +1289,7 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'seja-instrutor-2',
     name: 'Seja Instrutor — Modelo 2',
-    category: 'Recrutamento',
+    category: 'Equipe',
     thumbnail: '/images/pure-design/seja-instrutor-2-bg-v3.png',
     width: 1080,
     height: 1440,
@@ -1024,7 +1299,7 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'aniversario-instrutor',
     name: 'Aniversário do Instrutor(a)',
-    category: 'Datas Comemorativas',
+    category: 'Equipe',
     thumbnail: '/images/pure-design/aniversario-instrutor-bg.png',
     width: 1080,
     height: 1080,
@@ -1034,7 +1309,7 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'dia-das-maes',
     name: 'Dia das Mães',
-    category: 'Dia das mães',
+    category: 'Datas comemorativas',
     thumbnail: '/images/pure-design/dia-das-maes-bg-v2.png',
     width: 1080,
     height: 1440,
@@ -1044,7 +1319,7 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'dia-das-maes-comemorativa',
     name: 'Dia das Mães',
-    category: 'Datas Comemorativas',
+    category: 'Datas comemorativas',
     thumbnail: '/images/pure-design/dia-das-maes-bg-v2.png',
     width: 1080,
     height: 1440,
@@ -1054,7 +1329,7 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'dia-das-maes-50-off',
     name: 'Dupla Dinâmica 50% OFF',
-    category: 'Dia das mães',
+    category: 'Datas comemorativas',
     thumbnail: '/images/pure-design/dia-das-maes-50-off.png',
     width: 1080,
     height: 1350,
@@ -1064,7 +1339,7 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'a4-informativo',
     name: 'A4 Informativo',
-    category: 'Informativos',
+    category: 'Avisos da unidade',
     thumbnail: '/images/pure-design/a4-base.png',
     width: 1410,
     height: 2000,
@@ -1074,18 +1349,18 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'feriado-aviso',
     name: 'Feriado — Aviso de Horário',
-    category: 'Feriados',
+    category: 'Avisos da unidade',
     thumbnail: '/images/pure-design/feriado-aviso.png',
     width: 1080,
     height: 1350,
     html: feriadoAvisoHTML('/images/pure-design/pure-pilates-logo.png'),
-    fields: feriadoAvisoFields,
+    fields: [...feriadoAvisoFields, logoFeriadoAviso],
     repeat: feriadoAvisoRepeat,
   },
   {
     id: 'comunicado-copa',
     name: 'Copa — Clima de Torcida',
-    category: 'Comunicados',
+    category: 'Avisos da unidade',
     thumbnail: '/images/pure-design/comunicado-copa.png',
     width: 1080,
     height: 1350,
@@ -1105,54 +1380,22 @@ export const pureDesignTemplates: PureDesignTemplate[] = [
   {
     id: 'depoimento-claro',
     name: 'Depoimento — Card claro',
-    category: 'Depoimentos',
+    category: 'Alunos e comunidade',
     thumbnail: '/images/pure-design/depoimento-claro.png',
     width: 1080,
     height: 1350,
     html: depoimentoClaroHTML('/images/pure-design/pure-pilates-logo-trim.png', depoimentoPlaceholderFoto),
-    fields: depoimentoClaroFields,
+    fields: [...depoimentoClaroFields, logoDepoimentoClaro],
   },
   {
     id: 'depoimento-vermelho',
     name: 'Depoimento — Fundo vermelho',
-    category: 'Depoimentos',
+    category: 'Alunos e comunidade',
     thumbnail: '/images/pure-design/depoimento-vermelho.png',
     width: 1080,
     height: 1350,
     html: depoimentoVermelhoHTML('/images/pure-design/pure-pilates-logo-trim.png', depoimentoPlaceholderFoto),
-    fields: depoimentoVermelhoFields,
-  },  {
-    id: 'coringa-texto',
-    name: 'Coringa — Só texto',
-    category: 'Coringa',
-    thumbnail: '/images/pure-design/coringa-texto-bg.png',
-    width: 1080,
-    height: 1350,
-    html: coringaTextoHTML('/images/pure-design/coringa-texto-bg.png'),
-    fields: coringaTextoFields,
-    coringa: true,
-  },
-  {
-    id: 'coringa-foto',
-    name: 'Coringa — Com foto',
-    category: 'Coringa',
-    thumbnail: '/images/pure-design/coringa-foto-bg.png',
-    width: 1080,
-    height: 1350,
-    html: coringaFotoHTML('/images/pure-design/coringa-foto-bg.png', aniversarioInstrutorPlaceholderPhoto),
-    fields: coringaFotoFields,
-    coringa: true,
-  },
-  {
-    id: 'coringa-duas-fotos',
-    name: 'Coringa — Duas fotos',
-    category: 'Coringa',
-    thumbnail: '/images/pure-design/coringa-foto-bg.png',
-    width: 1080,
-    height: 1350,
-    html: coringaDuasFotosHTML('/images/pure-design/coringa-foto-bg.png', aniversarioInstrutorPlaceholderPhoto),
-    fields: coringaDuasFotosFields,
-    coringa: true,
+    fields: [...depoimentoVermelhoFields, logoDepoimentoVermelho],
   },
 ];
 
@@ -1174,6 +1417,14 @@ const PALAVRAS_CHAVE: Record<string, string[]> = {
   'inauguracao-ja-tem-data': ['ja tem data', 'data da inauguracao', 'save the date', 'dia da inauguracao'],
   'inauguracao-primeira-aula': ['primeira aula', 'aula inaugural'],
   'inauguracao-inauguramos': ['inauguramos', 'inaugurada', 'abrimos', 'ja abriu', 'estamos abertos'],
+  'pure-store-foto-fundo': [
+    'pure store', 'loja', 'store', 'pre-venda', 'pre venda', 'lancamento', 'colecao', 'move', 'ultimos dias',
+    'garanta', 'pedido', 'chegando', 'foto de fundo', 'campanha', 'promocao',
+  ],
+  'pure-store-coringa': [
+    'pure store', 'loja', 'store', 'pre-venda', 'pre venda', 'lancamento', 'colecao', 'novidade', 'chegou',
+    'peca', 'roupa', 'look', 'produto', 'top', 'legging', 'camiseta', 'short', 'black friday', 'promocao',
+  ],
   'pure-store-tabela-precos': ['pure store', 'tabela', 'preco', 'produto', 'loja', 'uniforme', 'meia', 'garrafa'],
   'seja-instrutor': ['instrutor', 'vaga', 'contrat', 'recrut', 'seja instrutor', 'trabalhe', 'professor'],
   'seja-instrutor-2': ['instrutor', 'vaga', 'contrat', 'recrut', 'seja instrutor', 'trabalhe', 'professor'],
@@ -1201,20 +1452,41 @@ const PALAVRAS_CHAVE: Record<string, string[]> = {
 export const CATEGORIAS: Record<string, string> = {
   'Inauguração':
     'Artes para a abertura de uma unidade/estúdio novo: anunciar que vai abrir (vem aí, em breve), a data da inauguração, a primeira aula e o "inauguramos" depois de abrir. A pessoa pode dizer "abertura do estúdio", "estúdio novo", "nova unidade", "vamos abrir dia tal".',
-  'Feriados':
-    'Artes de feriado. Hoje o modelo disponível é de AVISO de funcionamento (dias que fecha ou abre, horário especial, recesso), e serve para qualquer feriado (Natal, Ano Novo, Carnaval, Corpus Christi, Consciência Negra…).',
-  'Datas Comemorativas':
-    'Homenagens em datas especiais de pessoas da unidade, como o aniversário de um instrutor ou instrutora.',
-  'Dia das mães': 'Artes do Dia das Mães: homenagem às mães e a promoção Dupla Dinâmica (mãe e filha/filho).',
-  'Recrutamento': 'Vagas para instrutor/instrutora de Pilates: "seja instrutor", "estamos contratando", "trabalhe conosco".',
-  'Pure Store': 'Produtos da Pure Store vendidos na unidade: tabela de preços de uniformes, meias, garrafas e acessórios.',
-  'Informativos': 'Comunicado impresso (A4) para mural ou recepção: avisos internos, recados formais, informações gerais.',
-  'Comunicados': 'Comunicados de ocasiões especiais, como dias de jogo da Copa (horário, clima de torcida).',
+  'Atrair alunos':
+    'Captação de alunos: convite para aula experimental (com ou sem foto), programa de indicação (indique um amigo) e Black Friday / condição especial de planos da unidade (sem inventar preço).',
+  'Avisos da unidade':
+    'Avisos de funcionamento: feriado (dias que fecha/abre, com mensagem opcional de bom feriado), mudança de horário, aula cancelada, manutenção, comunicado impresso A4 e dias de jogo.',
+  'Aulas e eventos':
+    'Programação da unidade: grade de horários da semana, aulão do mês, aula aberta, workshop, evento.',
+  'Equipe':
+    'Equipe da unidade. "Vaga", "contratando", "trabalhe conosco" = vaga de INSTRUTOR(A) DE PILATES (assuma sem perguntar o cargo; só mude se a pessoa disser outro). Também: novo instrutor na equipe e aniversário de instrutor(a).',
+  'Alunos e comunidade':
+    'Relação com os alunos: depoimento de aluno, boas-vindas a aluno novo, aniversariantes do mês.',
+  'Feriados 2027':
+    'Um aviso pronto para cada feriado de 2027 (Ano-Novo, Carnaval, Quarta de Cinzas, Sexta-feira Santa, Tiradentes, Dia do Trabalho, Corpus Christi, 9 de julho em SP, Independência, Aparecida, Finados, República, Consciência Negra, véspera de Natal, Natal e véspera de Ano-Novo), com a ilustração do tema e a data já preenchida. Quando o pedido é sobre um desses feriados, use o modelo da data em vez do aviso de feriado genérico.',
+  'Datas comemorativas':
+    'Mensagens de datas especiais: Natal e Ano Novo (com ou sem foto), Dia das Mães (homenagem e Dupla Dinâmica).',
+  'Pure Store':
+    'Produtos da Pure Store vendidos na unidade: vitrine com galeria de 1 a 3 fotos, campanha com foto de fundo e tabela de preços.',
   'Vale-presente': 'Vale-presente / cartão-presente de aulas, para presentear alguém.',
-  'Depoimentos': 'Depoimento de aluno ou aluna: frase de quem pratica, com nome (e foto, conforme o modelo).',
-  'Coringa':
-    'Modelos genéricos, com título e texto livres (só texto, com uma foto ou com duas fotos), que servem para qualquer assunto que as outras categorias não cobrem bem: mensagens, campanhas, boas-vindas, aula aberta, Black Friday, boas festas…',
+  'Coringas':
+    'Modelos genéricos, com título e texto livres (só texto, com uma foto ou com duas fotos), para qualquer assunto que as outras categorias não cobrem bem.',
 };
+
+/** Ordem das categorias na galeria do Pure Design. */
+export const ORDEM_DAS_CATEGORIAS = [
+  'Inauguração',
+  'Atrair alunos',
+  'Avisos da unidade',
+  'Feriados 2027',
+  'Aulas e eventos',
+  'Equipe',
+  'Alunos e comunidade',
+  'Datas comemorativas',
+  'Pure Store',
+  'Vale-presente',
+  'Coringas',
+];
 
 /** O que é cada modelo, em uma frase, para o assistente diferenciar modelos do mesmo tema. */
 const DICAS: Record<string, string> = {
@@ -1225,16 +1497,22 @@ const DICAS: Record<string, string> = {
   'inauguracao-ja-tem-data': 'Anuncia que a inauguração já tem data marcada ("save the date").',
   'inauguracao-primeira-aula': 'Convite para a primeira aula / aula inaugural da unidade nova.',
   'inauguracao-inauguramos': 'Para depois da inauguração: "inauguramos", "abrimos".',
-  'feriado-aviso': 'Aviso de funcionamento em qualquer feriado, com a lista de datas (fechado/aberto). Sem foto.',
+  'pure-store-foto-fundo':
+    'Campanha da Pure Store com UMA foto ocupando a arte inteira (obrigatória: peça a foto antes), etiqueta opcional no alto e um cartão com chamada pequena, título, texto e botão (ex.: "Garanta já seus pedidos"). Para lançamento, pré-venda, últimos dias de campanha.',
+  'pure-store-coringa':
+    'O coringa da Pure Store: vitrine com GALERIA de 1 a 3 fotos de produtos (o layout se ajusta à quantidade), título, texto, logo e uma etiqueta opcional (ex.: "Pré-venda", "Lançamento", "Novidade"; vazia = sem etiqueta). Serve para qualquer divulgação de produtos da loja.',
+  'feriado-aviso':
+    'Aviso de funcionamento em qualquer feriado, com a lista de datas (fechado/aberto) e uma mensagem opcional de bom feriado (ex.: "Desejamos um ótimo feriado!"). Sem foto.',
 };
 for (const t of pureDesignTemplates) {
-  t.palavrasChave = PALAVRAS_CHAVE[t.id];
-  t.dica = DICAS[t.id];
+  t.palavrasChave = PALAVRAS_CHAVE[t.id] ?? PALAVRAS_MODELOS_NOVOS[t.id] ?? PALAVRAS_FERIADOS_2027[t.id];
+  t.dica = DICAS[t.id] ?? DICAS_MODELOS_NOVOS[t.id] ?? DICAS_FERIADOS_2027[t.id];
 }
 
 // Fica true quando o template demarca o bloco removível do campo (forma + texto)
 // via <!--fld:ID-->...<!--/fld:ID-->. Só nesses campos o editor mostra a lixeira.
 export function fieldIsRemovable(template: PureDesignTemplate, fieldId: string): boolean {
+  if (template.galeria?.campos.includes(fieldId)) return true;
   return template.html.includes(`<!--fld:${fieldId}-->`);
 }
 
@@ -1259,9 +1537,19 @@ export function buildRenderedHTML(
       html = html.replace(re, '');
     });
   }
+  html = emoldurarFotos(html, template, values);
+  if (template.galeria) {
+    html = html.split(template.galeria.token).join(montarGaleria(template.galeria, values, removed));
+  }
   template.fields.forEach((field) => {
+    // Logo: o estilo (canto, distâncias, tamanho) entra antes, pelo token próprio.
+    if (field.inputType === 'logo' && field.logoCaixa) {
+      html = html.split(`{{${field.id}:estilo}}`).join(estiloDoLogo(field.id, field.logoCaixa, values));
+    }
     // Campo removido sem marcador de bloco: pelo menos zera o texto.
-    const value = removed?.has(field.id) ? '' : (values[field.id] ?? field.defaultValue);
+    const bruto = removed?.has(field.id) ? '' : (values[field.id] ?? field.defaultValue);
+    const ehTexto = field.inputType !== 'image' && field.inputType !== 'logo';
+    const value = ehTexto ? textoDoCampo(field.id, bruto, values) : bruto;
     html = html.split(field.placeholder).join(value);
   });
   // Tabela de linhas dinâmicas (Pure Store): gera uma linha por item escolhido.

@@ -9,17 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, FileText, ImageIcon, FolderOpen, ChevronLeft } from 'lucide-react';
-import { artesProntas, type ArtePronta } from '@/data/artesProntasData';
-
-/** Nome amigável do arquivo baixado. */
-const downloadName = (arte: ArtePronta) => {
-  const slug = arte.title
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return `Pure Pilates - ${arte.format} - ${slug}.${arte.fileType.toLowerCase()}`;
-};
+import { artesProntas, nomeDoDownload as downloadName, type ArtePronta } from '@/data/artesProntasData';
 
 const typeIcon = (t: ArtePronta['fileType']) => (t === 'PDF' ? FileText : ImageIcon);
 
