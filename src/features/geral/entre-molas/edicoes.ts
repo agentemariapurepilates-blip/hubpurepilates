@@ -10,6 +10,7 @@ export interface EdicaoEntreMolas {
 export const EDICOES_ENTRE_MOLAS: EdicaoEntreMolas[] = [
   { slug: 'edicao-1', nome: 'Edição 1' },
   { slug: 'edicao-2', nome: 'Edição 2' },
+  { slug: 'especial-nota-fiscal', nome: 'Edição especial' },
 ];
 
 export const EDICAO_MAIS_RECENTE = EDICOES_ENTRE_MOLAS[EDICOES_ENTRE_MOLAS.length - 1];

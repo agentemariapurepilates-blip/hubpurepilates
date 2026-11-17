@@ -7,6 +7,8 @@ import { PAGINAS_EDICAO_1 } from './edicao-1';
 import { CAPITULOS as CAPITULOS_EDICAO_1 } from './edicao-1/materias';
 import { PAGINAS_EDICAO_2 } from './edicao-2';
 import { CAPITULOS as CAPITULOS_EDICAO_2 } from './edicao-2/materias';
+import { PAGINAS_EDICAO_ESPECIAL } from './edicao-especial';
+import { CAPITULOS as CAPITULOS_EDICAO_ESPECIAL } from './edicao-especial/materias';
 import './entre-molas.css';
 
 // O que a estante e a revista compartilham: fontes, o palco em tela cheia e o
@@ -16,6 +18,7 @@ import './entre-molas.css';
 export const CONTEUDO_POR_EDICAO: Record<string, { paginas: RenderPagina[]; capitulos: Capitulo[] }> = {
   'edicao-1': { paginas: PAGINAS_EDICAO_1, capitulos: CAPITULOS_EDICAO_1 },
   'edicao-2': { paginas: PAGINAS_EDICAO_2, capitulos: CAPITULOS_EDICAO_2 },
+  'especial-nota-fiscal': { paginas: PAGINAS_EDICAO_ESPECIAL, capitulos: CAPITULOS_EDICAO_ESPECIAL },
 };
 
 // Fontes editoriais carregadas só quando a Entre Molas abre.
