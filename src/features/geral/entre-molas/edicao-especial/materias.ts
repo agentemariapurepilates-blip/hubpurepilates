@@ -12,8 +12,19 @@ export const MATERIAS = {
   riscos: { pagina: 9, n: '04', titulo: 'Quanto custa ficar fora', tipo: 'Infográfico', secao: 'Os números do risco' },
   pratica: { pagina: 13, n: '05', titulo: 'Na prática: uma nota por aluno, por mês', tipo: 'Passo a passo', secao: 'Como funciona na prática' },
   numeros: { pagina: 15, n: '06', titulo: 'Os três números que precisam bater', tipo: 'Infográfico', secao: 'Os números do ciclo' },
-  ganhos: { pagina: 19, n: '07', titulo: 'O que a sua unidade ganha', tipo: 'Tabela', secao: 'O que você ganha' },
-  padrao: { pagina: 23, n: '08', titulo: 'O que a COF já pede e o seu checklist', tipo: 'Checklist', secao: 'O padrão da rede' },
+  ganhos: { pagina: 21, n: '07', titulo: 'O que a sua unidade ganha', tipo: 'Tabela', secao: 'O que você ganha' },
+  padrao: { pagina: 25, n: '08', titulo: 'O que a COF já pede e o seu checklist', tipo: 'Checklist', secao: 'O padrão da rede' },
+} as const;
+
+// Destaque da edição, fora das 8 seções: o Pure GPT (o assistente "Peça sua arte"
+// do Pure Design). Chamada na capa e no sumário.
+export const PURE_GPT = {
+  pagina: 29,
+  titulo: 'Peça sua arte no chat da Pure',
+  /** Chamada da capa e do sumário. */
+  chamada: 'Peça sua arte no chat da Pure',
+  secao: 'Pure GPT',
+  tipo: 'Novidade',
 } as const;
 
 export const ORDEM_DO_SUMARIO = [
@@ -39,4 +50,5 @@ export const CAPITULOS = [
   { rotulo: '3 números', pagina: MATERIAS.numeros.pagina },
   { rotulo: 'Ganhos', pagina: MATERIAS.ganhos.pagina },
   { rotulo: 'Padrão da rede', pagina: MATERIAS.padrao.pagina },
+  { rotulo: 'Pure GPT', pagina: PURE_GPT.pagina },
 ];

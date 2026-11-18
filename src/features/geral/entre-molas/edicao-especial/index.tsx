@@ -3,7 +3,7 @@ import { EdicaoContext, EditoriaContext, type Lado } from '../diagramacao';
 import { FotoMolas } from '../edicao-1/Abertura';
 import Contracapa from '../edicao-1/Contracapa';
 import Capa from './Capa';
-import { MATERIAS } from './materias';
+import { MATERIAS, PURE_GPT } from './materias';
 import {
   Calendario1,
   Calendario2,
@@ -16,12 +16,16 @@ import {
   Ganhos4,
   Mito1,
   Mito2,
+  NumerosAbertura,
   Numeros1,
   Numeros2,
   Numeros3,
-  Numeros4,
+  NumerosPodcast,
+  NumerosWellhub,
   Padrao1,
   Padrao2,
+  PureGpt1,
+  PureGpt2,
   Fontes,
   Pratica1,
   Pratica2,
@@ -55,8 +59,12 @@ export const PAGINAS_EDICAO_ESPECIAL: RenderPagina[] = [
   ...materia(MATERIAS.mito.secao, [(l) => <Mito1 lado={l} />, (l) => <Mito2 lado={l} />]),
   ...materia(MATERIAS.riscos.secao, [(l) => <Riscos1 lado={l} />, (l) => <Riscos2 lado={l} />, (l) => <Riscos3 lado={l} />, (l) => <Riscos4 lado={l} />]),
   ...materia(MATERIAS.pratica.secao, [(l) => <Pratica1 lado={l} />, (l) => <Pratica2 lado={l} />]),
-  ...materia(MATERIAS.numeros.secao, [(l) => <Numeros1 lado={l} />, (l) => <Numeros2 lado={l} />, (l) => <Numeros3 lado={l} />, (l) => <Numeros4 lado={l} />]),
+  ...materia(MATERIAS.numeros.secao, [
+    (l) => <NumerosAbertura lado={l} />, (l) => <Numeros1 lado={l} />, (l) => <Numeros2 lado={l} />, (l) => <NumerosPodcast lado={l} />,
+    (l) => <Numeros3 lado={l} />, (l) => <NumerosWellhub lado={l} />,
+  ]),
   ...materia(MATERIAS.ganhos.secao, [(l) => <Ganhos1 lado={l} />, (l) => <Ganhos2 lado={l} />, (l) => <Ganhos3 lado={l} />, (l) => <Ganhos4 lado={l} />]),
   ...materia(MATERIAS.padrao.secao, [(l) => <Padrao1 lado={l} />, (l) => <Padrao2 lado={l} />, (l) => <Checklist lado={l} />, (l) => <Fontes lado={l} />]),
+  ...materia(PURE_GPT.secao, [(l) => <PureGpt1 lado={l} />, (l) => <PureGpt2 lado={l} />]),
   (lado) => <Contracapa lado={lado} />,
 ];

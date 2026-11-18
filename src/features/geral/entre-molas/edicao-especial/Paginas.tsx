@@ -1,13 +1,16 @@
-import { useState, type ReactNode, type SyntheticEvent } from 'react';
-import { Foto, Pagina, Rotulo, Titulo, useNavegacao, type Lado } from '../diagramacao';
-import fotoAula from './fotos/foto-aula.jpg';
-import fotoAulao1 from './fotos/foto-aulao-1.jpg';
-import fotoAulao2 from './fotos/foto-aulao-2.jpg';
-import fotoGestao from './fotos/foto-gestao.jpg';
-import fotoRecepcao from './fotos/foto-recepcao.jpg';
-import fotoStudio from './fotos/foto-studio.jpg';
-import { CalendarioNovembro, NotaFiscal, SemanaAlternada } from './Ilustracoes';
-import { MATERIAS, ORDEM_DO_SUMARIO } from './materias';
+import { Fragment, useState, type ReactNode, type SyntheticEvent } from 'react';
+import { BarChart3, FileText, Scale } from 'lucide-react';
+import { Pagina, Rotulo, Titulo, useNavegacao, type Lado } from '../diagramacao';
+import posterPodcast from './fotos/podcast-poster.jpg';
+import {
+  Bifurcacao,
+  BoatoLei,
+  CalendarioNovembro,
+  LequeDeNotas,
+  Redutores,
+  SemanaAlternada,
+} from './Ilustracoes';
+import { MATERIAS, ORDEM_DO_SUMARIO, PURE_GPT } from './materias';
 
 // Páginas da Edição especial · Nota fiscal. Texto exatamente como na edição
 // original (ver materias.ts); aqui só muda a diagramação, uma página por vez.
@@ -50,11 +53,11 @@ export const Sumario = ({ lado }: P) => {
     <Pagina lado={lado} numero={2}>
       <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col">
         <Rotulo>Nesta edição</Rotulo>
-        <Titulo className="mt-[12px]" style={{ fontSize: 58 }}>A regra é a mesma. O cenário mudou.</Titulo>
-        <p className="em-serif mt-[16px] text-[19px] leading-[1.45]">
+        <Titulo className="mt-[10px]" style={{ fontSize: 50 }}>A regra é a mesma. O cenário mudou.</Titulo>
+        <p className="em-serif mt-[12px] text-[18px] leading-[1.4]">
           Esta edição relembra o que a COF já pede, explica o que a reforma tributária muda na emissão das notas e separa o que é lei do que é boato.
         </p>
-        <div className="mt-[18px] grid grid-cols-3 gap-[18px] border-y border-[var(--em-tinta)]/20 py-[12px]">
+        <div className="mt-[14px] grid grid-cols-3 gap-[18px] border-y border-[var(--em-tinta)]/20 py-[8px]">
           {[
             ['1', 'mensagem: nota sobre 100% da receita'],
             ['3', 'números que precisam bater'],
@@ -77,7 +80,7 @@ export const Sumario = ({ lado }: P) => {
                   e.stopPropagation();
                   irParaPagina(m.pagina);
                 }}
-                className="group flex w-full items-center gap-[20px] border-b border-[var(--em-tinta)]/15 py-[7px] text-left"
+                className="group flex w-full items-center gap-[20px] border-b border-[var(--em-tinta)]/15 py-[5px] text-left"
               >
                 <span className="em-display w-[48px] shrink-0 text-[34px] font-extrabold leading-none text-[var(--em-vinho)] transition-transform duration-300 group-hover:translate-x-[6px]">
                   {m.n}
@@ -90,6 +93,24 @@ export const Sumario = ({ lado }: P) => {
             </li>
           ))}
         </ol>
+        <button
+          type="button"
+          onPointerDown={segura}
+          onPointerUp={segura}
+          onClick={(e) => {
+            e.stopPropagation();
+            irParaPagina(PURE_GPT.pagina);
+          }}
+          className="em-tom--vinho group mt-[12px] flex w-full items-center gap-[16px] px-[16px] py-[10px] text-left"
+        >
+          <span className="em-sans shrink-0 rounded-full bg-[#f7ecdc] px-[10px] py-[3px] text-[11px] font-bold uppercase tracking-[0.18em] text-[#a9293b]">
+            {PURE_GPT.tipo}
+          </span>
+          <span className="em-display flex-1 text-[24px] font-semibold uppercase leading-[1.02]">
+            {PURE_GPT.secao}: {PURE_GPT.chamada}
+          </span>
+          <span className="em-sans text-[13px] font-bold tracking-[0.14em]">P. {PURE_GPT.pagina}</span>
+        </button>
       </div>
     </Pagina>
   );
@@ -119,6 +140,48 @@ export const Editorial1 = ({ lado }: P) => (
   </Pagina>
 );
 
+/** Infográfico do editorial: o que a edição faz (com as páginas) e o método. */
+const InfoEdicao = () => {
+  const itens = [
+    { Icone: FileText, t: 'Relembra o que a COF pede', p: `P. ${MATERIAS.padrao.pagina}` },
+    { Icone: Scale, t: 'Separa o que é lei do que é boato', p: `P. ${String(MATERIAS.mito.pagina).padStart(2, '0')}` },
+    { Icone: BarChart3, t: 'Mostra com números o que está em jogo', p: `PP. ${String(MATERIAS.riscos.pagina).padStart(2, '0')} e ${MATERIAS.numeros.pagina}` },
+  ];
+  return (
+    <div aria-hidden="true" className="flex flex-col gap-[14px] self-center">
+      <Rotulo>Esta edição</Rotulo>
+      <div className="relative flex flex-col gap-[12px] border-l-[3px] border-[var(--em-vinho)] pl-[22px]">
+        {itens.map(({ Icone, t, p }) => (
+          <div key={t} className="relative flex items-center gap-[14px] rounded-[10px] bg-white/60 px-[14px] py-[12px] shadow-[0_6px_18px_-10px_rgba(0,0,0,0.3)]">
+            <span className="absolute left-[-31px] top-1/2 h-[14px] w-[14px] -translate-y-1/2 rounded-full border-[3px] border-[var(--em-vinho)] bg-[var(--em-papel)]" />
+            <span className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-[var(--em-vinho)] text-[#f7ecdc]">
+              <Icone className="h-[22px] w-[22px]" strokeWidth={2} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="em-display block text-[22px] font-extrabold uppercase leading-[1]">{t}</span>
+              <span className="em-sans mt-[3px] block text-[12px] font-bold tracking-[0.14em] text-[var(--em-vinho)]">{p}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-[14px] rounded-[10px] bg-[var(--em-tinta)] px-[18px] py-[16px] text-[#f7ecdc]">
+        <div className="em-sans text-[11.5px] font-bold uppercase tracking-[0.2em] text-[#e0566b]">Método antes do movimento</div>
+        <div className="mt-[10px] grid grid-cols-[1fr_auto_1fr] items-center gap-[10px]">
+          <div className="rounded-[8px] border border-white/20 px-[12px] py-[10px] text-center">
+            <div className="em-display text-[30px] font-extrabold leading-none text-[#e0566b]">1</div>
+            <div className="em-display mt-[2px] text-[22px] font-extrabold uppercase leading-none">Entender</div>
+          </div>
+          <span className="em-display text-[30px] font-extrabold text-[#e0566b]">→</span>
+          <div className="rounded-[8px] bg-[#e0566b] px-[12px] py-[10px] text-center text-white">
+            <div className="em-display text-[30px] font-extrabold leading-none">2</div>
+            <div className="em-display mt-[2px] text-[22px] font-extrabold uppercase leading-none">Ajustar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const Editorial2 = ({ lado }: P) => (
   <Pagina lado={lado} numero={E.pagina + 1}>
     <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] grid grid-cols-[1fr_400px] gap-[34px]">
@@ -131,7 +194,7 @@ export const Editorial2 = ({ lado }: P) => (
           A regra que vale para o Reformer vale aqui também: <b>método antes do movimento</b>. Primeiro a gente entende; depois a gente ajusta.
         </Texto>
       </div>
-      <Foto src={fotoRecepcao} alt="Recepção de um studio Pure Pilates" className="h-[500px] w-[400px] self-start rounded-[10px]" />
+      <InfoEdicao />
     </div>
   </Pagina>
 );
@@ -322,7 +385,7 @@ export const Mito2 = ({ lado }: P) => (
   <Pagina lado={lado} numero={M.pagina + 1}>
     <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col pt-[40px]">
       <TabelaMitos linhas={MITOS.slice(3)} />
-      <Foto src={fotoStudio} alt="Aula no Cadillac em um studio Pure Pilates" posicao="50% 35%" className="mt-auto h-[300px] w-full rounded-[10px]" />
+      <BoatoLei className="mt-auto h-[300px] w-full" />
     </div>
   </Pagina>
 );
@@ -519,9 +582,8 @@ export const Pratica2 = ({ lado }: P) => (
           ]}
         />
       </div>
-      <div className="relative mt-auto h-[400px]">
-        <Foto src={fotoGestao} alt="Studio Pure Pilates com os aparelhos" className="absolute left-0 top-0 h-[400px] w-[470px] rounded-[10px]" />
-        <NotaFiscal className="absolute right-0 top-[24px] w-[300px]" style={{ rotate: '3deg' }} />
+      <div className="relative mb-[30px] mt-auto h-[370px]">
+        <LequeDeNotas className="absolute inset-0" />
       </div>
     </div>
   </Pagina>
@@ -530,8 +592,49 @@ export const Pratica2 = ({ lado }: P) => (
 // ── 06 Três números ─────────────────────────────────────────────────────────
 const N = MATERIAS.numeros;
 
+// Abre a seção (página ímpar): o alerta da nota de royalty. Texto enviado pelo time em 18/11/2026.
+export const NumerosAbertura = ({ lado }: P) => (
+  <Pagina lado={lado} numero={N.pagina} tom="vinho">
+    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[18px]">
+      <div className="h-[4px] w-[64px] bg-[#f7ecdc]" />
+      <Titulo style={{ fontSize: 66 }}>A franqueadora faz a parte dela por inteiro.</Titulo>
+      <p className="em-sans text-[17.5px] leading-[1.5]">
+        Todo mês, emite a nota fiscal dos royalties de cada unidade, com o valor certo e o CNPJ da unidade como tomador. Essa nota vai para a
+        mesma base nacional da NFS-e em que estão as notas que a sua unidade emite.
+      </p>
+      <p className="em-sans text-[17.5px] leading-[1.5]">
+        É justamente por estar tudo certo do lado da franqueadora que existe uma primeira pista sobre o faturamento de cada unidade. E ela é
+        fácil de reconhecer: o royalty é 8% do faturamento bruto. Quem olha a nota de royalty sabe, numa divisão, quanto a unidade faturou.
+      </p>
+      <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-[10px] bg-[#1d1413] px-[18px] py-[16px] text-[#f7ecdc]">
+        {[
+          ['R$ 6.400', 'de nota de royalty'],
+          ['R$ 80.000', 'de faturamento revelado'],
+          ['R$ 28.000', 'de diferença, se as suas NFS-e somam R$ 52.000.'],
+        ].map(([v, t], i) => (
+          <Fragment key={v}>
+            {i > 0 && <span className="em-display text-[34px] font-extrabold text-[#ffd9a8]">→</span>}
+            <div>
+              <div className={`em-display text-[40px] font-extrabold leading-none ${i === 2 ? 'text-[#ff8a9a]' : ''}`}>{v}</div>
+              <div className="em-sans mt-[4px] text-[13px] leading-[1.3] opacity-85">{t}</div>
+            </div>
+          </Fragment>
+        ))}
+      </div>
+      <p className="em-sans text-[17.5px] leading-[1.5]">
+        Para reconhecer essa diferença, ninguém precisa de denúncia, de supercomputador nem de rastreamento de Pix. Basta pôr lado a lado duas
+        notas oficiais: a que a franqueadora emitiu e as que a unidade emitiu. A primeira a unidade não controla e não pode mudar.
+      </p>
+      <p className="em-sans border-l-[3px] border-[#f7ecdc] pl-[16px] text-[18px] font-semibold leading-[1.5]">
+        A rede fez tudo certo, e é por isso que a pista já está lá. Se o que a unidade informa à rede, inclusive o repasse do Wellhub, não
+        aparece também nas notas dela, a diferença salta aos olhos na primeira comparação.
+      </p>
+    </div>
+  </Pagina>
+);
+
 export const Numeros1 = ({ lado }: P) => (
-  <Pagina lado={lado} numero={N.pagina} tom="escuro">
+  <Pagina lado={lado} numero={N.pagina + 1} tom="escuro">
     <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[34px]">
       <Cabeca
         n={N.n}
@@ -589,7 +692,7 @@ const Unidade = ({ nome, selo, ok, nfse, nfseL, nota }: { nome: string; selo: st
 );
 
 export const Numeros2 = ({ lado }: P) => (
-  <Pagina lado={lado} numero={N.pagina + 1}>
+  <Pagina lado={lado} numero={N.pagina + 2}>
     <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col justify-center gap-[46px]">
       <Unidade nome="Unidade A" selo="Em dia" ok nfse="R$ 80 mil" nfseL={100} nota="Os três números batem. Não há programa a implantar: só manter." />
       <Unidade
@@ -605,8 +708,26 @@ export const Numeros2 = ({ lado }: P) => (
   </Pagina>
 );
 
+// Podcast da edição (vídeo com o áudio, 18 min). Não toca sozinho: a pessoa aperta o play.
+const PODCAST = '/videos/entre-molas/especial/podcast-nota-fiscal.mp4';
+
+// Página só do podcast (vídeo com o áudio, 18 min). Não toca sozinho: a pessoa aperta o play.
+export const NumerosPodcast = ({ lado }: P) => (
+  <Pagina lado={lado} numero={N.pagina + 3} tom="escuro">
+    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col items-center gap-[26px]">
+      <div className="self-stretch">
+        <Titulo style={{ fontSize: 58 }}>Edição especial: nota fiscal e reforma tributária</Titulo>
+        <p className="em-sans mt-[10px] text-[17px] opacity-80">Conteúdo educativo.</p>
+      </div>
+      <div onPointerDown={segura} onPointerUp={segura} onClick={segura} className="overflow-hidden rounded-[12px] bg-black shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)]">
+        <video src={PODCAST} poster={posterPodcast} controls preload="none" playsInline className="block h-[560px] w-[560px] object-cover" />
+      </div>
+    </div>
+  </Pagina>
+);
+
 export const Numeros3 = ({ lado }: P) => (
-  <Pagina lado={lado} numero={N.pagina + 2}>
+  <Pagina lado={lado} numero={N.pagina + 4}>
     <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col justify-center gap-[50px]">
       <div>
         <Titulo className="border-b-2 border-[var(--em-tinta)] pb-[12px]" style={{ fontSize: 50 }}>Por que o royalty é uma trilha</Titulo>
@@ -628,15 +749,40 @@ export const Numeros3 = ({ lado }: P) => (
   </Pagina>
 );
 
-/** Página de foto inteira (fecha uma seção com número ímpar de páginas). */
-const FotoInteira = ({ lado, numero, src, alt, posicao }: P & { numero: number; src: string; alt: string; posicao?: string }) => (
-  <Pagina lado={lado} numero={numero} tom="escuro" folioCurto>
-    <img src={src} alt={alt} draggable={false} className="absolute inset-0 h-full w-full select-none object-cover" style={{ objectPosition: posicao }} />
+// Wellhub: texto enviado pelo time em 18/11/2026, com o destaque pedido.
+export const NumerosWellhub = ({ lado }: P) => (
+  <Pagina lado={lado} numero={N.pagina + 5}>
+    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col justify-center gap-[26px]">
+      <div className="em-tom--vinho px-[34px] py-[34px]">
+        <Rotulo className="!text-[#f7ecdc]">Wellhub</Rotulo>
+        <h2 className="em-display mt-[10px] text-[64px] font-extrabold uppercase leading-[0.92]">
+          Check-in do Wellhub também é faturamento. <span className="text-[#ffd9a8]">E também precisa de nota.</span>
+        </h2>
+      </div>
+      <p className="em-serif text-[22px] leading-[1.45]">
+        Esse dinheiro paga um serviço que a sua unidade prestou. Por isso ele segue exatamente a mesma regra das mensalidades.
+      </p>
+      <div className="border-t-[3px] border-[var(--em-vinho)] pt-[14px]">
+        <Texto>
+          <Destaque>É receita da unidade.</Destaque> O próprio Wellhub explica que é só intermediador: quem presta o serviço ao aluno é a unidade.
+          Ele não emite nota fiscal para os parceiros, e o repasse chega bruto, com os impostos dentro. Recolher esses tributos é
+          responsabilidade da unidade.
+        </Texto>
+      </div>
+      <div className="border-t-[3px] border-[var(--em-vinho)] pt-[14px]">
+        <Texto>
+          <Destaque>Precisa de nota fiscal.</Destaque> Toda receita da unidade é documentada, qualquer que seja o canal.
+        </Texto>
+      </div>
+    </div>
   </Pagina>
 );
 
-export const Numeros4 = ({ lado }: P) => (
-  <FotoInteira lado={lado} numero={N.pagina + 3} src={fotoAulao1} alt="Aula em um studio Pure Pilates" posicao="50% 40%" />
+/** Página inteira de imagem (fecha uma seção com número ímpar de páginas). */
+const PaginaImagem = ({ lado, numero, children }: P & { numero: number; children: ReactNode }) => (
+  <Pagina lado={lado} numero={numero} tom="escuro" folioCurto>
+    {children}
+  </Pagina>
 );
 
 // ── 07 Ganhos ───────────────────────────────────────────────────────────────
@@ -745,7 +891,7 @@ export const Ganhos2 = ({ lado }: P) => (
 export const Ganhos3 = ({ lado }: P) => (
   <Pagina lado={lado} numero={G.pagina + 2}>
     <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[30px]">
-      <Foto src={fotoAula} alt="Aula no Reformer em um studio Pure Pilates" className="h-[389px] w-full rounded-[10px]" />
+      <Bifurcacao className="h-[300px] w-full" />
       <blockquote className="em-display border-l-[5px] border-[var(--em-vinho)] pl-[24px] text-[50px] font-bold uppercase leading-[0.98]">
         Emitir tudo sob um único código, sem olhar quem dá a aula, <span className="text-[var(--em-vinho)]">é risco em dobro.</span>
       </blockquote>
@@ -758,7 +904,9 @@ export const Ganhos3 = ({ lado }: P) => (
 );
 
 export const Ganhos4 = ({ lado }: P) => (
-  <FotoInteira lado={lado} numero={G.pagina + 3} src={fotoAulao2} alt="Aula no Barrel em um studio Pure Pilates" posicao="50% 45%" />
+  <PaginaImagem lado={lado} numero={G.pagina + 3}>
+    <Redutores />
+  </PaginaImagem>
 );
 
 // ── 08 Padrão da rede ───────────────────────────────────────────────────────
@@ -943,6 +1091,92 @@ export const Fontes = ({ lado }: P) => (
         orientação do contador e do jurídico. Valores de multa variam por município; os de São Paulo são exemplo. Itens marcados como previstos
         ou anunciados ainda não são lei em vigor.
       </p>
+    </div>
+  </Pagina>
+);
+
+// ── Destaque: Pure GPT ──────────────────────────────────────────────────────
+// O assistente "Peça sua arte" do Pure Design. A conversa da página é um exemplo
+// (fac-símile), com a arte real do modelo de Carnaval 2027.
+
+const Bolha = ({ de, children }: { de: 'pessoa' | 'pure'; children: ReactNode }) => (
+  <div className={`flex ${de === 'pessoa' ? 'justify-end' : 'justify-start'}`}>
+    <div
+      className={`em-sans max-w-[460px] rounded-[18px] px-[18px] py-[12px] text-[16px] leading-[1.45] ${
+        de === 'pessoa' ? 'rounded-br-[4px] bg-[#a9293b] text-[#f7ecdc]' : 'rounded-bl-[4px] bg-white/10'
+      }`}
+    >
+      {children}
+    </div>
+  </div>
+);
+
+export const PureGpt1 = ({ lado }: P) => (
+  <Pagina lado={lado} numero={PURE_GPT.pagina} tom="escuro">
+    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[22px]">
+      <div className="flex items-center gap-[12px]">
+        <span className="em-sans rounded-full bg-[#e0566b] px-[12px] py-[4px] text-[12px] font-bold uppercase tracking-[0.18em] text-white">Novidade</span>
+        <Rotulo>Pure GPT</Rotulo>
+      </div>
+      <Titulo style={{ fontSize: 78 }}>
+        Peça sua arte <span className="text-[#e0566b]">no chat da Pure.</span>
+      </Titulo>
+      <p className="em-serif text-[20px] leading-[1.45]">
+        É só escrever o que você precisa, do jeito que pediria a alguém da equipe. O Pure GPT entende o pedido, escolhe o modelo certo e devolve a
+        arte pronta, no padrão da marca.
+      </p>
+      <div className="mt-auto flex flex-col gap-[12px] rounded-[12px] border border-white/10 bg-white/[0.04] p-[20px]">
+        <Bolha de="pessoa">Preciso avisar que a unidade fecha no Carnaval, segunda e terça.</Bolha>
+        <Bolha de="pure">
+          Pronto! Usei o modelo de Carnaval 2027, já com as datas. Quer ajustar alguma coisa?
+          <div className="mt-[10px] flex items-end gap-[12px]">
+            <img
+              src="/images/pure-design/feriado-2027-carnaval.jpg"
+              alt="Arte de Carnaval 2027 feita no Pure Design"
+              draggable={false}
+              className="h-[175px] w-[140px] select-none rounded-[6px] object-cover"
+            />
+            <div className="flex flex-col gap-[6px] pb-[2px]">
+              <span className="rounded-[6px] border border-white/30 px-[10px] py-[6px] text-[12px] font-semibold">Abrir no editor</span>
+              <span className="rounded-[6px] bg-[#e0566b] px-[10px] py-[6px] text-[12px] font-semibold text-white">Baixar PNG</span>
+            </div>
+          </div>
+        </Bolha>
+      </div>
+    </div>
+  </Pagina>
+);
+
+const PASSOS_GPT: [string, string, string][] = [
+  ['01', 'Escreva o pedido', 'Aviso de feriado, vaga de instrutor, aula experimental, aniversário da equipe. Com as suas palavras, sem formulário.'],
+  ['02', 'Ele escolhe o modelo', 'O Pure GPT encontra o modelo da marca que combina com o pedido e preenche os textos. Na dúvida, pergunta antes de fazer.'],
+  ['03', 'Anexe a foto', 'Quer uma foto da unidade ou da equipe na arte? Mande no chat.'],
+  ['04', 'Ajuste conversando', '“Muda esse texto”, “coloca em negrito”, “logo embaixo”: é só pedir.'],
+  ['05', 'Baixe e use', 'Baixe o PNG na hora ou abra no editor para mexer à mão.'],
+];
+
+export const PureGpt2 = ({ lado }: P) => (
+  <Pagina lado={lado} numero={PURE_GPT.pagina + 1}>
+    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[18px]">
+      <Titulo className="border-b-2 border-[var(--em-tinta)] pb-[12px]" style={{ fontSize: 50 }}>
+        Como funciona
+      </Titulo>
+      <div>
+        {PASSOS_GPT.map(([n, t, d]) => (
+          <div key={n} className="flex gap-[20px] border-b border-[var(--em-tinta)]/15 py-[11px]">
+            <div className="em-display w-[52px] shrink-0 text-[44px] font-extrabold leading-[0.95] text-[var(--em-vinho)]">{n}</div>
+            <div>
+              <div className="em-display text-[27px] font-extrabold uppercase leading-[1]">{t}</div>
+              <p className="em-sans mt-[4px] text-[15.5px] leading-[1.42]">{d}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="em-tom--vinho mt-auto px-[26px] py-[20px]">
+        <div className="em-display text-[30px] font-extrabold uppercase leading-[1]">Precisa da tag do mês?</div>
+        <p className="em-sans mt-[6px] text-[15.5px] leading-[1.42]">Ele também entrega as artes prontas da rede, como as tags, direto no chat.</p>
+      </div>
+      <p className="em-sans text-[14px] font-semibold uppercase tracking-[0.16em] text-[var(--em-vinho)]">Onde encontrar: Pure Design › Peça sua arte</p>
     </div>
   </Pagina>
 );

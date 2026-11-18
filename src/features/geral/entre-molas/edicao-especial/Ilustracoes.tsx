@@ -114,3 +114,84 @@ export const SemanaAlternada = ({ className }: { className?: string }) => (
     })}
   </div>
 );
+
+// ── Abstratas (no lugar das fotos), cada uma ligada ao texto da página ─────────
+
+/** Bolhas de conversa riscadas (os boatos) e um documento firme (a lei). */
+export const BoatoLei = ({ className }: { className?: string }) => (
+  <div aria-hidden="true" className={`em-sans relative overflow-hidden rounded-[10px] bg-[#1d1413] ${className ?? ''}`}>
+    {[
+      [28, 26, 210, 0.55],
+      [150, 92, 260, 0.4],
+      [40, 160, 190, 0.3],
+      [250, 210, 170, 0.22],
+    ].map(([x, y, w, o], i) => (
+      <div key={i} className="absolute flex h-[46px] items-center gap-[8px] rounded-[18px] rounded-bl-[4px] bg-white/10 px-[14px]" style={{ left: x, top: y, width: w, opacity: o + 0.3 }}>
+        <span className="font-bold text-[#e0566b]">✕</span>
+        <span className="h-[6px] flex-1 rounded-full bg-white/35" />
+      </div>
+    ))}
+    <div className="absolute bottom-[26px] right-[30px] w-[170px] rotate-[3deg] rounded-[6px] bg-[#f7ecdc] p-[14px] shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
+      <div className="h-[8px] w-[70px] rounded-full" style={{ background: VINHO }} />
+      {[120, 140, 100, 130].map((w, i) => (
+        <div key={i} className="mt-[8px] h-[5px] rounded-full bg-[#231f20]/25" style={{ width: w }} />
+      ))}
+      <div className="mt-[12px] flex h-[34px] w-[34px] items-center justify-center rounded-full text-[20px] font-extrabold text-white" style={{ background: '#3f7d4e' }}>
+        ✓
+      </div>
+    </div>
+  </div>
+);
+
+/** Leque de notas: uma NFS-e por aluno, por mês. */
+export const LequeDeNotas = ({ className }: { className?: string }) => (
+  <div aria-hidden="true" className={className ?? 'relative'}>
+    {[-14, -5, 4, 13].map((g, i) => (
+      <div key={g} className="absolute bottom-0 left-1/2 w-[205px] origin-bottom" style={{ transform: `translateX(-50%) rotate(${g}deg)`, zIndex: i }}>
+        <NotaFiscal />
+      </div>
+    ))}
+  </div>
+);
+
+/** Quem conduz a aula define o código: um ponto que se divide em dois caminhos. */
+export const Bifurcacao = ({ className }: { className?: string }) => (
+  <div aria-hidden="true" className={`em-sans relative ${className ?? ''}`}>
+    <svg viewBox="0 0 692 300" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
+      <path d="M 120 150 C 260 150 260 60 400 60" fill="none" stroke={VINHO} strokeWidth="4" />
+      <path d="M 120 150 C 260 150 260 240 400 240" fill="none" stroke="#231f20" strokeOpacity="0.55" strokeWidth="4" strokeDasharray="10 8" />
+    </svg>
+    <div className="absolute left-0 top-1/2 flex h-[120px] w-[120px] -translate-y-1/2 items-center justify-center rounded-full text-center text-[13px] font-bold uppercase leading-[1.25] tracking-[0.08em] text-[#f7ecdc]" style={{ background: '#231f20' }}>
+      Quem
+      <br />
+      conduz
+      <br />a aula
+    </div>
+    {[
+      { top: 10, cor: VINHO, quem: 'Fisioterapeuta', cod: '4.08 · 8650-0/04', pct: '60%' },
+      { top: 190, cor: '#231f20', quem: 'Educação física', cod: '6.04 · 9313-1/00', pct: '30%' },
+    ].map((c) => (
+      <div key={c.quem} className="absolute right-0 flex h-[100px] w-[292px] items-center gap-[14px] rounded-[10px] border-2 bg-white/60 px-[16px]" style={{ top: c.top, borderColor: c.cor }}>
+        <span className="em-display text-[44px] font-extrabold leading-none" style={{ color: c.cor }}>{c.pct}</span>
+        <span>
+          <span className="block text-[15px] font-bold">{c.quem}</span>
+          <span className="block text-[13px] opacity-70">{c.cod}</span>
+        </span>
+      </div>
+    ))}
+  </div>
+);
+
+/** Página inteira: os redutores (60% e 30%) em arcos. */
+export const Redutores = () => (
+  <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+    <svg viewBox="0 0 600 600" className="w-[640px]">
+      <circle cx="300" cy="300" r="250" fill="none" stroke="#f7ecdc" strokeOpacity="0.12" strokeWidth="34" />
+      <circle cx="300" cy="300" r="250" fill="none" stroke="#e0566b" strokeWidth="34" strokeDasharray={`${0.6 * 1570.8} 1570.8`} transform="rotate(-90 300 300)" />
+      <circle cx="300" cy="300" r="190" fill="none" stroke="#f7ecdc" strokeOpacity="0.12" strokeWidth="34" />
+      <circle cx="300" cy="300" r="190" fill="none" stroke="#f7ecdc" strokeWidth="34" strokeDasharray={`${0.3 * 1193.8} 1193.8`} transform="rotate(-90 300 300)" />
+      <text x="300" y="300" textAnchor="middle" fontFamily="Barlow Condensed" fontWeight="800" fontSize="120" fill="#e0566b">60%</text>
+      <text x="300" y="390" textAnchor="middle" fontFamily="Barlow Condensed" fontWeight="800" fontSize="76" fill="#f7ecdc">30%</text>
+    </svg>
+  </div>
+);
