@@ -145,10 +145,10 @@ export const sectionFromPath = (path: string): SectionKey | null => {
   // seção própria. Se o teste ficasse depois, '/inauguracoes' continuaria
   // casando com a lista de colaboradores e a seção errada abriria.
   if (path.startsWith('/inauguracoes')) return 'inauguracoes';
-  // '/marketing' exato ou '/marketing/...': a página '/marketing-local' (do
-  // franqueado, item solto do menu) não é da seção do time de marketing.
+  // '/marketing' exato ou '/marketing/...': a página '/marketing-local' fica na
+  // seção Colaboradores, não na do time de marketing.
   if (path === '/marketing' || path.startsWith('/marketing/')) return 'marketing';
-  if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais', '/colaborador/pure-store', '/leads-rh', '/purepedia'].some((p) => path.startsWith(p))) return 'colaboradores';
+  if (['/feed', '/pedidos-demanda', '/academy', '/colaborador/midias-sociais', '/colaborador/pure-store', '/leads-rh', '/purepedia', '/marketing-local'].some((p) => path.startsWith(p))) return 'colaboradores';
   // Antes de '/minha-area': o Hub tem /minha-area/dashboard (Mídia Adicional),
   // que NÃO pertence a esta seção. Por isso o teste é '/dashboard/' com barra.
   if (path.startsWith('/dashboard/')) return 'dashboard';
@@ -241,7 +241,6 @@ const Sidebar = () => {
     // { name: 'Parcerias', href: '/parcerias', icon: Handshake },
     { name: 'Mídias Sociais', href: '/midias-sociais', icon: Video },
     { name: 'Calendário de Marketing', href: '/calendario-marketing', icon: CalendarDays },
-    { name: 'Marketing local · TV Globo', href: '/marketing-local', icon: Tv },
     { name: 'Pure Design', href: '/pure-design', icon: Paintbrush },
     // O Pure GPT virou o assistente dentro do Pure Design (16/11/2026): /pure-gpt redireciona para lá.
   ];
@@ -270,6 +269,8 @@ const Sidebar = () => {
     { name: 'Solicitação de demandas', href: '/pedidos-demanda', icon: ClipboardList },
     { name: 'Visão Geral das Unidades', href: '/midia-adicional/unidades', icon: Building2 },
     { name: 'Leads RH', href: '/leads-rh', icon: UserSearch },
+    // Saiu da lista geral em 19/11/2026: só o time vê.
+    { name: 'Marketing local · TV Globo', href: '/marketing-local', icon: Tv },
   ];
 
   // Artigos do PurePedia (filhos do dropdown), vindos do mesmo registro que

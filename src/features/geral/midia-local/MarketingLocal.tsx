@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ import {
 // importar arquivo dessa pasta pelo JavaScript.)
 const imagemImpacto: string | null = '/arquivos/midia-local/impacto-local.png';
 
-const MarketingLocal = () => (
+const PaginaMarketingLocal = () => (
   <MainLayout>
     <div className="max-w-4xl mx-auto py-6 space-y-6">
       <div>
@@ -192,5 +193,14 @@ const MarketingLocal = () => (
     </div>
   </MainLayout>
 );
+
+// Só o time (colaborador e admin) vê esta página; o franqueado volta para o início.
+const MarketingLocal = () => {
+  const { isColaborador, isAdmin, loading, profileLoading } = useAuth();
+  // espera o papel do usuário carregar, senão um colaborador seria mandado embora por engano
+  if (loading || profileLoading) return null;
+  if (!isColaborador && !isAdmin) return <Navigate to="/" replace />;
+  return <PaginaMarketingLocal />;
+};
 
 export default MarketingLocal;

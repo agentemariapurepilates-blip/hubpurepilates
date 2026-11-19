@@ -1121,19 +1121,38 @@ export const PureGpt4 = ({ lado }: P) => (
 // "O cuidado que aparece". Texto do time exatamente como veio (19/11/2026); a palavra
 // de acento do título vai em itálico, como no brandbook.
 
+// Citação da Marina (Suporte ao Franqueado): a foto recortada, sem fundo, apoiada
+// numa linha que marca o fim do corte (o corpo não fica flutuando).
+const FOTO_MARINA = '/arquivos/entre-molas-especial/marina-recorte.png';
+
+const CitacaoMarina = () => (
+  <figure className="relative mt-auto flex items-end gap-[22px] border-b-[3px] border-[#f7ecdc]">
+    <img src={FOTO_MARINA} alt="Marina Lombardi" draggable={false} className="block h-[200px] w-auto shrink-0 select-none" />
+    <div className="pb-[18px]">
+      <div className="em-display text-[64px] font-extrabold leading-[0.5] text-[#ffd9a8]">“</div>
+      <blockquote className="em-serif mt-[6px] text-[18px] italic leading-[1.42]">
+        Com escuta ativa e acompanhamento de cada caso até a solução, conseguimos elevar a reputação do Reclame Aqui de Regular para Bom.
+      </blockquote>
+      <figcaption className="em-sans mt-[10px] text-[12.5px] font-bold uppercase tracking-[0.14em] text-[#ffd9a8]">
+        Marina Lombardi · Gerente de suporte ao franqueado
+      </figcaption>
+    </div>
+  </figure>
+);
+
 export const Reconhecimento1 = ({ lado }: P) => (
   <Pagina lado={lado} numero={RECONHECIMENTO.pagina} tom="vinho">
-    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[24px]">
+    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[18px]">
       <div className="em-sans text-[14px] font-bold uppercase tracking-[0.24em]">{RECONHECIMENTO.sobretitulo}</div>
-      <h2 className="em-display text-[118px] font-extrabold uppercase leading-[0.86] tracking-[-0.01em]">
+      <h2 className="em-display text-[100px] font-extrabold uppercase leading-[0.86] tracking-[-0.01em]">
         O cuidado que <em className="font-extrabold italic text-[#ffd9a8]">aparece</em>
       </h2>
-      <p className="em-serif text-[22px] leading-[1.45]">
+      <p className="em-serif text-[19px] leading-[1.45]">
         A nota da Pure no Reclame Aqui chegou a 7,3, já na faixa “bom”. O número é novo. O cuidado que ele mostra não é: é o de sempre das
         equipes de Operações e Consultoria.
       </p>
-      <div aria-hidden="true" className="flex items-center gap-[26px] bg-[#1d1413] px-[28px] py-[22px] text-[#f7ecdc]">
-        <div className="em-display text-[124px] font-extrabold leading-[0.85] text-[#ffd9a8]">7,3</div>
+      <div aria-hidden="true" className="flex items-center gap-[26px] bg-[#1d1413] px-[24px] py-[14px] text-[#f7ecdc]">
+        <div className="em-display text-[96px] font-extrabold leading-[0.85] text-[#ffd9a8]">7,3</div>
         <div className="flex flex-1 items-center gap-[12px]">
           <div className="text-center">
             <div className="em-sans text-[11px] font-bold uppercase tracking-[0.18em] opacity-60">Antes</div>
@@ -1151,11 +1170,12 @@ export const Reconhecimento1 = ({ lado }: P) => (
           Aqui
         </div>
       </div>
-      <p className="em-sans text-[18px] leading-[1.6]">
+      <p className="em-sans text-[16px] leading-[1.55]">
         A nota da Pure Pilates no Reclame Aqui está em 7,3. Antes, quem pesquisava a marca encontrava a palavra “regular”. Hoje encontra “bom”.
         E, se o número mudou, é porque ele finalmente está mostrando o que já existia aqui dentro: o cuidado das equipes de Operações e
         Consultoria com cada aluno que precisou de uma resposta.
       </p>
+      <CitacaoMarina />
     </div>
   </Pagina>
 );
