@@ -1,16 +1,16 @@
 import { Fragment, useState, type ReactNode, type SyntheticEvent } from 'react';
-import { BarChart3, FileText, Scale } from 'lucide-react';
+import { BarChart3, FileText, ImagePlus, MessageCircleQuestion, Scale, SlidersHorizontal, Tag, Type, Wand2 } from 'lucide-react';
+import { MotionPureGpt } from './MotionPureGpt';
 import { Pagina, Rotulo, Titulo, useNavegacao, type Lado } from '../diagramacao';
 import posterPodcast from './fotos/podcast-poster.jpg';
 import {
-  Bifurcacao,
   BoatoLei,
   CalendarioNovembro,
   LequeDeNotas,
-  Redutores,
   SemanaAlternada,
 } from './Ilustracoes';
-import { MATERIAS, ORDEM_DO_SUMARIO, PURE_GPT } from './materias';
+import douglas from '../edicao-1/fotos/douglas-recorte.png';
+import { MATERIAS, ORDEM_DO_SUMARIO, PURE_GPT, RECONHECIMENTO } from './materias';
 
 // Páginas da Edição especial · Nota fiscal. Texto exatamente como na edição
 // original (ver materias.ts); aqui só muda a diagramação, uma página por vez.
@@ -61,7 +61,7 @@ export const Sumario = ({ lado }: P) => {
           {[
             ['1', 'mensagem: nota sobre 100% da receita'],
             ['3', 'números que precisam bater'],
-            ['8', 'seções curtas'],
+            ['7', 'seções curtas'],
           ].map(([n, t]) => (
             <div key={n}>
               <div className="em-display text-[58px] font-extrabold leading-[0.9] text-[var(--em-vinho)]">{n}</div>
@@ -110,6 +110,24 @@ export const Sumario = ({ lado }: P) => {
             {PURE_GPT.secao}: {PURE_GPT.chamada}
           </span>
           <span className="em-sans text-[13px] font-bold tracking-[0.14em]">P. {PURE_GPT.pagina}</span>
+        </button>
+        <button
+          type="button"
+          onPointerDown={segura}
+          onPointerUp={segura}
+          onClick={(e) => {
+            e.stopPropagation();
+            irParaPagina(RECONHECIMENTO.pagina);
+          }}
+          className="em-tom--escuro mt-[8px] flex w-full items-center gap-[16px] px-[16px] py-[10px] text-left"
+        >
+          <span className="em-sans shrink-0 rounded-full bg-[#f7ecdc] px-[10px] py-[3px] text-[11px] font-bold uppercase tracking-[0.18em] text-[#1d1413]">
+            Reconhecimento
+          </span>
+          <span className="em-display flex-1 text-[24px] font-semibold uppercase leading-[1.02]">
+            {RECONHECIMENTO.secao}: {RECONHECIMENTO.titulo}
+          </span>
+          <span className="em-sans text-[13px] font-bold tracking-[0.14em]">P. {RECONHECIMENTO.pagina}</span>
         </button>
       </div>
     </Pagina>
@@ -326,13 +344,6 @@ const MITOS: [string, ReactNode][] = [
     </>,
   ],
   [
-    '“Pilates tem redução de 60% como serviço de saúde.”',
-    <>
-      <b>Não existe esse redutor para Pilates.</b> Existe redução de 60% para <b>fisioterapia</b> e de 30% para{' '}
-      <b>profissionais de educação física</b>. Quem conduz a aula define o enquadramento.
-    </>,
-  ],
-  [
     '“O split payment vai reter imposto da mensalidade no cartão.”',
     <>
       <b>A primeira fase deixa cartões de fora.</b> Ela será facultativa e só entre empresas. A mensalidade do aluno pessoa física não entra na
@@ -372,7 +383,7 @@ export const Mito1 = ({ lado }: P) => (
       <Cabeca
         n={M.n}
         chapeu={M.secao}
-        titulo="Seis frases que circulam nos grupos e o que a lei diz de verdade"
+        titulo="Cinco frases que circulam nos grupos e o que a lei diz de verdade"
         tam={52}
         fina="Um número errado tira a credibilidade de todo o resto. Por isso, antes de qualquer conversa, vale desarmar os boatos."
       />
@@ -569,7 +580,6 @@ export const Pratica2 = ({ lado }: P) => (
           itens={[
             'Uma nota por aluno, por mês, com CPF do tomador',
             'RPS com conversão em lote em dias de muito volume, convertido até o 10º dia',
-            'Nota de fisioterapia só quando o fisioterapeuta presta o serviço',
           ]}
         />
         <Lista
@@ -778,138 +788,7 @@ export const NumerosWellhub = ({ lado }: P) => (
   </Pagina>
 );
 
-/** Página inteira de imagem (fecha uma seção com número ímpar de páginas). */
-const PaginaImagem = ({ lado, numero, children }: P & { numero: number; children: ReactNode }) => (
-  <Pagina lado={lado} numero={numero} tom="escuro" folioCurto>
-    {children}
-  </Pagina>
-);
-
-// ── 07 Ganhos ───────────────────────────────────────────────────────────────
-const G = MATERIAS.ganhos;
-
-const Enquadramento = ({
-  quem,
-  conselho,
-  codigo,
-  reducao,
-  reducaoNota,
-  deduz,
-  deduzNota,
-  sim,
-}: {
-  quem: string;
-  conselho: string;
-  codigo: string;
-  reducao: string;
-  reducaoNota: string;
-  deduz: string;
-  deduzNota: string;
-  sim: boolean;
-}) => (
-  <div className="border-t-[3px] border-[var(--em-vinho)] pt-[12px]">
-    <div className="em-display text-[34px] font-extrabold uppercase leading-none">{quem}</div>
-    <div className="mt-[12px] grid grid-cols-4 gap-[16px]">
-      <div>
-        <div className="em-sans text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--em-vinho)]">Conselho</div>
-        <div className="em-sans mt-[4px] text-[16px] font-semibold">{conselho}</div>
-      </div>
-      <div>
-        <div className="em-sans text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--em-vinho)]">Item LC 116 · CNAE</div>
-        <div className="em-sans mt-[4px] text-[16px] font-semibold">{codigo}</div>
-      </div>
-      <div>
-        <div className="em-sans text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--em-vinho)]">Redução de IBS/CBS</div>
-        <div className="em-display mt-[2px] text-[40px] font-extrabold leading-none text-[var(--em-vinho)]">{reducao}</div>
-        <div className="em-sans mt-[4px] text-[12.5px] leading-[1.35] opacity-75">{reducaoNota}</div>
-      </div>
-      <div>
-        <div className="em-sans text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--em-vinho)]">Aluno deduz no IR?</div>
-        <div className={`em-display mt-[2px] text-[40px] font-extrabold leading-none ${sim ? 'text-[var(--em-vinho)]' : ''}`}>{deduz}</div>
-        <div className="em-sans mt-[4px] text-[12.5px] leading-[1.35] opacity-75">{deduzNota}</div>
-      </div>
-    </div>
-  </div>
-);
-
-export const Ganhos1 = ({ lado }: P) => (
-  <Pagina lado={lado} numero={G.pagina}>
-    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[28px]">
-      <Cabeca
-        n={G.n}
-        chapeu={G.secao}
-        titulo="Quem conduz a aula define o enquadramento"
-        tam={56}
-        fina="O critério é quem presta o serviço, não o nome “Pilates”. E quem emite nota corretamente abre portas que quem não emite fecha sozinho."
-      />
-      <div className="em-sans text-[12.5px] font-bold uppercase tracking-[0.2em] opacity-70">Quem conduz a aula</div>
-      <Enquadramento
-        quem="Fisioterapeuta"
-        conselho="CREFITO"
-        codigo="4.08 · 8650-0/04"
-        reducao="60%"
-        reducaoNota="Serviços de fisioterapia, Anexo III da LC 214/2025"
-        deduz="Sim"
-        deduzNota="Receita Federal, SC Cosit 32/2024"
-        sim
-      />
-      <Enquadramento
-        quem="Profissional de educação física"
-        conselho="CREF"
-        codigo="6.04 · 9313-1/00"
-        reducao="30%"
-        reducaoNota="Art. 127, X, LC 214/2025. A PJ precisa de registro no conselho e de apuração fora do DAS"
-        deduz="Não"
-        deduzNota="Atividade física não é despesa médica"
-        sim={false}
-      />
-    </div>
-  </Pagina>
-);
-
-const GANHOS: [string, string][] = [
-  ['Redutor de 30%', 'Disponível para a unidade com registro no CREF que apura fora do DAS. Sem nota, não há o que reduzir.'],
-  ['Aluno com dedução', 'Quando o fisioterapeuta conduz a sessão, a nota correta vale como despesa dedutível para o aluno.'],
-  ['Crédito nas compras', 'No regime regular, a nota das próprias compras, como os aparelhos, pode gerar crédito.'],
-  ['Histórico cooperativo', 'Os programas de conformidade dão prazo extra para quem demonstra boa conduta. Quem nunca emitiu não tem histórico para mostrar.'],
-];
-
-export const Ganhos2 = ({ lado }: P) => (
-  <Pagina lado={lado} numero={G.pagina + 1}>
-    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] grid grid-cols-2 content-center gap-[30px]">
-      {GANHOS.map(([t, p], i) => (
-        <div key={t} className={`${i === 0 || i === 3 ? 'em-tom--vinho' : 'bg-[var(--em-papel-2)]'} px-[26px] py-[30px]`}>
-          <div className="em-display text-[60px] font-extrabold leading-none opacity-40">{String(i + 1).padStart(2, '0')}</div>
-          <h4 className="em-display mt-[10px] text-[36px] font-extrabold uppercase leading-[0.95]">{t}</h4>
-          <p className="em-sans mt-[12px] text-[16.5px] leading-[1.48]">{p}</p>
-        </div>
-      ))}
-    </div>
-  </Pagina>
-);
-
-export const Ganhos3 = ({ lado }: P) => (
-  <Pagina lado={lado} numero={G.pagina + 2}>
-    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[30px]">
-      <Bifurcacao className="h-[300px] w-full" />
-      <blockquote className="em-display border-l-[5px] border-[var(--em-vinho)] pl-[24px] text-[50px] font-bold uppercase leading-[0.98]">
-        Emitir tudo sob um único código, sem olhar quem dá a aula, <span className="text-[var(--em-vinho)]">é risco em dobro.</span>
-      </blockquote>
-      <Texto>
-        Uma unidade com fisioterapeutas e outra com educadores físicos têm, na prática, enquadramentos diferentes. O código da nota precisa
-        refletir a equipe real, e o emissor de São Paulo já rejeita notas com código incompatível.
-      </Texto>
-    </div>
-  </Pagina>
-);
-
-export const Ganhos4 = ({ lado }: P) => (
-  <PaginaImagem lado={lado} numero={G.pagina + 3}>
-    <Redutores />
-  </PaginaImagem>
-);
-
-// ── 08 Padrão da rede ───────────────────────────────────────────────────────
+// ── 07 Padrão da rede ───────────────────────────────────────────────────────
 const PD = MATERIAS.padrao;
 
 const Clausula = ({ no, titulo, children, cinza }: { no: string; titulo: string; children: ReactNode; cinza?: boolean }) => (
@@ -981,7 +860,6 @@ const PERGUNTAS = [
   'Minha unidade emite pelo Emissor Nacional desde 1º/11.',
   'Cada aluno ativo recebe uma NFS-e por mês, com CPF.',
   'Os campos de IBS e CBS estão prontos para janeiro de 2027.',
-  'Sei quem conduz as aulas (CREF ou CREFITO) e uso o código certo.',
   'O faturamento do sistema bate com as notas emitidas.',
   'Avaliei o regime (DAS ou regular) com o contador. A próxima janela é em março de 2027.',
   'Leio a caixa postal do e-CAC e do Domicílio Tributário Eletrônico.',
@@ -997,12 +875,13 @@ const MENSAGENS = [
 export const Checklist = ({ lado }: P) => {
   const [marcadas, setMarcadas] = useState<boolean[]>(() => PERGUNTAS.map(() => false));
   const n = marcadas.filter(Boolean).length;
-  const msg = n === 0 ? MENSAGENS[0] : n < 4 ? MENSAGENS[1] : n < 7 ? MENSAGENS[2] : MENSAGENS[3];
+  const total = PERGUNTAS.length;
+  const msg = n === 0 ? MENSAGENS[0] : n * 2 <= total ? MENSAGENS[1] : n < total ? MENSAGENS[2] : MENSAGENS[3];
   return (
     <Pagina lado={lado} numero={PD.pagina + 2}>
       <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col">
         <Rotulo>Checklist da unidade</Rotulo>
-        <Titulo className="mt-[10px]" style={{ fontSize: 50 }}>Sete perguntas para responder com o seu contador</Titulo>
+        <Titulo className="mt-[10px]" style={{ fontSize: 50 }}>Seis perguntas para responder com o seu contador</Titulo>
         <ul className="mt-[18px]">
           {PERGUNTAS.map((p, i) => (
             <li key={p} className="border-b border-[var(--em-tinta)]/15">
@@ -1029,13 +908,13 @@ export const Checklist = ({ lado }: P) => {
               <div className="em-sans text-[12px] font-bold uppercase tracking-[0.2em] opacity-75">Sua unidade</div>
               <div className="em-display text-[64px] font-extrabold leading-none">
                 {n}
-                <small className="text-[28px]">/7</small>
+                <small className="text-[28px]">/{total}</small>
               </div>
             </div>
             <p className="em-sans max-w-[400px] text-right text-[15px] leading-[1.4]">{msg}</p>
           </div>
           <div className="mt-[10px] h-[8px] bg-white/15">
-            <div className="h-full bg-[#e0566b] transition-all duration-500" style={{ width: `${(n / 7) * 100}%` }} />
+            <div className="h-full bg-[#e0566b] transition-all duration-500" style={{ width: `${(n / total) * 100}%` }} />
           </div>
         </div>
         <div className="mt-auto grid grid-cols-3 gap-[18px]">
@@ -1059,7 +938,7 @@ const FONTES = [
   'Lei 8.846/1994 e Lei 9.532/1997, Câmara dos Deputados',
   'Lei 8.137/1990, SEF/MG',
   'Lei 13.966/2019 (Lei de Franquias), Câmara dos Deputados',
-  'LC 214/2025, art. 127 e Anexo III; LC 227/2026',
+  'LC 214/2025; LC 227/2026',
   'Resolução CGSN 191/2026, CRC-MS',
   'Cronograma do Ato Conjunto RFB/CGIBS 4/2026, CGIBS',
   'STF, Tema 863 (RE 736.090) e Tema 300 (RE 603.136)',
@@ -1067,7 +946,6 @@ const FONTES = [
   'Decreto 53.151/2012 e Manual DOC-DIMP, Prefeitura de São Paulo',
   'SC SF/DEJUG 10/2025 e Orientações sobre RPS, Prefeitura de São Paulo',
   'Perguntas e respostas da e-Financeira, Receita Federal',
-  'SC Cosit 32/2024, resumo do IBET',
   'Sefaz-MA e DIMP, via netCPA',
   'Nota oficial da Receita Federal sobre Pix, T-Rex e Harpia, Secom/gov.br e Agência Gov, 20/04/2026',
   'Split payment, Convergência Digital; alíquota da CBS, O Povo e Migalhas',
@@ -1096,78 +974,137 @@ export const Fontes = ({ lado }: P) => (
 );
 
 // ── Destaque: Pure GPT ──────────────────────────────────────────────────────
-// O assistente "Peça sua arte" do Pure Design. A conversa da página é um exemplo
-// (fac-símile), com a arte real do modelo de Carnaval 2027.
-
-const Bolha = ({ de, children }: { de: 'pessoa' | 'pure'; children: ReactNode }) => (
-  <div className={`flex ${de === 'pessoa' ? 'justify-end' : 'justify-start'}`}>
-    <div
-      className={`em-sans max-w-[460px] rounded-[18px] px-[18px] py-[12px] text-[16px] leading-[1.45] ${
-        de === 'pessoa' ? 'rounded-br-[4px] bg-[#a9293b] text-[#f7ecdc]' : 'rounded-bl-[4px] bg-white/10'
-      }`}
-    >
-      {children}
-    </div>
-  </div>
-);
+// O chat de pedir arte do Pure Design. A conversa do celular é um exemplo animado
+// (MotionPureGpt); as artes são miniaturas reais dos modelos do Pure Design.
 
 export const PureGpt1 = ({ lado }: P) => (
   <Pagina lado={lado} numero={PURE_GPT.pagina} tom="escuro">
-    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[22px]">
-      <div className="flex items-center gap-[12px]">
-        <span className="em-sans rounded-full bg-[#e0566b] px-[12px] py-[4px] text-[12px] font-bold uppercase tracking-[0.18em] text-white">Novidade</span>
-        <Rotulo>Pure GPT</Rotulo>
+    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] grid grid-cols-[1fr_292px] items-center gap-[34px]">
+      <div className="flex flex-col gap-[20px]">
+        <div className="flex items-center gap-[12px]">
+          <span className="em-sans rounded-full bg-[#e0566b] px-[12px] py-[4px] text-[12px] font-bold uppercase tracking-[0.18em] text-white">Novidade</span>
+          <Rotulo>{PURE_GPT.secao}</Rotulo>
+        </div>
+        <Titulo style={{ fontSize: 92 }}>
+          Você pediu.
+          <br />
+          <span className="text-[#e0566b]">A gente fez.</span>
+        </Titulo>
+        <p className="em-serif text-[19px] leading-[1.5]">
+          Agora as suas artes são criadas com inteligência artificial, direto no Pure Design. Um chat inteligente entende o que a sua unidade
+          precisa e entrega a arte pronta, no padrão da marca, enquanto você conversa.
+        </p>
+        <p className="em-sans border-l-[3px] border-[#e0566b] pl-[14px] text-[15px] font-semibold leading-[1.45] opacity-90">
+          Sem procurar modelo, sem trocar texto campo por campo. Você escreve, ele entrega.
+        </p>
       </div>
-      <Titulo style={{ fontSize: 78 }}>
-        Peça sua arte <span className="text-[#e0566b]">no chat da Pure.</span>
+      <MotionPureGpt className="h-[560px] w-[292px]" />
+    </div>
+  </Pagina>
+);
+
+const CAPACIDADES = [
+  { Icone: Wand2, t: 'Escolhe o modelo certo', d: 'Entre todos os modelos da marca, acha o que combina com o pedido.' },
+  { Icone: Type, t: 'Escreve os textos', d: 'Preenche título, datas e chamadas no tom da Pure.' },
+  { Icone: ImagePlus, t: 'Usa a sua foto', d: 'Anexe a foto da unidade ou da equipe e ela entra na arte.' },
+  { Icone: MessageCircleQuestion, t: 'Pergunta quando falta algo', d: 'Se faltar uma informação, ele pergunta antes de fazer.' },
+  { Icone: SlidersHorizontal, t: 'Ajusta na conversa', d: '“Muda esse texto”, “coloca em negrito”, “logo embaixo”.' },
+  { Icone: Tag, t: 'Entrega o que já está pronto', d: 'Pediu a tag do mês? Ela chega direto no chat.' },
+];
+
+export const PureGpt2 = ({ lado }: P) => (
+  <Pagina lado={lado} numero={PURE_GPT.pagina + 1}>
+    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[30px]">
+      <Titulo className="border-b-2 border-[var(--em-tinta)] pb-[12px]" style={{ fontSize: 60 }}>
+        Uma frase no lugar de dez cliques
       </Titulo>
-      <p className="em-serif text-[20px] leading-[1.45]">
-        É só escrever o que você precisa, do jeito que pediria a alguém da equipe. O Pure GPT entende o pedido, escolhe o modelo certo e devolve a
-        arte pronta, no padrão da marca.
-      </p>
-      <div className="mt-auto flex flex-col gap-[12px] rounded-[12px] border border-white/10 bg-white/[0.04] p-[20px]">
-        <Bolha de="pessoa">Preciso avisar que a unidade fecha no Carnaval, segunda e terça.</Bolha>
-        <Bolha de="pure">
-          Pronto! Usei o modelo de Carnaval 2027, já com as datas. Quer ajustar alguma coisa?
-          <div className="mt-[10px] flex items-end gap-[12px]">
-            <img
-              src="/images/pure-design/feriado-2027-carnaval.jpg"
-              alt="Arte de Carnaval 2027 feita no Pure Design"
-              draggable={false}
-              className="h-[175px] w-[140px] select-none rounded-[6px] object-cover"
-            />
-            <div className="flex flex-col gap-[6px] pb-[2px]">
-              <span className="rounded-[6px] border border-white/30 px-[10px] py-[6px] text-[12px] font-semibold">Abrir no editor</span>
-              <span className="rounded-[6px] bg-[#e0566b] px-[10px] py-[6px] text-[12px] font-semibold text-white">Baixar PNG</span>
-            </div>
+      <div className="grid grid-cols-2 gap-[18px]">
+        {[
+          { r: 'Antes', cor: 'bg-[var(--em-papel-2)]', itens: ['Procurar o modelo certo entre dezenas', 'Trocar o texto campo por campo', 'Ajustar tudo à mão'] },
+          { r: 'Agora', cor: 'em-tom--vinho', itens: ['Escrever o que você precisa', 'Receber a arte pronta', 'Pedir os ajustes na conversa'] },
+        ].map((c) => (
+          <div key={c.r} className={`${c.cor} px-[22px] py-[20px]`}>
+            <div className="em-display text-[34px] font-extrabold uppercase leading-none">{c.r}</div>
+            <ul className="em-sans mt-[12px] space-y-[8px] text-[16.5px] leading-[1.35]">
+              {c.itens.map((i) => (
+                <li key={i} className="flex gap-[8px]">
+                  <span className="font-bold">{c.r === 'Antes' ? '·' : '✓'}</span>
+                  {i}
+                </li>
+              ))}
+            </ul>
           </div>
-        </Bolha>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-x-[28px] gap-y-[30px]">
+        {CAPACIDADES.map(({ Icone, t, d }) => (
+          <div key={t} className="flex gap-[12px]">
+            <span className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full bg-[var(--em-vinho)] text-[#f7ecdc]">
+              <Icone className="h-[24px] w-[24px]" />
+            </span>
+            <span>
+              <span className="em-display block text-[26px] font-extrabold uppercase leading-[1]">{t}</span>
+              <span className="em-sans mt-[5px] block text-[15.5px] leading-[1.42]">{d}</span>
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   </Pagina>
 );
 
-const PASSOS_GPT: [string, string, string][] = [
-  ['01', 'Escreva o pedido', 'Aviso de feriado, vaga de instrutor, aula experimental, aniversário da equipe. Com as suas palavras, sem formulário.'],
-  ['02', 'Ele escolhe o modelo', 'O Pure GPT encontra o modelo da marca que combina com o pedido e preenche os textos. Na dúvida, pergunta antes de fazer.'],
-  ['03', 'Anexe a foto', 'Quer uma foto da unidade ou da equipe na arte? Mande no chat.'],
-  ['04', 'Ajuste conversando', '“Muda esse texto”, “coloca em negrito”, “logo embaixo”: é só pedir.'],
-  ['05', 'Baixe e use', 'Baixe o PNG na hora ou abra no editor para mexer à mão.'],
+const EXEMPLOS = [
+  { pedido: 'Quero divulgar a aula experimental', arte: '/images/pure-design/aula-experimental-texto.jpg' },
+  { pedido: 'Lista dos aniversariantes de novembro', arte: '/images/pure-design/aniversariantes-mes.jpg' },
+  { pedido: 'Mensagem de fim de ano para os alunos', arte: '/images/pure-design/natal-boas-festas.jpg' },
+  { pedido: 'Aviso de mudança de horário na quinta', arte: '/images/pure-design/mudanca-horario.jpg' },
 ];
 
-export const PureGpt2 = ({ lado }: P) => (
-  <Pagina lado={lado} numero={PURE_GPT.pagina + 1}>
+export const PureGpt3 = ({ lado }: P) => (
+  <Pagina lado={lado} numero={PURE_GPT.pagina + 2} tom="escuro">
+    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[22px]">
+      <div>
+        <Rotulo>Peça do seu jeito</Rotulo>
+        <Titulo className="mt-[8px]" style={{ fontSize: 54 }}>
+          Você escreve. <span className="text-[#e0566b]">A arte chega.</span>
+        </Titulo>
+      </div>
+      <div className="grid flex-1 grid-cols-2 gap-x-[24px] gap-y-[20px]">
+        {EXEMPLOS.map((e) => (
+          <div key={e.pedido} className="flex flex-col gap-[10px]">
+            <span className="em-sans self-start rounded-[14px] rounded-bl-[3px] bg-[#a9293b] px-[12px] py-[7px] text-[13.5px] font-semibold leading-[1.3] text-[#f7ecdc]">
+              {e.pedido}
+            </span>
+            <img src={e.arte} alt="" draggable={false} className="h-[236px] w-[189px] select-none rounded-[6px] object-cover shadow-[0_16px_34px_-14px_rgba(0,0,0,0.7)]" />
+          </div>
+        ))}
+      </div>
+      <p className="em-sans text-[13px] opacity-70">Artes feitas com os modelos do Pure Design.</p>
+    </div>
+  </Pagina>
+);
+
+const PASSOS_GPT: [string, string, string][] = [
+  ['01', 'Abra o Pure Design', 'No menu do Hub, entre em Pure Design. O chat está logo no topo, em Peça sua arte.'],
+  ['02', 'Escreva o pedido', 'Aviso de feriado, vaga de instrutor, aula experimental, aniversário da equipe. Com as suas palavras, sem formulário.'],
+  ['03', 'Anexe a foto, se quiser', 'Quer uma foto da unidade ou da equipe na arte? Mande no chat.'],
+  ['04', 'Ajuste conversando', 'Mudou de ideia sobre um texto ou o lugar do logo? É só pedir.'],
+  ['05', 'Baixe e publique', 'Baixe o PNG na hora ou abra no editor para mexer à mão.'],
+];
+
+export const PureGpt4 = ({ lado }: P) => (
+  <Pagina lado={lado} numero={PURE_GPT.pagina + 3}>
     <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[18px]">
-      <Titulo className="border-b-2 border-[var(--em-tinta)] pb-[12px]" style={{ fontSize: 50 }}>
-        Como funciona
+      <Titulo className="border-b-2 border-[var(--em-tinta)] pb-[12px]" style={{ fontSize: 54 }}>
+        Comece agora
       </Titulo>
       <div>
         {PASSOS_GPT.map(([n, t, d]) => (
-          <div key={n} className="flex gap-[20px] border-b border-[var(--em-tinta)]/15 py-[11px]">
-            <div className="em-display w-[52px] shrink-0 text-[44px] font-extrabold leading-[0.95] text-[var(--em-vinho)]">{n}</div>
+          <div key={n} className="flex gap-[22px] border-b border-[var(--em-tinta)]/15 py-[16px]">
+            <div className="em-display w-[58px] shrink-0 text-[50px] font-extrabold leading-[0.95] text-[var(--em-vinho)]">{n}</div>
             <div>
-              <div className="em-display text-[27px] font-extrabold uppercase leading-[1]">{t}</div>
-              <p className="em-sans mt-[4px] text-[15.5px] leading-[1.42]">{d}</p>
+              <div className="em-display text-[31px] font-extrabold uppercase leading-[1]">{t}</div>
+              <p className="em-sans mt-[6px] text-[17px] leading-[1.45]">{d}</p>
             </div>
           </div>
         ))}
@@ -1176,7 +1113,95 @@ export const PureGpt2 = ({ lado }: P) => (
         <div className="em-display text-[30px] font-extrabold uppercase leading-[1]">Precisa da tag do mês?</div>
         <p className="em-sans mt-[6px] text-[15.5px] leading-[1.42]">Ele também entrega as artes prontas da rede, como as tags, direto no chat.</p>
       </div>
-      <p className="em-sans text-[14px] font-semibold uppercase tracking-[0.16em] text-[var(--em-vinho)]">Onde encontrar: Pure Design › Peça sua arte</p>
+    </div>
+  </Pagina>
+);
+
+// ── Gente da Pure · Reconhecimento ─────────────────────────────────────────
+// "O cuidado que aparece". Texto do time exatamente como veio (19/11/2026); a palavra
+// de acento do título vai em itálico, como no brandbook.
+
+export const Reconhecimento1 = ({ lado }: P) => (
+  <Pagina lado={lado} numero={RECONHECIMENTO.pagina} tom="vinho">
+    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[24px]">
+      <div className="em-sans text-[14px] font-bold uppercase tracking-[0.24em]">{RECONHECIMENTO.sobretitulo}</div>
+      <h2 className="em-display text-[118px] font-extrabold uppercase leading-[0.86] tracking-[-0.01em]">
+        O cuidado que <em className="font-extrabold italic text-[#ffd9a8]">aparece</em>
+      </h2>
+      <p className="em-serif text-[22px] leading-[1.45]">
+        A nota da Pure no Reclame Aqui chegou a 7,3, já na faixa “bom”. O número é novo. O cuidado que ele mostra não é: é o de sempre das
+        equipes de Operações e Consultoria.
+      </p>
+      <div aria-hidden="true" className="flex items-center gap-[26px] bg-[#1d1413] px-[28px] py-[22px] text-[#f7ecdc]">
+        <div className="em-display text-[124px] font-extrabold leading-[0.85] text-[#ffd9a8]">7,3</div>
+        <div className="flex flex-1 items-center gap-[12px]">
+          <div className="text-center">
+            <div className="em-sans text-[11px] font-bold uppercase tracking-[0.18em] opacity-60">Antes</div>
+            <div className="em-display mt-[4px] text-[34px] font-extrabold uppercase leading-none opacity-50 line-through decoration-[#e0566b] decoration-[3px]">Regular</div>
+          </div>
+          <span className="em-display text-[40px] font-extrabold text-[#e0566b]">→</span>
+          <div className="text-center">
+            <div className="em-sans text-[11px] font-bold uppercase tracking-[0.18em] opacity-60">Hoje</div>
+            <div className="em-display mt-[4px] text-[44px] font-extrabold uppercase leading-none text-[#ffd9a8]">Bom</div>
+          </div>
+        </div>
+        <div className="em-sans text-right text-[12px] font-bold uppercase leading-[1.4] tracking-[0.16em] opacity-70">
+          Reclame
+          <br />
+          Aqui
+        </div>
+      </div>
+      <p className="em-sans text-[18px] leading-[1.6]">
+        A nota da Pure Pilates no Reclame Aqui está em 7,3. Antes, quem pesquisava a marca encontrava a palavra “regular”. Hoje encontra “bom”.
+        E, se o número mudou, é porque ele finalmente está mostrando o que já existia aqui dentro: o cuidado das equipes de Operações e
+        Consultoria com cada aluno que precisou de uma resposta.
+      </p>
+    </div>
+  </Pagina>
+);
+
+export const Reconhecimento2 = ({ lado }: P) => (
+  <Pagina lado={lado} numero={RECONHECIMENTO.pagina + 1}>
+    <div className="absolute inset-x-[64px] bottom-[112px] top-[96px] flex flex-col gap-[22px]">
+      <blockquote className="em-display border-l-[5px] border-[var(--em-vinho)] pl-[22px] text-[40px] font-bold uppercase leading-[0.98] text-[var(--em-vinho)]">
+        “A nota não mediu um processo. Mediu o cuidado de quem atendeu.”
+      </blockquote>
+      <div className="em-sans columns-2 gap-[30px] text-[15.5px] leading-[1.55] [&>p]:mb-[12px] [&>p]:break-inside-avoid-column">
+        <p>
+          Esse cuidado tem cara de coisa pequena. É a ligação feita no mesmo dia. É o nome da pessoa lembrado na segunda conversa. É o retorno
+          dado à unidade com calma, mesmo numa segunda-feira cheia. É tratar uma reclamação pelo que ela é: alguém que escolheu a Pure e quer
+          poder continuar escolhendo.
+        </p>
+        <p>
+          Quem faz esse trabalho sabe que ele quase nunca aparece. Não rende palco, foto nem áudio no grupo. Dessa vez apareceu, em um número
+          público que qualquer pessoa pode consultar. Essa é a parte bonita da história: a nota virou o espelho do jeito como vocês cuidam das
+          nossas entregas.
+        </p>
+        <p>
+          E cuidado, aqui, tem efeito de negócio. A reputação no Reclame Aqui é uma das primeiras coisas que aparecem para quem pesquisa a Pure
+          antes de marcar a aula experimental. Uma marca “bom” conversa melhor com essa pessoa, e isso vale para a rede inteira ao mesmo tempo,
+          sem um real de mídia. Operações e Consultoria entregaram aos estúdios um argumento que anúncio nenhum compra.
+        </p>
+        <p>
+          É isso que a gente mais quer preservar: o padrão de atendimento que fez esse número acontecer já é o padrão da casa. Ele é a nossa
+          referência de como uma entrega da Pure chega ao cliente, em qualquer unidade de negócio. E essa referência veio de vocês.
+        </p>
+      </div>
+      <div className="mt-auto flex items-center gap-[20px] border-t-2 border-[var(--em-tinta)] pt-[16px]">
+        {/* janela: o recorte do Douglas termina na borda do quadro */}
+        <span className="relative block h-[220px] w-[160px] shrink-0 overflow-hidden rounded-[16px] bg-[var(--em-vinho)]">
+          <img
+            src={douglas}
+            alt="Douglas Paiva"
+            draggable={false}
+            className="absolute left-1/2 top-[-30px] h-[300px] w-auto max-w-none -translate-x-1/2 select-none"
+          />
+        </span>
+        <div className="pb-[6px]">
+          <p className="em-serif text-[26px] italic leading-[1.3] text-[var(--em-vinho)]">Obrigada por cuidarem assim. De verdade.</p>
+          <p className="em-sans mt-[6px] text-[14px] font-bold uppercase tracking-[0.16em]">Douglas Paiva · CEO Pure Pilates</p>
+        </div>
+      </div>
     </div>
   </Pagina>
 );

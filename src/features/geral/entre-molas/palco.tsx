@@ -23,7 +23,7 @@ export const CONTEUDO_POR_EDICAO: Record<string, { paginas: RenderPagina[]; capi
 
 // Fontes editoriais carregadas só quando a Entre Molas abre.
 const FONTES =
-  'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800&display=swap';
+  'https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700;1,800&display=swap';
 
 function useFontesDaRevista() {
   useEffect(() => {

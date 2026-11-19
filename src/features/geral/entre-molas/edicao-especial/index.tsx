@@ -3,17 +3,13 @@ import { EdicaoContext, EditoriaContext, type Lado } from '../diagramacao';
 import { FotoMolas } from '../edicao-1/Abertura';
 import Contracapa from '../edicao-1/Contracapa';
 import Capa from './Capa';
-import { MATERIAS, PURE_GPT } from './materias';
+import { MATERIAS, PURE_GPT, RECONHECIMENTO } from './materias';
 import {
   Calendario1,
   Calendario2,
   Checklist,
   Editorial1,
   Editorial2,
-  Ganhos1,
-  Ganhos2,
-  Ganhos3,
-  Ganhos4,
   Mito1,
   Mito2,
   NumerosAbertura,
@@ -26,6 +22,10 @@ import {
   Padrao2,
   PureGpt1,
   PureGpt2,
+  PureGpt3,
+  PureGpt4,
+  Reconhecimento1,
+  Reconhecimento2,
   Fontes,
   Pratica1,
   Pratica2,
@@ -63,8 +63,8 @@ export const PAGINAS_EDICAO_ESPECIAL: RenderPagina[] = [
     (l) => <NumerosAbertura lado={l} />, (l) => <Numeros1 lado={l} />, (l) => <Numeros2 lado={l} />, (l) => <NumerosPodcast lado={l} />,
     (l) => <Numeros3 lado={l} />, (l) => <NumerosWellhub lado={l} />,
   ]),
-  ...materia(MATERIAS.ganhos.secao, [(l) => <Ganhos1 lado={l} />, (l) => <Ganhos2 lado={l} />, (l) => <Ganhos3 lado={l} />, (l) => <Ganhos4 lado={l} />]),
   ...materia(MATERIAS.padrao.secao, [(l) => <Padrao1 lado={l} />, (l) => <Padrao2 lado={l} />, (l) => <Checklist lado={l} />, (l) => <Fontes lado={l} />]),
-  ...materia(PURE_GPT.secao, [(l) => <PureGpt1 lado={l} />, (l) => <PureGpt2 lado={l} />]),
+  ...materia(PURE_GPT.secao, [(l) => <PureGpt1 lado={l} />, (l) => <PureGpt2 lado={l} />, (l) => <PureGpt3 lado={l} />, (l) => <PureGpt4 lado={l} />]),
+  ...materia(RECONHECIMENTO.secao, [(l) => <Reconhecimento1 lado={l} />, (l) => <Reconhecimento2 lado={l} />]),
   (lado) => <Contracapa lado={lado} />,
 ];
