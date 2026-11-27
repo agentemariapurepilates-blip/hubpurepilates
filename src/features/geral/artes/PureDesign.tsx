@@ -14,14 +14,15 @@ type Tab = 'personalizadas' | 'prontas' | 'assets';
 const PureDesign = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isColaborador, isAdmin } = useAuth();
-  // Artes personalizadas, Artes prontas e Assets de marca são só do time: o
-  // franqueado pede pelo chat e recebe ali a arte (modelo preenchido ou arte pronta, como a tag).
+  // Artes prontas e Assets de marca são só do time. As Artes personalizadas (os
+  // modelos editáveis) ficam abertas a todos: o franqueado pode pedir pelo chat
+  // ou procurar o modelo e editar ele mesmo (liberado de novo em 26/11/2026).
   const doTime = isColaborador || isAdmin;
   const param = searchParams.get('tab');
   const tab: Tab | null =
     param === 'prontas' && doTime
       ? 'prontas'
-      : param === 'personalizadas' && doTime
+      : param === 'personalizadas'
         ? 'personalizadas'
         : param === 'assets' && doTime
           ? 'assets'
@@ -62,11 +63,9 @@ const PureDesign = () => {
             <AssistentePureDesign />
           </section>
 
-          {/* Tela de escolha: só para o time */}
-          {doTime && (
+          {/* Tela de escolha: Artes personalizadas para todos; o resto só para o time */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Artes personalizadas: só para o time */}
-            {doTime && (
+            {/* Artes personalizadas: para todos */}
             <button
               type="button"
               onClick={() => setTab('personalizadas')}
@@ -107,9 +106,9 @@ const PureDesign = () => {
                 </div>
               </Card>
             </button>
-            )}
 
             {/* Artes prontas: só para o time */}
+            {doTime && (
             <button type="button" onClick={() => setTab('prontas')} className="text-left">
               <Card className="h-44 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group bg-card">
                 <div
@@ -140,6 +139,7 @@ const PureDesign = () => {
                 </div>
               </Card>
             </button>
+            )}
 
             {/* Assets de marca: só para o time */}
             {doTime && (
@@ -164,7 +164,6 @@ const PureDesign = () => {
               </button>
             )}
           </div>
-          )}
           </div>
         ) : (
           /* Seção escolhida */

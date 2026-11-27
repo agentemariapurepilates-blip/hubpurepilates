@@ -1,4 +1,4 @@
-import { DndContext, DragEndEvent, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragMoveEvent, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useState } from 'react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
 import KanbanDroppableColumn from './KanbanDroppableColumn';
 import type { DemandGroup } from './demandGroups';
 import { parseDateOnly, priorityConfig } from './demandHelpers';
+import { novaOrdem } from './demandOrdem';
 
 /** Id da coluna das demandas sem grupo (ou com grupo de outra área). */
 const SEM_GRUPO = '__sem_grupo__';
@@ -20,11 +21,15 @@ interface DemandKanbanViewProps {
   /** Grupos da área selecionada, já na ordem de exibição. */
   groups: DemandGroup[];
   onDemandClick: (demand: Demand) => void;
-  onGroupChange: (demandId: string, groupId: string | null) => void;
+  /** Soltou o cartão: coluna de destino e a ordem nova da coluna inteira. */
+  onMoveDemand: (demandId: string, groupId: string | null, ordem: string[]) => void;
 }
 
-const DemandKanbanView = ({ demands, groups, onDemandClick, onGroupChange }: DemandKanbanViewProps) => {
+type Alvo = { grupo: string; linha: string | null; depois: boolean };
+
+const DemandKanbanView = ({ demands, groups, onDemandClick, onMoveDemand }: DemandKanbanViewProps) => {
   const [activeDemand, setActiveDemand] = useState<Demand | null>(null);
+  const [alvo, setAlvo] = useState<Alvo | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -44,23 +49,31 @@ const DemandKanbanView = ({ demands, groups, onDemandClick, onGroupChange }: Dem
     if (demand) setActiveDemand(demand);
   };
 
+  // Em cima de um cartão: cai antes ou depois dele, pela metade em que está.
+  // Na coluna, fora dos cartões: cai no fim.
+  const alvoDo = (event: DragMoveEvent | DragEndEvent): Alvo | null => {
+    const dados = event.over?.data.current as { linha: string | null; grupo: string } | undefined;
+    if (!dados) return null;
+    if (!dados.linha) return { grupo: dados.grupo, linha: null, depois: false };
+    const meio = event.over!.rect.top + event.over!.rect.height / 2;
+    const arrastado = event.active.rect.current.translated;
+    return { grupo: dados.grupo, linha: dados.linha, depois: arrastado ? arrastado.top + arrastado.height / 2 > meio : false };
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+    const destino = alvoDo(event);
     setActiveDemand(null);
-
-    if (!over) return;
-
-    const demandId = active.id as string;
-    const destino = over.id === SEM_GRUPO ? null : String(over.id);
-    const demand = demands.find((d) => d.id === demandId);
-
-    if (demand && grupoAtual(demand) !== destino) {
-      onGroupChange(demandId, destino);
-    }
+    setAlvo(null);
+    if (!destino) return;
+    const demandId = String(event.active.id);
+    const daColuna = destino.grupo === SEM_GRUPO ? semGrupo : demands.filter((d) => grupoAtual(d) === destino.grupo);
+    const ordem = novaOrdem(daColuna.map((d) => d.id), demandId, destino.linha, destino.depois);
+    onMoveDemand(demandId, destino.grupo === SEM_GRUPO ? null : destino.grupo, ordem);
   };
 
   const handleDragCancel = () => {
     setActiveDemand(null);
+    setAlvo(null);
   };
 
   if (groups.length === 0 && semGrupo.length === 0) {
@@ -75,6 +88,7 @@ const DemandKanbanView = ({ demands, groups, onDemandClick, onGroupChange }: Dem
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
+      onDragMove={(e) => setAlvo(alvoDo(e))}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -88,6 +102,7 @@ const DemandKanbanView = ({ demands, groups, onDemandClick, onGroupChange }: Dem
               color={grupo.color}
               demands={demands.filter((d) => d.group_id === grupo.id)}
               pausesDeadline={grupo.pauses_deadline}
+              marca={alvo?.grupo === grupo.id ? alvo : null}
               onDemandClick={onDemandClick}
             />
           ))}
@@ -98,6 +113,7 @@ const DemandKanbanView = ({ demands, groups, onDemandClick, onGroupChange }: Dem
               color="#C4C4C4"
               demands={semGrupo}
               pausesDeadline={false}
+              marca={alvo?.grupo === SEM_GRUPO ? alvo : null}
               onDemandClick={onDemandClick}
             />
           )}

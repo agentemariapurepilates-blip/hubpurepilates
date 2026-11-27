@@ -1,7 +1,20 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragMoveEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
-import { ChevronDown, ChevronRight, Maximize2, MessageCircle, MoreHorizontal, Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical, Maximize2, MessageCircle, MoreHorizontal, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -23,6 +36,8 @@ import { BOARD_AREAS } from './DemandBoardSidebar';
 import { flagsFor, useDemandLabels, type LabelKind } from './demandLabels';
 import { LabelSelect } from './LabelSelect';
 import { BoardColumnsMenu } from './BoardColumnsMenu';
+import { novaOrdem } from './demandOrdem';
+import { TituloDeColuna, useLargurasDasColunas, type ColunaDemanda, type Larguras } from './larguraColunas';
 
 interface DemandListViewProps {
   /** Já filtradas por setor, busca e "Minhas". */
@@ -37,6 +52,8 @@ interface DemandListViewProps {
   onDemandClick: (demand: Demand) => void;
   /** Renomear direto na linha (qualquer colaborador). */
   onRenameDemand: (demandId: string, title: string) => Promise<void>;
+  /** Soltou a tarefa numa linha: grupo de destino e a ordem nova do grupo inteiro. */
+  onMoveDemand: (demandId: string, groupId: string | null, ordem: string[]) => void;
   onAddDemand: (department: string, groupId: string | null) => void;
   onCreateGroup: (department: string) => void;
   onRenameGroup: (groupId: string, name: string) => Promise<void>;
@@ -44,6 +61,20 @@ interface DemandListViewProps {
 }
 
 const SEM_GRUPO_COR = '#C4C4C4';
+/** Chave do bloco "Sem grupo" no arrastar. */
+const SEM_GRUPO = '__sem_grupo__';
+const chaveDoGrupo = (grupo: DemandGroup | null) => grupo?.id ?? SEM_GRUPO;
+
+/**
+ * Onde a tarefa vai cair enquanto é arrastada: antes ou depois de uma linha,
+ * ou no fim do grupo (`linha` nula). Pedido de 26/11/2026: arrastar entre os
+ * grupos (Outubro → Novembro) e trocar de linha dentro do grupo, ignorando o prazo.
+ */
+interface Alvo {
+  grupo: string;
+  linha: string | null;
+  depois: boolean;
+}
 const TITULO_COLUNA: Record<LabelKind, string> = { status: 'Status', frente: 'Frente' };
 
 /** Colunas de etiqueta ligadas no setor, na ordem da tabela. */
@@ -55,9 +86,20 @@ const colunasDeEtiqueta = (flags: ReturnType<typeof flagsFor>): LabelKind[] => [
 // Tarefa | comentários | pessoa | [status] | [frente] | prioridade | prazo | [gravação] | "+".
 // Inline em vez de classe: o número de colunas muda por setor, e o Tailwind só
 // gera classes que existem escritas no código. A gravação só existe em Gravações.
-const gridDaTabela = (etiquetas: LabelKind[], gravacao: boolean) =>
-  ['minmax(0,1fr)', '52px', '104px', ...etiquetas.map(() => '136px'), '96px', '84px', ...(gravacao ? ['96px'] : []), '40px'].join(' ');
-const larguraMinima = (etiquetas: LabelKind[], gravacao: boolean) => 600 + etiquetas.length * 136 + (gravacao ? 96 : 0);
+// As larguras são as que a pessoa puxou (larguraColunas.tsx); a Tarefa ainda
+// cresce para ocupar o que sobrar da tela.
+const colunasDaTabela = (etiquetas: LabelKind[], gravacao: boolean): ColunaDemanda[] => [
+  'comentarios',
+  'pessoa',
+  ...etiquetas,
+  'prioridade',
+  'prazo',
+  ...(gravacao ? (['gravacao'] as const) : []),
+];
+const gridDaTabela = (etiquetas: LabelKind[], gravacao: boolean, l: Larguras) =>
+  [`minmax(${l.tarefa}px,1fr)`, ...colunasDaTabela(etiquetas, gravacao).map((c) => `${l[c]}px`), '40px'].join(' ');
+const larguraMinima = (etiquetas: LabelKind[], gravacao: boolean, l: Larguras) =>
+  l.tarefa + colunasDaTabela(etiquetas, gravacao).reduce((soma, c) => soma + l[c], 0) + 40;
 
 /** Data de gravação, editável na própria célula: clica, escolhe no calendário, grava. */
 const CelulaGravacao = ({ demand }: { demand: Demand }) => {
@@ -119,6 +161,8 @@ const LinhaDemanda = ({
   etiquetas,
   gravacao,
   template,
+  grupoChave,
+  marca,
   onClick,
   onRename,
 }: {
@@ -128,10 +172,15 @@ const LinhaDemanda = ({
   etiquetas: LabelKind[];
   gravacao: boolean;
   template: string;
+  grupoChave: string;
+  /** Linha de onde a tarefa arrastada vai cair. */
+  marca: 'antes' | 'depois' | null;
   onClick: () => void;
   onRename: (title: string) => void;
 }) => {
   const api = useDemandLabels();
+  const arrasto = useDraggable({ id: demand.id, data: { demand } });
+  const alvo = useDroppable({ id: `linha:${demand.id}`, data: { linha: demand.id, grupo: grupoChave } });
   const prazo = getDeadlineStatus(demand.deadline, pausado);
   const prioridade = priorityConfig[demand.priority];
   const pessoas = demand.assignees ?? [];
@@ -141,13 +190,38 @@ const LinhaDemanda = ({
   // por conta própria. O título é o botão acessível por teclado.
   return (
     <div
+      ref={(el) => {
+        arrasto.setNodeRef(el);
+        alvo.setNodeRef(el);
+      }}
       onClick={onClick}
-      className="group/linha grid min-h-[38px] cursor-pointer border-t text-sm transition-colors hover:bg-muted/40"
+      className={cn(
+        'group/linha relative grid min-h-[38px] cursor-pointer border-t text-sm transition-colors hover:bg-muted/40',
+        arrasto.isDragging && 'opacity-40',
+      )}
       style={{ gridTemplateColumns: template }}
     >
+      {marca && (
+        <span
+          className={cn('pointer-events-none absolute inset-x-0 z-10 h-0.5 bg-primary', marca === 'antes' ? '-top-px' : '-bottom-px')}
+          aria-hidden="true"
+        />
+      )}
       {/* Clicar no título renomeia (qualquer colaborador); o botão Abrir abre a demanda.
           O resto da linha continua abrindo, como antes. */}
-      <span className="flex min-w-0 items-center gap-1.5 px-2 py-1.5">
+      <span className="flex min-w-0 items-center gap-1.5 py-1.5 pl-0.5 pr-2">
+        {/* Os pontinhos: é por aqui que se arrasta a tarefa para outra linha ou grupo. */}
+        <button
+          type="button"
+          {...arrasto.listeners}
+          {...arrasto.attributes}
+          onClick={(e) => e.stopPropagation()}
+          className="flex h-6 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded text-muted-foreground/50 transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
+          title="Arraste para mudar de linha ou de grupo"
+          aria-label="Arrastar tarefa"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
         <TituloEditavel titulo={demand.title} onSalvar={onRename} />
         <button
           type="button"
@@ -237,6 +311,9 @@ const BlocoGrupo = ({
   podeExcluir,
   etiquetas,
   gravacao,
+  alvo,
+  larguras,
+  onMudarLargura,
   onDemandClick,
   onRenameDemand,
   onAddDemand,
@@ -251,17 +328,26 @@ const BlocoGrupo = ({
   podeExcluir: boolean;
   etiquetas: LabelKind[];
   gravacao: boolean;
+  /** Onde a tarefa arrastada vai cair agora (de qualquer grupo do setor). */
+  alvo: Alvo | null;
+  larguras: Larguras;
+  onMudarLargura: (coluna: ColunaDemanda, largura: number | null, guardar: boolean) => void;
   onDemandClick: (demand: Demand) => void;
   onRenameDemand: (demandId: string, title: string) => Promise<void>;
   onAddDemand: (department: string, groupId: string | null) => void;
   onRenameGroup: (groupId: string, name: string) => Promise<void>;
   onDeleteGroup: (group: DemandGroup) => void;
 }) => {
+  const chave = chaveDoGrupo(group);
+  // O grupo inteiro (e o título, para grupo recolhido) recebe a tarefa: cai no fim.
+  const corpo = useDroppable({ id: `grupo:${chave}`, data: { linha: null, grupo: chave } });
+  const cabecalho = useDroppable({ id: `cab:${chave}`, data: { linha: null, grupo: chave } });
+  const recebendo = alvo?.grupo === chave;
   const [aberto, setAberto] = useState(!comecaRecolhido(group));
   const [renomeando, setRenomeando] = useState(false);
   const [nome, setNome] = useState(group?.name ?? '');
   const cor = group?.color ?? SEM_GRUPO_COR;
-  const template = gridDaTabela(etiquetas, gravacao);
+  const template = gridDaTabela(etiquetas, gravacao, larguras);
 
   const salvarNome = async () => {
     const novo = nome.trim();
@@ -275,7 +361,10 @@ const BlocoGrupo = ({
 
   return (
     <section className="space-y-1.5">
-      <div className="group/cab flex items-center gap-2">
+      <div
+        ref={cabecalho.setNodeRef}
+        className={cn('group/cab flex items-center gap-2 rounded-md', recebendo && !aberto && 'bg-primary/10 ring-2 ring-primary/30')}
+      >
         <button
           type="button"
           onClick={() => setAberto((v) => !v)}
@@ -349,20 +438,42 @@ const BlocoGrupo = ({
       </div>
 
       {aberto && (
-        <div className="overflow-x-auto rounded-md border" style={{ borderLeft: `4px solid ${cor}` }}>
-          <div style={{ minWidth: larguraMinima(etiquetas, gravacao) }}>
+        <div
+          ref={corpo.setNodeRef}
+          className={cn('overflow-x-auto rounded-md border transition-shadow', recebendo && 'ring-2 ring-primary/30')}
+          style={{ borderLeft: `4px solid ${cor}` }}
+        >
+          <div style={{ minWidth: larguraMinima(etiquetas, gravacao, larguras) }}>
             <div className="grid bg-muted/30 text-xs text-muted-foreground" style={{ gridTemplateColumns: template }}>
-              <span className="px-3 py-1.5">Tarefa</span>
-              <span className="border-l" />
-              <span className="flex items-center justify-center border-l">Pessoa</span>
+              <TituloDeColuna coluna="tarefa" larguras={larguras} onMudar={onMudarLargura} className="px-3 py-1.5">
+                Tarefa
+              </TituloDeColuna>
+              <TituloDeColuna coluna="comentarios" larguras={larguras} onMudar={onMudarLargura} className="border-l" />
+              <TituloDeColuna coluna="pessoa" larguras={larguras} onMudar={onMudarLargura} className="flex items-center justify-center border-l">
+                Pessoa
+              </TituloDeColuna>
               {etiquetas.map((kind) => (
-                <span key={kind} className="flex items-center justify-center border-l">
+                <TituloDeColuna
+                  key={kind}
+                  coluna={kind}
+                  larguras={larguras}
+                  onMudar={onMudarLargura}
+                  className="flex items-center justify-center border-l"
+                >
                   {TITULO_COLUNA[kind]}
-                </span>
+                </TituloDeColuna>
               ))}
-              <span className="flex items-center justify-center border-l">Prioridade</span>
-              <span className="flex items-center justify-center border-l">Prazo</span>
-              {gravacao && <span className="flex items-center justify-center border-l">Gravação</span>}
+              <TituloDeColuna coluna="prioridade" larguras={larguras} onMudar={onMudarLargura} className="flex items-center justify-center border-l">
+                Prioridade
+              </TituloDeColuna>
+              <TituloDeColuna coluna="prazo" larguras={larguras} onMudar={onMudarLargura} className="flex items-center justify-center border-l">
+                Prazo
+              </TituloDeColuna>
+              {gravacao && (
+                <TituloDeColuna coluna="gravacao" larguras={larguras} onMudar={onMudarLargura} className="flex items-center justify-center border-l">
+                  Gravação
+                </TituloDeColuna>
+              )}
               <span className="border-l">
                 <BoardColumnsMenu department={department} />
               </span>
@@ -377,6 +488,8 @@ const BlocoGrupo = ({
                 etiquetas={etiquetas}
                 gravacao={gravacao}
                 template={template}
+                grupoChave={chave}
+                marca={alvo?.linha === demand.id ? (alvo.depois ? 'depois' : 'antes') : null}
                 onClick={() => onDemandClick(demand)}
                 onRename={(title) => onRenameDemand(demand.id, title)}
               />
@@ -385,7 +498,10 @@ const BlocoGrupo = ({
             <button
               type="button"
               onClick={() => onAddDemand(department, group?.id ?? null)}
-              className="flex w-full items-center gap-1.5 border-t px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+              className={cn(
+                'flex w-full items-center gap-1.5 border-t px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground',
+                recebendo && alvo?.linha === null && 'border-t-2 border-t-primary',
+              )}
             >
               <Plus className="h-3.5 w-3.5" />
               Adicionar tarefa
@@ -417,13 +533,55 @@ const SecaoArea = ({
   // Em "Ver todos" só os grupos com tarefa; dentro do setor, todos — para dar para adicionar nos vazios.
   const visiveis = emTodos ? grupos.filter((g) => daArea.some((d) => d.group_id === g.id)) : grupos;
   const etiquetas = colunasDeEtiqueta(flagsFor(api.settings, area));
+  const { larguras, mudar: mudarLargura } = useLargurasDasColunas(area);
+
+  // Arrastar: uma tarefa por vez, dentro do setor, pelos pontinhos no começo da
+  // linha (pedido de 26/11/2026: deixar óbvio por onde se pega). O resto da linha só abre a tarefa.
+  const sensores = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 5 } }),
+  );
+  const [arrastando, setArrastando] = useState<Demand | null>(null);
+  const [alvo, setAlvo] = useState<Alvo | null>(null);
+  // Depois de soltar, o navegador ainda dispara o clique da linha: ignorar esse.
+  const acabouDeSoltar = useRef(false);
+  const demandasDoGrupo = (chave: string) =>
+    chave === SEM_GRUPO ? semGrupo : daArea.filter((d) => d.group_id === chave && idsDosGrupos.has(chave));
+
+  const aoMover = (e: DragMoveEvent | DragEndEvent): Alvo | null => {
+    const dados = e.over?.data.current as { linha: string | null; grupo: string } | undefined;
+    if (!dados) return null;
+    if (!dados.linha) return { grupo: dados.grupo, linha: null, depois: false };
+    const meio = e.over!.rect.top + e.over!.rect.height / 2;
+    const arrastada = e.active.rect.current.translated;
+    const depois = arrastada ? arrastada.top + arrastada.height / 2 > meio : false;
+    return { grupo: dados.grupo, linha: dados.linha, depois };
+  };
+
+  const aoSoltar = (e: DragEndEvent) => {
+    const destino = aoMover(e);
+    setArrastando(null);
+    setAlvo(null);
+    acabouDeSoltar.current = true;
+    setTimeout(() => (acabouDeSoltar.current = false), 0);
+    if (!destino) return;
+    const id = String(e.active.id);
+    const atuais = demandasDoGrupo(destino.grupo).map((d) => d.id);
+    const ordem = novaOrdem(atuais, id, destino.linha, destino.depois);
+    props.onMoveDemand(id, destino.grupo === SEM_GRUPO ? null : destino.grupo, ordem);
+  };
 
   const blocoComum = {
+    alvo,
+    larguras,
+    onMudarLargura: mudarLargura,
     department: area,
     commentCounts: props.commentCounts,
     etiquetas,
     gravacao: area === SETOR_GRAVACOES,
-    onDemandClick: props.onDemandClick,
+    onDemandClick: (d: Demand) => {
+      if (!acabouDeSoltar.current) props.onDemandClick(d);
+    },
     onRenameDemand: props.onRenameDemand,
     onAddDemand: props.onAddDemand,
     onRenameGroup: props.onRenameGroup,
@@ -441,6 +599,16 @@ const SecaoArea = ({
         </Button>
       </Card>
     ) : (
+      <DndContext
+        sensors={sensores}
+        onDragStart={(e: DragStartEvent) => setArrastando((e.active.data.current?.demand as Demand) ?? null)}
+        onDragMove={(e) => setAlvo(aoMover(e))}
+        onDragEnd={aoSoltar}
+        onDragCancel={() => {
+          setArrastando(null);
+          setAlvo(null);
+        }}
+      >
       <div className="space-y-5">
         {visiveis.map((grupo) => (
           <BlocoGrupo
@@ -465,6 +633,14 @@ const SecaoArea = ({
           </button>
         )}
       </div>
+      <DragOverlay>
+        {arrastando && (
+          <div className="flex max-w-md items-center gap-2 rounded-md border border-primary/40 bg-background px-3 py-2 text-sm font-medium shadow-xl">
+            <span className="truncate">{arrastando.title}</span>
+          </div>
+        )}
+      </DragOverlay>
+      </DndContext>
     );
 
   if (!emTodos) return conteudo;

@@ -1,5 +1,6 @@
 import { DICAS_MODELOS_NOVOS, MODELOS_NOVOS, PALAVRAS_MODELOS_NOVOS } from './pureDesignModelosNovos';
 import { DICAS_FERIADOS_2027, FERIADOS_2027, PALAVRAS_FERIADOS_2027 } from './pureDesignFeriados2027';
+import { DICAS_RECESSO, PALAVRAS_RECESSO, RECESSO } from './pureDesignRecesso';
 
 export interface TemplateField {
   id: string;
@@ -1173,6 +1174,7 @@ const logoDepoimentoVermelho: TemplateField = {
 export const pureDesignTemplates: PureDesignTemplate[] = [
   ...MODELOS_NOVOS,
   ...FERIADOS_2027,
+  ...RECESSO,
   {
     id: 'inauguracao-vem-ai',
     name: 'Inauguração — Vem aí uma nova (sem foto)',
@@ -1464,6 +1466,8 @@ export const CATEGORIAS: Record<string, string> = {
     'Relação com os alunos: depoimento de aluno, boas-vindas a aluno novo, aniversariantes do mês.',
   'Feriados 2027':
     'Um aviso pronto para cada feriado de 2027 (Ano-Novo, Carnaval, Quarta de Cinzas, Sexta-feira Santa, Tiradentes, Dia do Trabalho, Corpus Christi, 9 de julho em SP, Independência, Aparecida, Finados, República, Consciência Negra, véspera de Natal, Natal e véspera de Ano-Novo), com a ilustração do tema e a data já preenchida. Quando o pedido é sobre um desses feriados, use o modelo da data em vez do aviso de feriado genérico.',
+  'Recesso de fim de ano':
+    'Comunicado de recesso de fim de ano (unidade fechada entre o Natal e o começo do ano): agradecimento pelo ano, período do recesso, data da volta e boas festas. Em quatro formatos: A4 para imprimir, feed, stories e quadrado.',
   'Datas comemorativas':
     'Mensagens de datas especiais: Natal e Ano Novo (com ou sem foto), Dia das Mães (homenagem e Dupla Dinâmica).',
   'Pure Store':
@@ -1479,6 +1483,7 @@ export const ORDEM_DAS_CATEGORIAS = [
   'Atrair alunos',
   'Avisos da unidade',
   'Feriados 2027',
+  'Recesso de fim de ano',
   'Aulas e eventos',
   'Equipe',
   'Alunos e comunidade',
@@ -1505,8 +1510,8 @@ const DICAS: Record<string, string> = {
     'Aviso de funcionamento em qualquer feriado, com a lista de datas (fechado/aberto) e uma mensagem opcional de bom feriado (ex.: "Desejamos um ótimo feriado!"). Sem foto.',
 };
 for (const t of pureDesignTemplates) {
-  t.palavrasChave = PALAVRAS_CHAVE[t.id] ?? PALAVRAS_MODELOS_NOVOS[t.id] ?? PALAVRAS_FERIADOS_2027[t.id];
-  t.dica = DICAS[t.id] ?? DICAS_MODELOS_NOVOS[t.id] ?? DICAS_FERIADOS_2027[t.id];
+  t.palavrasChave = PALAVRAS_CHAVE[t.id] ?? PALAVRAS_MODELOS_NOVOS[t.id] ?? PALAVRAS_FERIADOS_2027[t.id] ?? PALAVRAS_RECESSO[t.id];
+  t.dica = DICAS[t.id] ?? DICAS_MODELOS_NOVOS[t.id] ?? DICAS_FERIADOS_2027[t.id] ?? DICAS_RECESSO[t.id];
 }
 
 // Fica true quando o template demarca o bloco removível do campo (forma + texto)

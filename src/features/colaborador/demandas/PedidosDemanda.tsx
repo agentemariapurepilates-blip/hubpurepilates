@@ -30,7 +30,7 @@ import DemandListView from '@/components/demands/DemandListView';
 import DemandKanbanView from '@/components/demands/DemandKanbanView';
 import DemandBoardSidebar, { BOARD_AREAS, MINHA_AREA } from '@/components/demands/DemandBoardSidebar';
 import MinhaAreaDeTrabalho, { estaConcluida } from '@/components/demands/MinhaAreaDeTrabalho';
-import { compararPorPrazo } from '@/components/demands/demandHelpers';
+import { compararPorOrdem } from '@/components/demands/demandOrdem';
 import CreateDemandDialog from '@/components/demands/CreateDemandDialog';
 import CreateGroupDialog from '@/components/demands/CreateGroupDialog';
 import DemandDetailsDialog from '@/components/demands/DemandDetailsDialog';
@@ -68,6 +68,8 @@ export interface Demand {
   priority: 'low' | 'medium' | 'high';
   /** Grupo da área em que a demanda está. Nulo = "Sem grupo". */
   group_id: string | null;
+  /** Ordem manual dentro do grupo (arrastar). Nulo = vai pelo prazo. */
+  position?: number | null;
   /** Etiquetas coloridas: Status por etiqueta (do setor) e Frente de negócio. */
   status_label_id: string | null;
   frente_label_id: string | null;
@@ -312,7 +314,8 @@ const PedidosDemanda = () => {
   // No "Todos" cada área tem grupos diferentes, então não há colunas comuns para o Kanban.
   const kanbanDisponivel = areaAtual !== null;
 
-  // Filtra por setor, pessoa e busca. Ordena pelo prazo (vence antes, aparece antes): vale para a lista e o Kanban.
+  // Filtra por setor, pessoa e busca. Ordena pela ordem que alguém arrastou e, sem ela, pelo prazo
+  // (vence antes, aparece antes): vale para a lista e o Kanban.
   const filteredDemands = useMemo(() => {
     return demands.filter(d => {
       // "Minhas" e a Minha área de trabalho: quem abriu ou está como responsável
@@ -332,7 +335,7 @@ const PedidosDemanda = () => {
         );
       }
       return true;
-    }).sort(compararPorPrazo);
+    }).sort(compararPorOrdem);
   }, [demands, selectedDepartment, searchTerm, showOnlyMine, user]);
 
   // Link de demanda (/pedidos-demanda?demanda=<id>): abre essa demanda assim que a lista carrega.
@@ -396,8 +399,10 @@ const PedidosDemanda = () => {
   const handleGroupChange = async (demandId: string, groupId: string | null) => {
     const grupo = groups.find((g) => g.id === groupId) ?? null;
     // Grupo que nasceu de um status leva o status junto: o que ainda lê `status` continua coerente.
+    // Mudou de grupo sem escolher a linha: vai para o fim, pelo prazo (sem ordem manual).
     const patch = {
       group_id: groupId,
+      position: null,
       ...(grupo?.legacy_status ? { status: grupo.legacy_status } : {}),
     };
 
@@ -417,6 +422,54 @@ const PedidosDemanda = () => {
         description: "Erro ao mover a demanda",
         variant: "destructive"
       });
+    }
+  };
+
+  /**
+   * Soltou a tarefa numa linha (Lista ou Kanban). `ordem` = o grupo de destino
+   * inteiro, já na ordem nova; cada uma grava a sua posição. Mudou de grupo:
+   * leva o status do grupo junto, como no Kanban.
+   */
+  const handleMoveDemand = async (demandId: string, groupId: string | null, ordem: string[]) => {
+    const antes = demands;
+    const movida = antes.find((d) => d.id === demandId);
+    if (!movida) return;
+    const grupo = groups.find((g) => g.id === groupId) ?? null;
+    const mudouGrupo = (movida.group_id ?? null) !== groupId;
+    const posicao = new Map(ordem.map((id, i) => [id, i + 1]));
+    const patchDaMovida = {
+      group_id: groupId,
+      ...(mudouGrupo && grupo?.legacy_status ? { status: grupo.legacy_status } : {}),
+    };
+    const mudadas = ordem.filter((id) => id === demandId || antes.find((d) => d.id === id)?.position !== posicao.get(id));
+    if (!mudouGrupo && mudadas.every((id) => antes.find((d) => d.id === id)?.position === posicao.get(id))) return;
+
+    setDemands((prev) =>
+      prev.map((d) =>
+        d.id === demandId
+          ? { ...d, ...patchDaMovida, position: posicao.get(d.id) }
+          : posicao.has(d.id)
+            ? { ...d, position: posicao.get(d.id) }
+            : d,
+      ),
+    );
+
+    const resultados = await Promise.all(
+      mudadas.map((id) =>
+        supabase
+          .from('demands')
+          .update(id === demandId ? { ...patchDaMovida, position: posicao.get(id) } : { position: posicao.get(id) })
+          .eq('id', id),
+      ),
+    );
+    if (resultados.some((r) => r.error)) {
+      console.error('Error reordering demands:', resultados.find((r) => r.error)?.error);
+      setDemands(antes);
+      toast({ title: 'Erro', description: 'Não consegui salvar a nova ordem.', variant: 'destructive' });
+      return;
+    }
+    if (mudouGrupo) {
+      toast({ title: 'Demanda movida', description: grupo ? `Agora em "${grupo.name}".` : 'Agora sem grupo.' });
     }
   };
 
@@ -680,7 +733,7 @@ const PedidosDemanda = () => {
                 demands={filteredDemands}
                 groups={gruposDaArea}
                 onDemandClick={handleDemandClick}
-                onGroupChange={handleGroupChange}
+                onMoveDemand={handleMoveDemand}
               />
             ) : (
               <DemandListView
@@ -691,6 +744,7 @@ const PedidosDemanda = () => {
                 usedGroupIds={usedGroupIds}
                 onDemandClick={handleDemandClick}
                 onRenameDemand={handleRenameDemand}
+                onMoveDemand={handleMoveDemand}
                 onAddDemand={abrirNovaDemanda}
                 onCreateGroup={(area) => setGroupDialog({ open: true, area })}
                 onRenameGroup={handleRenameGroup}

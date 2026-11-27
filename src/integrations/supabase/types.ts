@@ -601,6 +601,7 @@ export type Database = {
           from_department: string
           group_id: string | null
           id: string
+          position: number | null
           priority: Database["public"]["Enums"]["demand_priority"]
           recording_date: string | null
           status: Database["public"]["Enums"]["demand_status"]
@@ -618,6 +619,7 @@ export type Database = {
           from_department: string
           group_id?: string | null
           id?: string
+          position?: number | null
           priority?: Database["public"]["Enums"]["demand_priority"]
           recording_date?: string | null
           status?: Database["public"]["Enums"]["demand_status"]
@@ -635,6 +637,7 @@ export type Database = {
           from_department?: string
           group_id?: string | null
           id?: string
+          position?: number | null
           priority?: Database["public"]["Enums"]["demand_priority"]
           recording_date?: string | null
           status?: Database["public"]["Enums"]["demand_status"]

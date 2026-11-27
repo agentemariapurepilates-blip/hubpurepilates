@@ -10,11 +10,14 @@ interface KanbanDroppableColumnProps {
   color: string;
   demands: Demand[];
   pausesDeadline: boolean;
+  /** O cartão sobre o qual o arrastado vai cair, e se antes ou depois. */
+  marca: { linha: string | null; depois: boolean } | null;
   onDemandClick: (demand: Demand) => void;
 }
 
-const KanbanDroppableColumn = ({ id, label, color, demands, pausesDeadline, onDemandClick }: KanbanDroppableColumnProps) => {
-  const { isOver, setNodeRef } = useDroppable({ id });
+const KanbanDroppableColumn = ({ id, label, color, demands, pausesDeadline, marca, onDemandClick }: KanbanDroppableColumnProps) => {
+  const { setNodeRef } = useDroppable({ id, data: { linha: null, grupo: id } });
+  const isOver = marca !== null;
 
   return (
     <div className="w-72 shrink-0">
@@ -46,6 +49,8 @@ const KanbanDroppableColumn = ({ id, label, color, demands, pausesDeadline, onDe
               key={demand.id}
               demand={demand}
               pausesDeadline={pausesDeadline}
+              coluna={id}
+              marca={marca?.linha === demand.id ? (marca.depois ? 'depois' : 'antes') : null}
               onDemandClick={onDemandClick}
             />
           ))

@@ -1,9 +1,9 @@
-import { useDraggable } from '@dnd-kit/core';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, CalendarPlus } from 'lucide-react';
+import { Calendar, CalendarPlus, GripVertical } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { Demand } from '@/features/colaborador/demandas/PedidosDemanda';
@@ -13,14 +13,19 @@ interface KanbanDraggableCardProps {
   demand: Demand;
   /** Vem do grupo da coluna: grupos como Concluído não acusam atraso. */
   pausesDeadline: boolean;
+  /** Coluna do cartão: soltar outro cartão em cima dele o coloca nessa coluna. */
+  coluna: string;
+  /** Onde o cartão arrastado vai cair: antes ou depois deste. */
+  marca: 'antes' | 'depois' | null;
   onDemandClick: (demand: Demand) => void;
 }
 
-const KanbanDraggableCard = ({ demand, pausesDeadline, onDemandClick }: KanbanDraggableCardProps) => {
+const KanbanDraggableCard = ({ demand, pausesDeadline, coluna, marca, onDemandClick }: KanbanDraggableCardProps) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: demand.id,
     data: { demand },
   });
+  const alvo = useDroppable({ id: `cartao:${demand.id}`, data: { linha: demand.id, grupo: coluna } });
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -38,15 +43,24 @@ const KanbanDraggableCard = ({ demand, pausesDeadline, onDemandClick }: KanbanDr
 
   return (
     <Card
-      ref={setNodeRef}
+      ref={(el) => {
+        setNodeRef(el);
+        alvo.setNodeRef(el);
+      }}
       style={style}
       {...listeners}
       {...attributes}
-      className={`p-3 cursor-grab active:cursor-grabbing transition-colors touch-none ${
+      className={`relative p-3 cursor-grab active:cursor-grabbing transition-colors touch-none ${
         isDragging ? 'opacity-40 shadow-lg z-50' : 'hover:bg-muted/50'
       }`}
       onClick={handleClick}
     >
+      {marca && (
+        <span
+          className={`pointer-events-none absolute inset-x-1 h-0.5 rounded bg-primary ${marca === 'antes' ? '-top-1.5' : '-bottom-1.5'}`}
+          aria-hidden="true"
+        />
+      )}
       {/* Deadline Status Badge */}
       {deadlineStatus && DeadlineStatusIcon && (
         <div className="flex items-center gap-1 mb-2">
@@ -58,8 +72,10 @@ const KanbanDraggableCard = ({ demand, pausesDeadline, onDemandClick }: KanbanDr
       )}
 
       {/* Title */}
-      <h4 className="font-medium text-sm line-clamp-2 mb-2">
-        {demand.title}
+      {/* Pontinhos: mostram que o cartão se arrasta (o cartão inteiro pega). */}
+      <h4 className="font-medium text-sm line-clamp-2 mb-2 flex gap-1">
+        <GripVertical className="h-4 w-4 shrink-0 -ml-1 mt-0.5 text-muted-foreground/50" aria-hidden="true" />
+        <span>{demand.title}</span>
       </h4>
 
       {/* Creator & Priority */}
